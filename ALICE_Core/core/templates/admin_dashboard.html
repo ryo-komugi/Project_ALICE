@@ -1,0 +1,3108 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Project_Alice | Management Cockpit</title>
+  <link rel="icon" type="image/jpeg" href="/static/admin/alice_logo.jpg">
+  
+  <!-- PWA & Mobile Web App Meta -->
+  <link rel="manifest" href="/static/admin/manifest.json">
+  <meta name="theme-color" content="#060913">
+
+  <!-- Real-time Client Error Reporting Watchdog -->
+  <script>
+    window.addEventListener('error', function(e) {
+      try {
+        var payload = { msg: e.message, file: e.filename, line: e.lineno, col: e.colno, stack: e.error ? e.error.stack : '' };
+        fetch('/admin/api/client-error', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+      } catch (_) {}
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      try {
+        var payload = { msg: 'Unhandled Rejection: ' + (e.reason ? (e.reason.message || e.reason) : ''), stack: e.reason && e.reason.stack ? e.reason.stack : '' };
+        fetch('/admin/api/client-error', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+      } catch (_) {}
+    });
+  </script>
+  <!-- iOS Safari PWA & Startup Image -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Project_Alice">
+  <link rel="apple-touch-icon" href="/static/admin/alice_logo.jpg">
+  <link rel="apple-touch-startup-image" href="/static/admin/alice_splash.jpg">
+  <!-- Android Chrome PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Marked Markdown Parser -->
+  <script src="/static/admin/marked.min.js"></script>
+  <!-- Google Fonts (BIZ UDPGothic, Inter & JetBrains Mono) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"BIZ UDPGothic"', 'Inter', 'sans-serif'],
+            brand: ['"BIZ UDPGothic"', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            alice: {
+              bg: '#0B0F19',
+              card: 'rgba(17, 24, 39, 0.75)',
+              border: 'rgba(255, 255, 255, 0.08)',
+              cyan: '#38BDF8',
+              purple: '#A855F7',
+              magenta: '#EC4899',
+              gold: '#F59E0B',
+              emerald: '#10B981',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #060913;
+      font-family: 'BIZ UDPGothic', Inter, sans-serif;
+    }
+    .font-brand {
+      font-family: 'BIZ UDPGothic', 'BIZ UDPゴシック', sans-serif;
+    }
+    .tab-title {
+      color: #7dd3fc;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.4);
+    }
+    .tab-desc {
+      color: #cbd5e1;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-panel-active {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: rgba(56, 189, 248, 0.5);
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
+    ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.8); }
+
+    /* Fix native select option background and text color for dark mode */
+    select option {
+      background-color: #0f172a !important; /* bg-slate-900 */
+      color: #e2e8f0 !important;            /* text-slate-200 */
+    }
+
+    /* Enable text selection inside AI Console */
+    #tab-chat, #tab-chat *, .chat-bubble-content, .chat-bubble-content *, pre, code {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
+    #tab-chat button, #tab-chat button *, #tab-chat svg, #tab-chat .select-none {
+      user-select: none !important;
+      -webkit-user-select: none !important;
+    }
+
+    /* Markdown Styles in AI Chat Bubbles */
+    .chat-bubble-content h1, .chat-bubble-content h2, .chat-bubble-content h3, .chat-bubble-content h4 {
+      color: #f8fafc;
+      font-weight: 700;
+      margin-top: 0.75rem;
+      margin-bottom: 0.35rem;
+    }
+    .chat-bubble-content h1 { font-size: 1.15rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 0.25rem; }
+    .chat-bubble-content h2 { font-size: 1.05rem; border-bottom: 1px solid rgba(255, 255, 255, 0.06); padding-bottom: 0.2rem; }
+    .chat-bubble-content h3 { font-size: 0.95rem; color: #38bdf8; }
+    .chat-bubble-content h4 { font-size: 0.875rem; color: #cbd5e1; }
+    .chat-bubble-content p {
+      margin-top: 0.35rem;
+      margin-bottom: 0.35rem;
+      line-height: 1.6;
+    }
+    .chat-bubble-content p:first-child { margin-top: 0; }
+    .chat-bubble-content p:last-child { margin-bottom: 0; }
+    .chat-bubble-content ul {
+      list-style-type: disc;
+      padding-left: 1.25rem;
+      margin-top: 0.35rem;
+      margin-bottom: 0.35rem;
+    }
+    .chat-bubble-content ol {
+      list-style-type: decimal;
+      padding-left: 1.25rem;
+      margin-top: 0.35rem;
+      margin-bottom: 0.35rem;
+    }
+    .chat-bubble-content li {
+      margin-top: 0.15rem;
+      margin-bottom: 0.15rem;
+      line-height: 1.5;
+    }
+    .chat-bubble-content blockquote {
+      border-left: 3px solid #8b5cf6;
+      padding-left: 0.75rem;
+      margin: 0.5rem 0;
+      color: #94a3b8;
+      font-style: italic;
+    }
+    .chat-bubble-content hr {
+      border-color: rgba(255, 255, 255, 0.1);
+      margin: 0.75rem 0;
+    }
+
+    /* Markdown Table Styles */
+    .chat-bubble-content .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin: 0.65rem 0;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(10, 15, 29, 0.75);
+    }
+    .chat-bubble-content table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: left;
+    }
+    .chat-bubble-content th {
+      background: rgba(30, 41, 59, 0.85);
+      color: #38bdf8;
+      font-weight: 600;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      white-space: nowrap;
+    }
+    .chat-bubble-content td {
+      padding: 0.45rem 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+      vertical-align: top;
+      line-height: 1.45;
+    }
+    .chat-bubble-content tr:last-child td {
+      border-bottom: none;
+    }
+    .chat-bubble-content tbody tr:hover {
+      background: rgba(56, 189, 248, 0.05);
+    }
+  </style>
+</head>
+<body class="text-slate-200 min-h-screen flex flex-col md:flex-row antialiased select-none relative">
+
+  <!-- ========================================================================= -->
+  <!-- Ambient Background Canvas (Shifted md:left-72 to avoid sidebar obstruction)-->
+  <!-- ========================================================================= -->
+  <div class="fixed inset-y-0 right-0 left-0 md:left-72 pointer-events-none z-0 overflow-hidden"
+       style="background-color: #060913;
+              background-image: 
+                linear-gradient(to bottom, rgba(6, 9, 19, 0.88), rgba(6, 9, 19, 0.82)),
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
+                url('/static/admin/alice_bg.png');
+              background-size: cover;
+              background-position: center bottom;
+              background-repeat: no-repeat;">
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- Dynamic Boot / Splash Screen Overlay                                      -->
+  <!-- ========================================================================= -->
+  <div id="alice-splash-screen" class="fixed inset-0 z-[100] transition-opacity duration-500 select-none cursor-pointer"
+       style="background-color: #060913; background-image: radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.15) 0%, transparent 60%), url('/static/admin/alice_splash.jpg'); background-size: cover; background-position: center;"
+       onclick="(document.getElementById('alice-splash-screen')||this).remove()" title="タップで即座にスキップ">
+    
+    <!-- Top Right: Skip Button -->
+    <div class="absolute top-4 right-4 z-10">
+      <button type="button" onclick="(document.getElementById('alice-splash-screen')||this).remove()" class="text-[11px] font-mono font-bold text-white bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-sky-400/40 hover:bg-sky-500/20 active:scale-95 transition-all">
+        SKIP ➔
+      </button>
+    </div>
+
+    <!-- Bottom Dynamic Progress Bar (Placed at very bottom to avoid text/graphics obstruction) -->
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 w-11/12 max-w-xs sm:max-w-sm px-4 py-3 rounded-2xl bg-slate-950/80 backdrop-blur-xl border border-sky-500/30 shadow-2xl flex flex-col items-center">
+      <div class="w-full h-2.5 rounded-full bg-slate-800/90 overflow-hidden border border-slate-700/80 shadow-inner">
+        <div id="splash-progress-bar" class="h-full bg-gradient-to-r from-sky-400 via-purple-500 to-pink-500 rounded-full transition-all duration-300 ease-out" style="width: 35%;"></div>
+      </div>
+      <div class="mt-2 text-[10px] sm:text-[11px] font-bold font-mono tracking-wider text-slate-300 flex items-center justify-between w-full px-0.5">
+        <span id="splash-status-text">INITIALIZING CORE SYSTEMS...</span>
+        <span id="splash-percent-text">35%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Autonomous Splash Watchdog (完全自律型フェールセーフ・スクリプト) -->
+  <script>
+    (function() {
+      var s = document.getElementById('alice-splash-screen');
+      if (!s) return;
+      var bar = document.getElementById('splash-progress-bar');
+      var pct = document.getElementById('splash-percent-text');
+      var st = document.getElementById('splash-status-text');
+      
+      // 画面タップで即時強制消去
+      s.addEventListener('click', function() { if (s && s.parentNode) s.remove(); });
+
+      // メインJSや通信の成否にかかわらず、自律的に100%まで進め最大1.5秒で自動消滅
+      var step = 0;
+      var timer = setInterval(function() {
+        step++;
+        if (step === 1) {
+          if (bar) bar.style.width = '65%';
+          if (pct) pct.innerText = '65%';
+          if (st) st.innerText = 'CONNECTING TO CORE...';
+        } else if (step === 2) {
+          if (bar) bar.style.width = '90%';
+          if (pct) pct.innerText = '90%';
+          if (st) st.innerText = 'STARTING INTERFACE...';
+        } else if (step >= 3) {
+          clearInterval(timer);
+          if (bar) bar.style.width = '100%';
+          if (pct) pct.innerText = '100%';
+          if (st) st.innerText = 'READY';
+          setTimeout(function() {
+            if (s) {
+              s.style.transition = 'opacity 0.4s ease-out';
+              s.style.opacity = '0';
+              s.style.pointerEvents = 'none';
+              setTimeout(function() { if (s && s.parentNode) s.remove(); }, 400);
+            }
+          }, 150);
+        }
+      }, 350);
+    })();
+  </script>
+
+  <!-- ========================================================================= -->
+  <!-- PC / Tablet Left Sidebar (Fixed on MD screens)                             -->
+  <!-- ========================================================================= -->
+  <aside class="hidden md:flex flex-col w-72 glass-panel border-r border-slate-800/80 p-5 shrink-0 justify-between min-h-screen">
+    <div>
+      <!-- Brand & Rabbit Logo & Banner -->
+      <div class="mb-6 space-y-4">
+        <div class="rounded-2xl overflow-hidden border border-slate-700/60 shadow-lg shadow-purple-950/40">
+          <img src="/static/admin/alice_banner.jpg" alt="PROJECT ALICE" class="w-full h-20 object-cover object-center">
+        </div>
+        <div class="flex items-center gap-3.5 px-1">
+          <img src="/static/admin/alice_logo.jpg" alt="ALICE" class="w-16 h-16 rounded-2xl border-2 border-sky-400/60 shadow-xl shadow-sky-500/25 object-cover shrink-0 hover:scale-105 transition-transform duration-200">
+          <div>
+            <h1 class="font-brand text-2xl font-bold tracking-wide text-white bg-gradient-to-r from-sky-300 via-sky-100 to-amber-200 bg-clip-text text-transparent">Project_Alice</h1>
+            <p class="text-xs text-slate-300 tracking-tight font-medium">AI Listening Intelligent Core</p>
+            <span class="inline-block mt-0.5 text-[10px] font-mono text-sky-400 bg-sky-950/80 border border-sky-800/60 px-1.5 py-0.5 rounded">MANAGEMENT COCKPIT</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="space-y-2">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all glass-panel-active text-sky-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          Dashboard
+        </button>
+
+        <button onclick="switchTab('jobs')" id="nav-jobs" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          Job Explorer
+        </button>
+
+        <button onclick="switchTab('logs')" id="nav-logs" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          System Logs
+        </button>
+
+        <button onclick="switchTab('users')" id="nav-users" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          User Directory
+        </button>
+
+        <button onclick="switchTab('chat')" id="nav-chat" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          <span>AI Console</span>
+        </button>
+
+        <a href="/admin/logout" class="w-full flex items-center gap-3 px-4 py-2.5 mt-3 rounded-xl text-xs font-medium transition-all text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/40 cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <span>ログアウト</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Bottom System Status Card (Enlarged) -->
+    <div class="pt-4 border-t border-slate-800/80">
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800/60">
+          <span class="text-xs font-mono text-slate-400 uppercase tracking-wider font-semibold">Daemon Telemetry</span>
+          <span class="flex items-center gap-1.5 text-xs font-mono text-emerald-400 font-semibold">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>ACTIVE
+          </span>
+        </div>
+        
+        <div class="space-y-2.5 text-xs font-mono">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Tailscale</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-800/60 font-semibold text-[11px]">SECURED</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Worker Loop</span>
+            <span id="sidebar-worker-status" class="px-2 py-0.5 rounded bg-sky-950/90 text-sky-300 border border-sky-800/60 font-semibold text-[11px]">ONLINE</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">GPU Unit</span>
+            <span id="sidebar-gpu-status" class="text-cyan-300 font-semibold">RTX 5060 Ti</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Core Engine</span>
+            <span class="text-slate-300 font-semibold">v1.0.0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ========================================================================= -->
+  <!-- Mobile Top Header (Visible on small screens)                               -->
+  <!-- ========================================================================= -->
+  <header class="md:hidden flex items-center justify-between p-4 glass-panel border-b border-slate-800/80 sticky top-0 z-30">
+    <div class="flex items-center gap-3.5">
+      <img src="/static/admin/alice_logo.jpg" alt="ALICE" class="w-14 h-14 rounded-2xl border-2 border-sky-400/70 shadow-lg shadow-sky-500/30 object-cover shrink-0">
+      <div>
+        <span class="font-brand font-bold text-white tracking-wide text-lg">Project_Alice</span>
+        <p class="text-[10px] text-slate-300 font-mono">MANAGEMENT COCKPIT</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="mobile-live-badge" class="px-2.5 py-1 rounded-full text-xs font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1.5 font-semibold">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>LIVE
+      </span>
+      <a href="/admin/logout" title="ログアウト" class="p-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-rose-400 border border-rose-900/40 transition-colors flex items-center justify-center">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- Main Content Area                                                         -->
+  <!-- ========================================================================= -->
+  <main class="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto max-w-[1800px] mx-auto w-full pb-20 md:pb-8">
+
+    <!-- TAB 1: DASHBOARD -->
+    <section id="tab-dashboard" class="tab-content space-y-6">
+      
+      <!-- Top Title Bar -->
+      <div class="glass-panel px-5 py-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-md">
+        <div>
+          <h2 class="text-xl md:text-2xl font-bold tracking-tight tab-title flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+            <span>System Telemetry</span>
+          </h2>
+          <p class="text-xs tab-desc mt-0.5">Real-time hardware utilization, service daemons & active queue</p>
+        </div>
+        <div class="text-xs font-mono text-slate-300 flex items-center gap-2.5 self-end md:self-center">
+          <button id="metrics-interval-btn" onclick="cycleMetricsInterval()" title="クリックして更新頻度を変更 (1s / 3s / 5s / 10s)" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 hover:text-white border border-slate-700/80 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm group">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 group-hover:animate-ping"></span>
+            <span id="metrics-interval-text" class="font-bold">Auto: 3s</span>
+            <svg class="w-3 h-3 text-slate-400 group-hover:text-sky-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <button onclick="fetchMetrics()" title="今すぐ手動更新" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700/60 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Maintenance Mode Top Alert Banner -->
+      <div id="maintenance-top-banner" class="hidden mb-4 p-3.5 rounded-xl bg-amber-950/80 border border-amber-500/60 shadow-lg shadow-amber-500/10 flex items-center justify-between text-amber-200 animate-pulse">
+        <div class="flex items-center gap-2.5 text-xs font-mono">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+          <strong class="text-amber-300 font-bold uppercase tracking-wider">⚠️ MAINTENANCE MODE ACTIVE:</strong>
+          <span>一般LINEユーザーの受付を一時停止し、案内メッセージを自動返却中</span>
+        </div>
+        <button onclick="openMaintenanceModal()" class="px-3 py-1 rounded bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 text-amber-200 text-xs font-mono font-semibold transition-all">
+          設定変更
+        </button>
+      </div>
+
+      <!-- Btop-style Resource Gauges Grid (2x2 Grid with Enhanced Height) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- CPU Card -->
+        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden flex flex-col justify-between min-h-[195px] shadow-lg">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-mono text-sky-400 uppercase tracking-wider font-semibold">CPU Core Load</span>
+              <div class="flex items-center gap-2">
+                <span id="cpu-temp-badge" class="px-1.5 py-0.5 rounded bg-sky-950/80 text-sky-300 border border-sky-800/60 text-[10px] font-mono flex items-center gap-0.5">
+                  <span>🌡️</span><span id="cpu-temp">--°C</span>
+                </span>
+                <strong id="cpu-percent" class="text-lg font-mono font-bold text-white">0%</strong>
+              </div>
+            </div>
+            <!-- Gauge Bar -->
+            <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden mb-2.5">
+              <div id="cpu-bar" class="h-full bg-gradient-to-r from-sky-500 to-cyan-300 transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <!-- CPU Sparkline -->
+            <div class="flex items-stretch gap-1.5 w-full h-12 my-1">
+              <canvas id="canvas-cpu-spark" width="400" height="48" class="flex-1 h-full opacity-85"></canvas>
+              <div class="flex flex-col justify-between text-[9px] font-mono text-slate-400 select-none shrink-0 text-right leading-none py-0.5">
+                <span>100%</span>
+                <span>50%</span>
+                <span>0%</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800/40 mt-1">
+            <span>Cores: <strong id="cpu-cores" class="text-slate-200">-</strong></span>
+            <span>Task load</span>
+          </div>
+        </div>
+
+        <!-- RAM Card -->
+        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden flex flex-col justify-between min-h-[195px] shadow-lg">
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-mono text-purple-400 uppercase tracking-wider font-semibold">Memory (RAM)</span>
+              <div class="flex items-center gap-2">
+                <span id="mem-used-header" class="text-slate-400 text-[11px] font-mono">-- / -- GB</span>
+                <strong id="mem-percent" class="text-lg font-mono font-bold text-white">0%</strong>
+              </div>
+            </div>
+            <!-- Gauge Bar -->
+            <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden mb-2.5">
+              <div id="mem-bar" class="h-full bg-gradient-to-r from-purple-500 to-pink-400 transition-all duration-500" style="width: 0%"></div>
+            </div>
+            <!-- Memory Sparkline -->
+            <div class="flex items-stretch gap-1.5 w-full h-12 my-1">
+              <canvas id="canvas-mem-spark" width="400" height="48" class="flex-1 h-full opacity-85"></canvas>
+              <div class="flex flex-col justify-between text-[9px] font-mono text-slate-400 select-none shrink-0 text-right leading-none py-0.5">
+                <span>100%</span>
+                <span>50%</span>
+                <span>0%</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800/40 mt-1">
+            <span id="mem-usage">0 / 0 GB</span>
+            <span>OS Buffer</span>
+          </div>
+        </div>
+
+        <!-- GPU / VRAM Card (Dual Waveform & Temp) -->
+        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden border border-pink-500/30 flex flex-col justify-between shadow-lg shadow-pink-500/5 min-h-[195px]">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-pink-400 animate-pulse"></span>
+                <span class="text-xs font-mono text-pink-400 uppercase tracking-wider font-bold">GPU (RTX)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="gpu-temp-badge" class="px-1.5 py-0.5 rounded bg-pink-950/90 text-pink-300 border border-pink-700/60 text-[10px] font-mono flex items-center gap-0.5">
+                  <span>🌡️</span><span id="gpu-temp">--°C</span>
+                </span>
+              </div>
+            </div>
+
+            <!-- Dual Core & VRAM Metric & Progress Bars -->
+            <div class="grid grid-cols-2 gap-3 mb-1.5 mt-0.5">
+              <div>
+                <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+                  <span class="text-cyan-300 flex items-center gap-1">
+                    <span class="w-2 h-0.5 bg-cyan-400 inline-block"></span> Core
+                  </span>
+                  <strong id="gpu-core-percent" class="text-white font-bold">0%</strong>
+                </div>
+                <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                  <div id="gpu-core-bar" class="h-full bg-gradient-to-r from-cyan-500 to-sky-300 transition-all duration-500" style="width: 0%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+                  <span class="text-pink-300 flex items-center gap-1">
+                    <span class="w-2 h-0.5 bg-pink-400 inline-block"></span> VRAM
+                  </span>
+                  <div class="flex items-center gap-2">
+                    <span id="gpu-vram-used-text" class="text-slate-400 text-[10px]">-- / -- GB</span>
+                    <strong id="gpu-vram-percent" class="text-white font-bold">0%</strong>
+                  </div>
+                </div>
+                <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                  <div id="gpu-vram-bar" class="h-full bg-gradient-to-r from-pink-500 to-rose-400 transition-all duration-500" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dual Realtime Sparkline Canvas -->
+            <div class="flex items-stretch gap-1.5 w-full h-12 my-1">
+              <canvas id="canvas-gpu-dual" width="400" height="48" class="flex-1 h-full"></canvas>
+              <div class="flex flex-col justify-between text-[9px] font-mono text-slate-400 select-none shrink-0 text-right leading-none py-0.5">
+                <span>100%</span>
+                <span>50%</span>
+                <span>0%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800/40 mt-1">
+            <span id="gpu-name" class="truncate max-w-[120px]">GeForce RTX</span>
+            <span id="gpu-usage">0 / 0 GB</span>
+          </div>
+        </div>
+
+        <!-- Disk Card (Multi-Drive: System / and Workspaces /data) -->
+        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden flex flex-col justify-between min-h-[195px] shadow-lg">
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <span class="text-xs font-mono text-amber-400 uppercase tracking-wider font-semibold">Storage Drives</span>
+              <span class="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60 text-[10px] font-mono font-semibold">2 DRIVES</span>
+            </div>
+
+            <!-- Drive 1: System (/) -->
+            <div class="mb-2.5">
+              <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+                <span class="text-amber-300 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block"></span> System <span class="text-slate-400">(/)</span>
+                </span>
+                <div class="flex items-center gap-2">
+                  <span id="disk-root-used-text" class="text-slate-400 text-[10px]">-- / -- GB</span>
+                  <strong id="disk-root-percent" class="text-white font-bold">0%</strong>
+                </div>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                <div id="disk-root-bar" class="h-full bg-gradient-to-r from-amber-500 to-yellow-300 transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Drive 2: Workspaces (/data) -->
+            <div class="mb-2">
+              <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+                <span class="text-emerald-300 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> Workspaces <span class="text-slate-400">(/data)</span>
+                </span>
+                <div class="flex items-center gap-2">
+                  <span id="disk-data-used-text" class="text-slate-400 text-[10px]">-- / -- GB</span>
+                  <strong id="disk-data-percent" class="text-white font-bold">0%</strong>
+                </div>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                <div id="disk-data-bar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-300 transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800/40 mt-1">
+            <span>NVMe Storage Array</span>
+            <span id="disk-total-combined">0 / 0 GB</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Daemons Status & Operations Banner -->
+      <div class="glass-panel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-mono uppercase text-slate-400 tracking-wider font-semibold">System Daemons & Controls:</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-xs font-mono">
+          <!-- Core -->
+          <div class="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1 gap-2">
+            <span class="text-slate-400">Core:</span>
+            <span id="svc-core" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold text-[11px]">checking...</span>
+            <button onclick="restartService('core')" title="Coreを再起動" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-sky-300 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+          </div>
+          <!-- CoPilot -->
+          <div class="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1 gap-2">
+            <span class="text-slate-400">CoPilot (Discord):</span>
+            <span id="svc-copilot" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold text-[11px]">checking...</span>
+            <button onclick="restartService('copilot')" title="CoPilotを再起動" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-sky-300 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+          </div>
+          <!-- Ollama -->
+          <div class="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1 gap-2">
+            <span class="text-slate-400">Ollama (LLM):</span>
+            <span id="svc-ollama" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold text-[11px]">checking...</span>
+            <button onclick="restartService('ollama')" title="Ollamaを再起動/VRAM解放" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-sky-300 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+          </div>
+          <!-- LINE Gateway -->
+          <div class="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1 gap-2">
+            <span class="text-slate-400">LINE Gateway:</span>
+            <span id="svc-line" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold text-[11px]">checking...</span>
+            <button onclick="restartService('line')" title="LINE Gateway (Core) を再起動" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-sky-300 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </button>
+          </div>
+          <!-- Maintenance Control Button -->
+          <button id="btn-open-maintenance" onclick="openMaintenanceModal()" title="メンテナンスモードの設定・管理" class="flex items-center bg-slate-900/90 border border-slate-800 hover:border-amber-500/70 rounded-lg px-2.5 py-1 gap-2 transition-all group cursor-pointer">
+            <span id="maintenance-indicator" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span class="text-slate-400 group-hover:text-amber-300">メンテナンス:</span>
+            <span id="maintenance-badge-status" class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-semibold text-[11px]">OFF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Job & Queue Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Currently Running Job -->
+        <div class="lg:col-span-2 glass-panel p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-sky-400 animate-ping"></span>
+                Active Processing Pipeline
+              </h3>
+              <span id="active-job-badge" class="px-2.5 py-0.5 rounded-full text-xs font-mono bg-slate-800 text-slate-400">IDLE</span>
+            </div>
+
+            <div id="active-job-container" class="space-y-4">
+              <div class="p-8 text-center text-slate-500 font-mono text-sm border border-dashed border-slate-800 rounded-xl">
+                現在実行中のジョブはありません（スタンバイ状態）
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending Queue List -->
+        <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-300">
+                Pending Queue (<span id="queue-count" class="text-sky-400">0</span>)
+              </h3>
+              <span class="text-[11px] font-mono text-slate-500">FIFO</span>
+            </div>
+            
+            <div id="queue-list-container" class="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+              <div class="text-xs text-slate-500 text-center py-6">待機中のジョブはありません</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TAB 2: JOB EXPLORER (Split View on PC) -->
+    <!-- TAB 2: JOB EXPLORER -->
+    <section id="tab-jobs" class="tab-content hidden space-y-4">
+      <div class="glass-panel px-5 py-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+        <div>
+          <h2 class="text-xl md:text-2xl font-bold tracking-tight tab-title flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+            <span>Job Explorer</span>
+          </h2>
+          <p class="text-xs tab-desc mt-0.5">過去の実行履歴、成果物プレビュー (Markdown/Text) およびログ閲覧</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-300">
+            <span class="text-slate-500 text-[11px] font-mono">👤</span>
+            <select id="job-user-filter" onchange="filterJobs()" class="bg-transparent text-xs text-sky-300 focus:outline-none font-medium cursor-pointer max-w-[140px] sm:max-w-[180px]">
+              <option value="ALL" class="bg-slate-900 text-slate-200">全員のJob</option>
+            </select>
+          </div>
+          <input type="text" id="job-search-input" onkeyup="filterJobs()" placeholder="ユーザー名・ファイル名・IDで検索..." class="bg-slate-950/90 border border-slate-700 text-xs px-3.5 py-2 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-400 w-48 sm:w-56">
+          <button onclick="fetchJobs()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-sky-300 border border-slate-700 transition-colors cursor-pointer">更新</button>
+        </div>
+      </div>
+
+      <!-- Split Container (2 Columns on MD) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:h-[calc(100vh-175px)] lg:min-h-[750px]">
+        
+        <!-- Left Column: Job Table / List (4 cols on lg, 3 cols on xl) -->
+        <div class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl p-3.5 flex flex-col h-[280px] lg:h-full overflow-hidden">
+          <div class="flex items-center gap-1.5 pb-3 border-b border-slate-800/80 text-xs font-mono text-slate-400 px-1">
+            <button onclick="setJobFilter('ALL')" id="filter-all" class="px-2.5 py-1 rounded-lg bg-sky-950 text-sky-300 border border-sky-800">ALL</button>
+            <button onclick="setJobFilter('COMPLETED')" id="filter-completed" class="px-2.5 py-1 rounded-lg hover:bg-slate-800">COMPLETED</button>
+            <button onclick="setJobFilter('FAILED')" id="filter-failed" class="px-2.5 py-1 rounded-lg hover:bg-slate-800">FAILED</button>
+          </div>
+
+          <div id="jobs-list" class="flex-1 overflow-y-auto divide-y divide-slate-800/40 mt-2 pr-1 space-y-1">
+            <div class="text-center py-12 text-slate-500 text-xs font-mono">ジョブを読み込み中...</div>
+          </div>
+        </div>
+
+        <!-- Right Column: Artifact & Log Split Viewer (8 cols on lg, 9 cols on xl) -->
+        <div class="lg:col-span-8 xl:col-span-9 glass-panel rounded-2xl p-4 sm:p-5 flex flex-col min-h-[550px] h-[65vh] lg:h-full overflow-hidden relative">
+          
+          <!-- Viewer Header -->
+          <div id="viewer-header" class="pb-3 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 id="selected-job-title" class="text-base font-bold text-white truncate max-w-xl">ジョブを選択してください</h3>
+              <p id="selected-job-meta" class="text-xs font-mono text-slate-400 mt-0.5">左の一覧から確認したいJobをクリックしてください</p>
+            </div>
+            <div id="artifact-action-buttons" class="hidden flex items-center gap-2">
+              <a id="btn-web-view" href="#" target="_blank" class="px-3 py-1.5 rounded-lg text-xs font-mono bg-sky-600/30 text-sky-300 border border-sky-500/40 hover:bg-sky-600/50">Webで開く</a>
+              <button id="btn-delete-job" onclick="deleteCurrentJob()" class="px-3 py-1.5 rounded-lg text-xs font-mono bg-rose-950/60 text-rose-300 border border-rose-700/60 hover:bg-rose-900/80 transition-colors flex items-center gap-1" title="このジョブを完全に削除">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <span>削除</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Artifact Selection Tabs -->
+          <div id="artifact-tabs" class="flex flex-wrap items-center gap-1.5 py-2.5 border-b border-slate-800/60 text-xs font-mono text-slate-400">
+            <span class="text-slate-600 text-xs">成果物:</span>
+          </div>
+
+          <!-- Artifact Content Box -->
+          <div class="flex-1 overflow-y-auto mt-3 bg-slate-950/80 rounded-xl p-4 sm:p-5 border border-slate-800/80 font-mono text-xs sm:text-sm leading-relaxed text-slate-200 select-text whitespace-pre-wrap min-h-[380px]" id="artifact-content-display">
+左のジョブ一覧から項目を選択すると、ここに文字起こし、要約、議事録、およびログファイルが瞬時にプレビュー表示されます。
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 3: SYSTEM LOGS -->
+    <section id="tab-logs" class="tab-content hidden space-y-4">
+      <div class="glass-panel px-5 py-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+        <div>
+          <h2 class="text-xl md:text-2xl font-bold tracking-tight tab-title flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+            <span>System Log Terminal</span>
+          </h2>
+          <p class="text-xs tab-desc mt-0.5">Core、Transcript、Summary、Minute 各種モジュールの稼働ログおよび過去アーカイブの閲覧</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-xs font-mono">
+          <!-- 1. 種類（カテゴリ）プルダウン -->
+          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-700 px-2.5 py-1.5 rounded-xl">
+            <span class="text-slate-400 text-[11px]">種類:</span>
+            <select id="log-category-select" onchange="onLogCategoryChange()" class="bg-transparent text-sky-300 font-semibold focus:outline-none cursor-pointer">
+              <option value="core" class="bg-slate-900 text-slate-200">Core (システム)</option>
+              <option value="transcript" class="bg-slate-900 text-slate-200">Transcript (文字起こし)</option>
+              <option value="summary" class="bg-slate-900 text-slate-200">Summary (要約)</option>
+              <option value="minutes" class="bg-slate-900 text-slate-200">Minute (議事録)</option>
+            </select>
+          </div>
+
+          <!-- 2. ファイル選択プルダウン -->
+          <select id="log-file-select" onchange="fetchSystemLogs()" class="bg-slate-950 border border-slate-700 text-slate-200 px-3 py-2 rounded-xl focus:outline-none max-w-[280px] sm:max-w-xs truncate cursor-pointer">
+            <option value="alice.log" class="bg-slate-900 text-slate-200">alice.log (最新稼働)</option>
+          </select>
+
+          <!-- 3. レベルフィルタ -->
+          <select id="log-level-select" onchange="fetchSystemLogs()" class="bg-slate-950 border border-slate-700 text-slate-200 px-2.5 py-2 rounded-xl focus:outline-none cursor-pointer">
+            <option value="ALL" class="bg-slate-900 text-slate-200">すべて</option>
+            <option value="ERROR" class="bg-slate-900 text-slate-200">ERROR のみ</option>
+            <option value="WARN" class="bg-slate-900 text-slate-200">WARN のみ</option>
+            <option value="INFO" class="bg-slate-900 text-slate-200">INFO のみ</option>
+          </select>
+
+          <button onclick="fetchSystemLogs()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 transition-colors">再読込</button>
+          
+          <button onclick="cleanupOldLogs()" class="px-3 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/60 transition-colors flex items-center gap-1" title="2週間以上経過した古いログおよび空ログを整理">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <span>ログ整理</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Log Terminal Display Box -->
+      <div class="glass-panel p-5 rounded-2xl flex flex-col h-[calc(100vh-175px)] min-h-[750px]">
+        <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800/60 text-xs font-mono text-slate-400">
+          <span id="log-status-info">ログを表示中...</span>
+          <span class="text-slate-500 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>Auto-tail enabled</span>
+        </div>
+        <div id="system-log-terminal" class="flex-1 overflow-y-auto bg-slate-950/90 rounded-xl p-5 font-mono text-xs sm:text-sm leading-relaxed text-slate-200 border border-slate-800 select-text whitespace-pre-wrap">
+ログを読み込んでいます...
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: USER DIRECTORY -->
+    <section id="tab-users" class="tab-content hidden space-y-4">
+      <div class="glass-panel px-5 py-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+        <div>
+          <h2 class="text-xl md:text-2xl font-bold tracking-tight tab-title flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+            <span>User Directory & LINE Access Control</span>
+          </h2>
+          <p class="text-xs tab-desc mt-0.5">LINE友だち追加時に自動登録されたユーザーの名前変更・アクセス権限制御（users.db）</p>
+        </div>
+        <div class="flex items-center gap-3 text-xs font-mono">
+          <div class="text-[11px] text-slate-400">
+            登録ユーザー数: <strong id="user-count" class="text-sky-300">0</strong> 名
+          </div>
+          <button onclick="fetchUsers()" title="最新情報に更新" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700/60 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Info Banner explaining Automatic Registration -->
+      <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 text-xs font-mono flex items-start gap-2.5 text-slate-400">
+        <span class="text-sky-400 text-sm">💡</span>
+        <div class="text-[11px] leading-relaxed">
+          LINEユーザーがBotを友だち追加すると、初期表示名（LINEのアカウント名）で自動登録されます。<br>
+          コックピット上での呼びやすい名前に変更して「保存」するか、不要なユーザーは「REJECTED（拒否）」または「削除」してください。
+        </div>
+      </div>
+
+      <!-- Search Box -->
+      <div class="flex items-center justify-between gap-3 text-xs font-mono">
+        <div class="relative w-full max-w-xs">
+          <input id="user-search-input" onkeyup="filterUsers()" type="text" placeholder="名前またはLINE IDで絞り込み..." class="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-slate-700 text-xs">
+        </div>
+      </div>
+
+      <!-- User Mapping Table -->
+      <div class="glass-panel rounded-2xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs font-mono border-collapse">
+            <thead>
+              <tr class="bg-slate-900/80 text-slate-400 border-b border-slate-800 text-[11px]">
+                <th class="py-3 px-4 font-semibold">表示名 (コックピット反映名)</th>
+                <th class="py-3 px-4 font-semibold">LINE User ID</th>
+                <th class="py-3 px-4 font-semibold">認証ステータス</th>
+                <th class="py-3 px-4 font-semibold text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody id="user-table-body" class="divide-y divide-slate-800/60">
+              <tr>
+                <td colspan="4" class="text-center py-8 text-slate-500 font-mono text-xs">ユーザーを読み込み中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Toast Notification -->
+      <div id="user-toast-msg" class="text-center text-xs font-mono text-emerald-400 opacity-0 transition-opacity">
+        ✓ メッセージ
+      </div>
+    </section>
+
+
+    <!-- ========================================================================= -->
+    <!-- Tab 6: AI Console (Assistant & Dev CoPilot)                                -->
+    <!-- ========================================================================= -->
+    <section id="tab-chat" class="tab-content hidden space-y-4">
+      <!-- Chat Header Bar -->
+      <div class="glass-panel rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 border border-slate-800">
+        <!-- Left: Mode Switcher -->
+        <div class="flex items-center gap-3">
+          <div class="flex bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+            <button onclick="switchChatMode('assistant')" id="chat-mode-assistant" class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-500/10 cursor-pointer">
+              <span>👔 Assistant</span>
+              <span class="text-[10px] opacity-75 font-normal">秘書</span>
+            </button>
+            <button onclick="switchChatMode('copilot')" id="chat-mode-copilot" class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 cursor-pointer">
+              <span>🛠️ CoPilot</span>
+              <span class="text-[10px] opacity-75 font-normal">開発</span>
+            </button>
+          </div>
+          <div id="chat-mode-desc" class="hidden sm:block text-xs text-slate-400 font-sans">
+            スケジュール・タスク・会議録・日常業務支援
+          </div>
+        </div>
+
+        <!-- Right: Status Badges (画面右側に配置) -->
+        <div class="flex items-center gap-2.5 flex-wrap ml-auto">
+          <!-- Ollama Status Badge -->
+          <div id="ollama-status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 shrink-0">
+            <span class="flex h-2 w-2 relative">
+              <span id="ollama-dot-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 hidden"></span>
+              <span id="ollama-dot" class="relative inline-flex rounded-full h-2 w-2 bg-slate-500"></span>
+            </span>
+            <span class="font-bold text-slate-400">Ollama:</span>
+            <span id="ollama-model-text" class="text-sky-300">qwen3.5:9b</span>
+            <span id="ollama-vram-text" class="px-1.5 py-0.5 rounded text-[9px] bg-slate-800 text-slate-400 font-sans">確認中</span>
+          </div>
+
+          <!-- Antigravity Status & Model Selector -->
+          <div id="antigravity-status-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-purple-900/40 text-[11px] font-mono text-slate-300 shrink-0">
+            <div class="flex items-center gap-1.5">
+              <span id="antigravity-dot" class="relative inline-flex rounded-full h-2 w-2 bg-slate-500"></span>
+              <span class="font-bold text-slate-400 hidden lg:inline">Antigravity:</span>
+              <span id="antigravity-state-text" class="px-1.5 py-0.5 rounded text-[9px] bg-slate-800 text-slate-400 font-sans">IDLE</span>
+            </div>
+            <select id="antigravity-model-select" onchange="changeAntigravityModel(this.value)" class="bg-slate-900/90 border border-purple-800/60 hover:border-purple-500 rounded-lg px-2 py-0.5 text-[10px] font-mono text-purple-300 focus:outline-none cursor-pointer">
+              <option value="Gemini 3.8 Flash (High)" class="bg-slate-900 text-purple-200" selected>⚡ Gemini 3.8 Flash</option>
+              <option value="Gemini 3.8 Pro" class="bg-slate-900 text-purple-200">🧠 Gemini 3.8 Pro</option>
+              <option value="Claude 3.5 Sonnet" class="bg-slate-900 text-purple-200">🎭 Claude 3.5 Sonnet</option>
+            </select>
+          </div>
+
+          <!-- Clear History Button -->
+          <button onclick="clearChatSession()" class="p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer" title="チャット履歴を初期化">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Messages Container -->
+      <div id="chat-messages-container" class="glass-panel rounded-2xl p-4 sm:p-6 overflow-y-auto space-y-4 h-[calc(100vh-320px)] min-h-[420px] flex flex-col">
+        <!-- Default Welcome Banner -->
+        <div id="chat-welcome-box" class="my-auto text-center max-w-md mx-auto space-y-3 py-8">
+          <div id="chat-welcome-avatar" class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/20 mx-auto">
+            👔
+          </div>
+          <h3 id="chat-welcome-title" class="text-lg font-bold text-white font-brand">ALICE 秘書コンソール</h3>
+          <p id="chat-welcome-subtitle" class="text-xs text-slate-400 leading-relaxed font-sans">
+            Google Tasks、カレンダー、人員動静、システムメトリクス、過去の会議録を横断検索・管理できます。「明日の予定は？」「タスク一覧」「今日のVRAMピーク」など気軽にどうぞ。
+          </p>
+          <div id="chat-suggestions" class="flex flex-wrap justify-center gap-2 pt-2">
+            <button onclick="applySuggestion('明日の予定と動静を教えて')" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 text-slate-300 text-xs transition-colors cursor-pointer">
+              📅 明日の予定と動静
+            </button>
+            <button onclick="applySuggestion('現在のToDo・タスク一覧')" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 text-slate-300 text-xs transition-colors cursor-pointer">
+              📋 ToDo一覧
+            </button>
+            <button onclick="applySuggestion('システム負荷とVRAM温度を確認')" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 text-slate-300 text-xs transition-colors cursor-pointer">
+              ⚡ サーバー状態
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Area -->
+      <div class="glass-panel rounded-2xl p-3 border border-slate-800 relative">
+        <!-- Antigravity Live Step Floater (CoPilot mode only) -->
+        <div id="antigravity-live-floater" class="hidden mb-2 px-3 py-2 rounded-xl bg-purple-950/60 border border-purple-800/80 flex items-center justify-between text-xs font-mono text-purple-300 animate-pulse">
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-purple-400 animate-ping"></span>
+            <span id="antigravity-step-label">🤖 Antigravity自律調査中...</span>
+          </div>
+          <span id="antigravity-step-tool" class="text-[10px] px-2 py-0.5 rounded bg-purple-900/80 text-purple-200">tool</span>
+        </div>
+
+        <form onsubmit="handleChatSubmit(event)" class="flex items-end gap-2.5">
+          <textarea id="chat-input-textarea" rows="2" placeholder="メッセージを入力... (Shift+Enterで改行、Enterで送信)" 
+            class="flex-1 bg-slate-950/90 border border-slate-800 focus:border-sky-500/80 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 resize-none focus:outline-none transition-colors"
+            onkeydown="handleChatKeydown(event)"></textarea>
+          
+          <button type="button" id="voice-chat-toggle-btn" onclick="openVoiceChatModal()" class="h-11 px-3.5 rounded-xl bg-slate-900/90 hover:bg-sky-950/70 border border-slate-800 hover:border-sky-500/60 text-sky-400 hover:text-sky-300 transition-all cursor-pointer flex items-center justify-center shrink-0 shadow-md" title="リアルタイム音声対話モード (Full-Duplex)">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+          </button>
+          
+          <button type="submit" id="chat-send-btn" class="h-11 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          </button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- System Maintenance Control Modal                                          -->
+  <!-- ========================================================================= -->
+  <div id="maintenance-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md transition-all">
+    <div class="w-full max-w-lg glass-panel rounded-3xl p-6 border-2 border-amber-500/80 shadow-2xl relative overflow-hidden animate-in fade-in zoom-in duration-200 text-slate-200">
+      <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-orange-400 to-yellow-400"></div>
+
+      <!-- Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-950/80 border border-amber-500/80 flex items-center justify-center text-amber-300 text-lg shadow-lg shadow-amber-500/20 shrink-0">
+            🛡️
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white font-brand">システムメンテナンス制御 (Maintenance Guard)</h3>
+            <p class="text-xs text-slate-400">LINE・外部受付の一時停止および自動案内文の管理</p>
+          </div>
+        </div>
+        <button onclick="closeMaintenanceModal()" class="text-slate-400 hover:text-white text-lg font-bold p-1 cursor-pointer">✕</button>
+      </div>
+
+      <!-- Body -->
+      <div class="space-y-4 py-4 text-sm">
+        <!-- Status Toggle Row -->
+        <div class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
+          <div>
+            <div class="font-semibold text-white flex items-center gap-2">
+              <span>メンテナンスモード</span>
+              <span id="modal-status-text" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">OFF</span>
+            </div>
+            <div class="text-xs text-slate-400 mt-0.5">有効にすると一般LINEユーザーからの受付を一時停止します</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="modal-maintenance-toggle" class="sr-only peer" onchange="onMaintenanceToggleChange()">
+            <div class="w-12 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+          </label>
+        </div>
+
+        <!-- Message Textarea -->
+        <div>
+          <label class="block font-semibold text-white text-xs font-mono mb-1 flex items-center justify-between">
+            <span>LINE返答メッセージ (Maintenance Message)</span>
+            <button onclick="resetDefaultMaintenanceMessage()" class="text-[11px] text-amber-400 hover:underline cursor-pointer">定型文に戻す</button>
+          </label>
+          <p class="text-[11px] text-slate-400 mb-2">メンテ中にユーザーがメッセージや音声を送信した際、即座に返信される案内文です。</p>
+          <textarea id="modal-maintenance-message" rows="4" class="w-full p-3 rounded-xl bg-slate-950/90 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs font-mono text-slate-200 resize-none leading-relaxed"></textarea>
+        </div>
+
+        <!-- Admin Bypass Checkbox -->
+        <div class="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
+          <input type="checkbox" id="modal-maintenance-bypass" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-amber-600 focus:ring-amber-500 cursor-pointer">
+          <label for="modal-maintenance-bypass" class="text-xs text-slate-300 cursor-pointer select-none">
+            管理者 (<code class="text-amber-300 font-mono">LINE_ADMIN_USER</code>) はメンテ中もテスト利用・通常応答を許可する
+          </label>
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+        <button onclick="closeMaintenanceModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-all cursor-pointer">
+          閉じる
+        </button>
+        <button id="btn-save-maintenance" onclick="saveMaintenanceSettings()" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-bold text-white shadow-lg shadow-amber-600/30 transition-all cursor-pointer">
+          設定を保存して適用
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ========================================================================= -->
+  <!-- Full-Duplex Real-Time Voice Chat Modal (Reactive AI Orb)                  -->
+  <!-- ========================================================================= -->
+  <div id="voice-chat-modal" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-between p-6 bg-slate-950/95 backdrop-blur-2xl transition-all duration-300">
+    <!-- Top Header -->
+    <div class="w-full max-w-2xl flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-400">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-white font-brand">ALICE Voice Experience</h2>
+          <p id="voice-status-sub" class="text-[11px] font-mono text-sky-400">Full-Duplex リアルタイム双方向音声対話</p>
+        </div>
+      </div>
+      <button onclick="closeVoiceChatModal()" class="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer" title="音声対話を終了">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Center: Glowing Reactive AI Orb & Visualizer -->
+    <div class="flex flex-col items-center justify-center my-auto space-y-8 w-full max-w-md">
+      <!-- Reactive Orb Container -->
+      <div class="relative flex items-center justify-center">
+        <!-- Outer Glow Ring -->
+        <div id="voice-orb-glow" class="absolute w-56 h-56 rounded-full bg-sky-500/20 blur-3xl transition-all duration-500 animate-pulse"></div>
+        <!-- Middle Pulse Ring -->
+        <div id="voice-orb-ring" class="absolute w-44 h-44 rounded-full border-2 border-sky-400/40 transition-all duration-300"></div>
+        <!-- Core Orb -->
+        <div id="voice-orb-core" class="relative w-32 h-32 rounded-full bg-gradient-to-tr from-sky-500 via-teal-400 to-indigo-500 shadow-2xl shadow-sky-500/40 flex items-center justify-center transition-all duration-300 cursor-pointer" onclick="handleOrbClick()">
+          <span id="voice-orb-icon" class="text-3xl text-slate-950">🎙️</span>
+        </div>
+      </div>
+
+      <!-- State Badge -->
+      <div id="voice-state-badge" class="px-4 py-1.5 rounded-full text-xs font-mono font-bold bg-sky-500/20 text-sky-300 border border-sky-400/30 tracking-wider transition-all duration-300">
+        LISTENING...
+      </div>
+
+      <!-- Live Transcriptions / Speech Box -->
+      <div class="w-full min-h-[100px] flex flex-col items-center justify-center text-center px-4 bg-slate-900/40 rounded-2xl border border-slate-800/60 p-4">
+        <p id="voice-user-text" class="text-sm font-medium text-slate-300 transition-all duration-150 leading-relaxed"></p>
+        <p id="voice-ai-text" class="text-sm font-medium text-emerald-300 transition-all duration-150 leading-relaxed mt-2"></p>
+      </div>
+    </div>
+
+    <!-- Footer Controls -->
+    <div class="w-full max-w-md flex items-center justify-center gap-4 text-xs font-mono text-slate-500">
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>割り込み発話(Barge-in)対応</span>
+      <span>•</span>
+      <span>手ぶらハンズフリー対話</span>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- Mobile Bottom Navigation (Visible on small screens)                       -->
+  <!-- ========================================================================= -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-panel border-t border-slate-800/80 py-2 px-6 flex justify-around items-center z-40">
+    <button onclick="switchTab('dashboard')" id="mob-dashboard" class="flex flex-col items-center gap-1 text-sky-400 text-[10px] font-medium">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Metrics
+    </button>
+    <button onclick="switchTab('jobs')" id="mob-jobs" class="flex flex-col items-center gap-1 text-slate-400 text-[10px] font-medium">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+      Jobs
+    </button>
+    <button onclick="switchTab('logs')" id="mob-logs" class="flex flex-col items-center gap-1 text-slate-400 text-[10px] font-medium">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Logs
+    </button>
+    <button onclick="switchTab('users')" id="mob-users" class="flex flex-col items-center gap-1 text-slate-400 text-[10px] font-medium">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      Users
+    </button>
+    <button onclick="switchTab('chat')" id="mob-chat" class="flex flex-col items-center gap-1 text-slate-400 text-[10px] font-medium">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+      Chat
+    </button>
+  </nav>
+
+  <!-- ========================================================================= -->
+  <!-- Client JavaScript Logic                                                   -->
+  <!-- ========================================================================= -->
+  <script>
+    // Robust Authenticated Fetch Wrapper
+    async function aliceFetch(url, options = {}) {
+      options.credentials = 'same-origin';
+      try {
+        const res = await fetch(url, options);
+        if (res.status === 401) {
+          console.warn('[AdminAuth] 401 Unauthorized encountered. Session invalid or expired. Redirecting to login...');
+          const currentPath = window.location.pathname + window.location.search + window.location.hash;
+          window.location.href = '/admin/login?next=' + encodeURIComponent(currentPath);
+          return null;
+        }
+        return res;
+      } catch (err) {
+        console.error('[Admin] Network communication error for ' + url + ':', err);
+        throw err;
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    let currentTab = 'dashboard';
+    let allJobs = [];
+    let currentJobFilter = 'ALL';
+    let selectedJob = null;
+    let metricsTimer = null;
+
+    function switchTab(tabId) {
+      currentTab = tabId;
+      try {
+        history.replaceState(null, null, '#' + tabId);
+      } catch (e) {}
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      const activeEl = document.getElementById('tab-' + tabId);
+      if (activeEl) activeEl.classList.remove('hidden');
+
+      // Update Desktop Nav
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.remove('glass-panel-active', 'text-sky-400');
+        el.classList.add('text-slate-400');
+      });
+      const navBtn = document.getElementById('nav-' + tabId);
+      if (navBtn) {
+        navBtn.classList.add('glass-panel-active', 'text-sky-400');
+        navBtn.classList.remove('text-slate-400');
+      }
+
+      if (tabId === 'users') {
+        fetchUsers();
+      } else if (tabId === 'chat') {
+        initChatTab();
+      }
+
+      // Update Mobile Nav
+      ['dashboard', 'jobs', 'logs', 'users', 'chat'].forEach(id => {
+        const mobEl = document.getElementById('mob-' + id);
+        if (mobEl) {
+          if (id === tabId) {
+            mobEl.classList.add('text-sky-400');
+            mobEl.classList.remove('text-slate-400');
+          } else {
+            mobEl.classList.remove('text-sky-400');
+            mobEl.classList.add('text-slate-400');
+          }
+        }
+      });
+
+      if (tabId === 'jobs') fetchJobs();
+      if (tabId === 'logs') fetchSystemLogs();
+    }
+
+    // 1. Fetch Metrics (Btop Telemetry)
+        // Telemetry Update Interval Controller
+    const updateIntervals = [1, 3, 5, 10]; // seconds
+    let currentIntervalSec = 3;
+
+    function applyMetricsInterval(sec) {
+      currentIntervalSec = sec;
+      const textEl = document.getElementById('metrics-interval-text');
+      if (textEl) textEl.innerText = `Auto: ${sec}s`;
+      if (metricsTimer) clearInterval(metricsTimer);
+      metricsTimer = setInterval(fetchMetrics, sec * 1000);
+      try {
+        localStorage.setItem('alice_metrics_interval', String(sec));
+      } catch (e) {}
+    }
+
+    function cycleMetricsInterval() {
+      const idx = updateIntervals.indexOf(currentIntervalSec);
+      const nextIdx = (idx >= 0 ? idx + 1 : 1) % updateIntervals.length;
+      applyMetricsInterval(updateIntervals[nextIdx]);
+
+      const btn = document.getElementById('metrics-interval-btn');
+      if (btn) {
+        btn.classList.add('ring-2', 'ring-sky-400');
+        setTimeout(() => btn.classList.remove('ring-2', 'ring-sky-400'), 250);
+      }
+    }
+
+    // Sparkline & Waveform History
+    const cpuSparkHistory = Array(20).fill(0);
+    const memSparkHistory = Array(20).fill(0);
+    const gpuCoreHistory = Array(20).fill(0);
+    const gpuVramHistory = Array(20).fill(0);
+
+    function drawTelemetryGrid(ctx, w, h) {
+      ctx.save();
+      const padY = 2;
+      const effectiveH = h - padY * 2;
+
+      // 縦軸方向（Y軸スケール: 0%, 25%, 50%, 75%, 100%）の薄いガイドライン
+      const lines = [
+        { pct: 100, y: padY, dashed: false, color: 'rgba(148, 163, 184, 0.22)' },
+        { pct: 75,  y: padY + effectiveH * 0.25, dashed: true, color: 'rgba(148, 163, 184, 0.09)' },
+        { pct: 50,  y: padY + effectiveH * 0.50, dashed: true, color: 'rgba(148, 163, 184, 0.18)' },
+        { pct: 25,  y: padY + effectiveH * 0.75, dashed: true, color: 'rgba(148, 163, 184, 0.09)' },
+        { pct: 0,   y: h - padY, dashed: false, color: 'rgba(148, 163, 184, 0.22)' }
+      ];
+
+      lines.forEach(l => {
+        ctx.beginPath();
+        if (l.dashed) {
+          ctx.setLineDash([3, 4]);
+        } else {
+          ctx.setLineDash([]);
+        }
+        ctx.strokeStyle = l.color;
+        ctx.lineWidth = 1;
+        ctx.moveTo(0, l.y);
+        ctx.lineTo(w, l.y);
+        ctx.stroke();
+      });
+
+      ctx.restore();
+    }
+
+    function drawSparkline(canvasId, history, color, fill) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // 背景の薄い罫線を描画
+      drawTelemetryGrid(ctx, w, h);
+
+      const padY = 2;
+      const effectiveH = h - padY * 2;
+      const step = w / (history.length - 1);
+
+      ctx.beginPath();
+      history.forEach((val, i) => {
+        const y = h - (val / 100) * effectiveH - padY;
+        if (i === 0) ctx.moveTo(0, y);
+        else ctx.lineTo(i * step, y);
+      });
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      if (fill) {
+        ctx.lineTo(w, h - padY);
+        ctx.lineTo(0, h - padY);
+        ctx.closePath();
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+    }
+
+    function drawDualGPU(canvasId, coreHist, vramHist) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // 背景の薄い罫線を描画
+      drawTelemetryGrid(ctx, w, h);
+
+      const padY = 2;
+      const effectiveH = h - padY * 2;
+      const step = w / (coreHist.length - 1);
+
+      // 1. VRAM (Pink with soft fill)
+      ctx.beginPath();
+      vramHist.forEach((val, i) => {
+        const y = h - (val / 100) * effectiveH - padY;
+        if (i === 0) ctx.moveTo(0, y);
+        else ctx.lineTo(i * step, y);
+      });
+      ctx.strokeStyle = '#f472b6';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.lineTo(w, h - padY);
+      ctx.lineTo(0, h - padY);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(244, 114, 182, 0.12)';
+      ctx.fill();
+
+      // 2. Core Load (Bright Cyan Line)
+      ctx.beginPath();
+      coreHist.forEach((val, i) => {
+        const y = h - (val / 100) * effectiveH - padY;
+        if (i === 0) ctx.moveTo(0, y);
+        else ctx.lineTo(i * step, y);
+      });
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    async function restartService(serviceName) {
+      const names = { core: 'ALICE Core', copilot: 'CoPilot (Discord)', ollama: 'Ollama (LLM)', line: 'LINE Gateway' };
+      const label = names[serviceName] || serviceName;
+      if (!confirm(`${label} を再起動しますか？
+※実行中のジョブがある場合は一時的に中断される可能性があります。`)) {
+        return;
+      }
+      const badge = document.getElementById('svc-' + serviceName);
+      const prevBadgeText = badge ? badge.innerText : '';
+      const prevBadgeClass = badge ? badge.className : '';
+      if (badge) {
+        badge.className = 'px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-semibold border border-amber-800 text-[11px] animate-pulse';
+        badge.innerText = 'RESTARTING...';
+      }
+      try {
+        const res = await aliceFetch(`/admin/api/services/${serviceName}/restart`, { method: 'POST' });
+        if (!res) return;
+        const result = await res.json();
+        alert(result.message || `${label} の再起動を実行しました。`);
+      } catch (e) {
+        alert(`${label} の再起動リクエストでエラーが発生しました: ` + e);
+        if (badge) {
+          badge.className = prevBadgeClass;
+          badge.innerText = prevBadgeText;
+        }
+      }
+      setTimeout(fetchMetrics, 3000);
+    }
+
+    async function fetchMetrics() {
+      const mobBadge = document.getElementById('mobile-live-badge');
+
+      try {
+        const res = await aliceFetch('/admin/api/metrics');
+        if (!res || !res.ok) {
+          if (mobBadge) {
+            mobBadge.className = 'px-2.5 py-1 rounded-full text-xs font-mono bg-amber-950 text-amber-300 border border-amber-800 flex items-center gap-1.5 font-semibold';
+            mobBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>RETRYING';
+          }
+          return;
+        }
+        const data = await res.json();
+
+        // ライブバッジ更新
+        if (mobBadge) {
+          mobBadge.className = 'px-2.5 py-1 rounded-full text-xs font-mono bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1.5 font-semibold';
+          mobBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>LIVE';
+        }
+
+        // CPU
+        try {
+          const cp = document.getElementById('cpu-percent');
+          if (cp) cp.innerText = data.cpu.percent + '%';
+          const cb = document.getElementById('cpu-bar');
+          if (cb) cb.style.width = data.cpu.percent + '%';
+          const cc = document.getElementById('cpu-cores');
+          if (cc) cc.innerText = data.cpu.cores + ' cores';
+          const cpuTempEl = document.getElementById('cpu-temp');
+          if (cpuTempEl) {
+            cpuTempEl.innerText = (data.cpu.temp !== null && data.cpu.temp !== undefined) ? data.cpu.temp + '°C' : 'N/A';
+          }
+          cpuSparkHistory.push(data.cpu.percent || 0);
+          cpuSparkHistory.shift();
+          drawSparkline('canvas-cpu-spark', cpuSparkHistory, '#38bdf8', 'rgba(56, 189, 248, 0.12)');
+        } catch (e) {}
+
+        // RAM
+        try {
+          const mp = document.getElementById('mem-percent');
+          if (mp) mp.innerText = data.memory.percent + '%';
+          const mb = document.getElementById('mem-bar');
+          if (mb) mb.style.width = data.memory.percent + '%';
+          const mu = document.getElementById('mem-usage');
+          if (mu) mu.innerText = data.memory.used_gb + ' / ' + data.memory.total_gb + ' GB';
+          const muh = document.getElementById('mem-used-header');
+          if (muh) muh.innerText = data.memory.used_gb + ' / ' + data.memory.total_gb + ' GB';
+          memSparkHistory.push(data.memory.percent || 0);
+          memSparkHistory.shift();
+          drawSparkline('canvas-mem-spark', memSparkHistory, '#c084fc', 'rgba(192, 132, 252, 0.12)');
+        } catch (e) {}
+
+        // GPU
+        try {
+          if (data.gpu.available) {
+            const gvp = document.getElementById('gpu-vram-percent');
+            if (gvp) gvp.innerText = data.gpu.vram_percent + '%';
+            const gvu = document.getElementById('gpu-vram-used-text');
+            if (gvu) gvu.innerText = data.gpu.used_gb + ' / ' + data.gpu.total_gb + ' GB';
+            const gpuCoreEl = document.getElementById('gpu-core-percent');
+            if (gpuCoreEl) gpuCoreEl.innerText = (data.gpu.gpu_util_percent || 0) + '%';
+            const gcb = document.getElementById('gpu-core-bar');
+            if (gcb) gcb.style.width = (data.gpu.gpu_util_percent || 0) + '%';
+            const gvb = document.getElementById('gpu-vram-bar');
+            if (gvb) gvb.style.width = (data.gpu.vram_percent || 0) + '%';
+            const gpuTempEl = document.getElementById('gpu-temp');
+            if (gpuTempEl) gpuTempEl.innerText = (data.gpu.temp !== null && data.gpu.temp !== undefined) ? data.gpu.temp + '°C' : 'N/A';
+            const gn = document.getElementById('gpu-name');
+            if (gn) gn.innerText = data.gpu.name;
+            const gu = document.getElementById('gpu-usage');
+            if (gu) gu.innerText = data.gpu.used_gb + ' / ' + data.gpu.total_gb + ' GB';
+            gpuCoreHistory.push(data.gpu.gpu_util_percent || 0);
+            gpuCoreHistory.shift();
+            gpuVramHistory.push(data.gpu.vram_percent || 0);
+            gpuVramHistory.shift();
+            drawDualGPU('canvas-gpu-dual', gpuCoreHistory, gpuVramHistory);
+          } else {
+            const gvp = document.getElementById('gpu-vram-percent');
+            if (gvp) gvp.innerText = 'N/A';
+            const gvu = document.getElementById('gpu-vram-used-text');
+            if (gvu) gvu.innerText = 'N/A';
+            const gpuCoreEl = document.getElementById('gpu-core-percent');
+            if (gpuCoreEl) gpuCoreEl.innerText = 'N/A';
+            const gcb = document.getElementById('gpu-core-bar');
+            if (gcb) gcb.style.width = '0%';
+            const gvb = document.getElementById('gpu-vram-bar');
+            if (gvb) gvb.style.width = '0%';
+            const gpuTempEl = document.getElementById('gpu-temp');
+            if (gpuTempEl) gpuTempEl.innerText = 'N/A';
+            const gn = document.getElementById('gpu-name');
+            if (gn) gn.innerText = 'GPU Offline';
+          }
+        } catch (e) {}
+
+        // Disk (Multi-Drive)
+        try {
+          if (data.disk) {
+            const drives = data.disk.drives || [];
+            const rootDrive = drives.find(d => d.mount === '/') || { percent: 0, used_gb: 0, total_gb: 0 };
+            const dataDrive = drives.find(d => d.mount === '/data') || {
+              percent: data.disk.percent || 0,
+              used_gb: data.disk.used_gb || 0,
+              total_gb: data.disk.total_gb || 0
+            };
+
+            // 1. Root /
+            const drp = document.getElementById('disk-root-percent');
+            if (drp) drp.innerText = rootDrive.percent + '%';
+            const drb = document.getElementById('disk-root-bar');
+            if (drb) drb.style.width = rootDrive.percent + '%';
+            const drt = document.getElementById('disk-root-used-text');
+            if (drt) drt.innerText = rootDrive.used_gb + ' / ' + rootDrive.total_gb + ' GB';
+
+            // 2. Workspaces /data
+            const ddp = document.getElementById('disk-data-percent');
+            if (ddp) ddp.innerText = dataDrive.percent + '%';
+            const ddb = document.getElementById('disk-data-bar');
+            if (ddb) ddb.style.width = dataDrive.percent + '%';
+            const ddt = document.getElementById('disk-data-used-text');
+            if (ddt) ddt.innerText = dataDrive.used_gb + ' / ' + dataDrive.total_gb + ' GB';
+
+            // 3. Combined Total
+            const dtc = document.getElementById('disk-total-combined');
+            if (dtc) {
+              const totUsed = (rootDrive.used_gb + dataDrive.used_gb).toFixed(1);
+              const totCap = (rootDrive.total_gb + dataDrive.total_gb).toFixed(1);
+              dtc.innerText = totUsed + ' / ' + totCap + ' GB';
+            }
+          }
+        } catch (e) {}
+
+        // Services
+        try {
+          updateServiceBadge('svc-core', data.services.core);
+          updateServiceBadge('svc-copilot', data.services.copilot);
+          updateServiceBadge('svc-ollama', data.services.ollama);
+          updateServiceBadge('svc-line', data.services.line);
+        } catch (e) {}
+
+        // Sidebar Telemetry
+        try {
+          const ws = document.getElementById('sidebar-worker-status');
+          if (ws) {
+            ws.innerText = data.services.core === 'active' ? 'ONLINE' : 'STOPPED';
+            ws.className = data.services.core === 'active'
+              ? 'px-2 py-0.5 rounded bg-sky-950/90 text-sky-300 border border-sky-800/60 font-semibold text-[11px]'
+              : 'px-2 py-0.5 rounded bg-rose-950/90 text-rose-300 border border-rose-800/60 font-semibold text-[11px]';
+          }
+          const gs = document.getElementById('sidebar-gpu-status');
+          if (gs) {
+            gs.innerText = data.gpu.available ? 'RTX 5060 Ti' : 'OFFLINE';
+            gs.className = data.gpu.available ? 'text-cyan-300 font-semibold' : 'text-slate-500';
+          }
+        } catch (e) {}
+
+        // Active Job
+        try {
+          renderActiveJob(data.active_job);
+        } catch (e) {}
+
+        // Queue
+        try {
+          const qc = document.getElementById('queue-count');
+          if (qc) qc.innerText = data.queue_size;
+          renderQueueList(data.queued_jobs);
+        } catch (e) {}
+
+        // Maintenance Status
+        try {
+          if (data.maintenance) {
+            updateMaintenanceUI(data.maintenance.active);
+          }
+        } catch (e) {}
+
+      } catch (e) {
+        console.error('Failed to fetch metrics:', e);
+        if (mobBadge) {
+          mobBadge.className = 'px-2.5 py-1 rounded-full text-xs font-mono bg-rose-950 text-rose-300 border border-rose-800 flex items-center gap-1.5 font-semibold';
+          mobBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>OFFLINE';
+        }
+      }
+    }
+
+    function updateServiceBadge(id, status) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (status === 'active') {
+        el.className = 'px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 font-semibold border border-emerald-800';
+        el.innerText = 'ONLINE';
+      } else {
+        el.className = 'px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 font-semibold border border-rose-800';
+        el.innerText = status ? status.toUpperCase() : 'STOPPED';
+      }
+    }
+
+    function renderActiveJob(job) {
+      const container = document.getElementById('active-job-container');
+      const badge = document.getElementById('active-job-badge');
+      if (!job) {
+        badge.innerText = 'IDLE';
+        badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono bg-slate-800 text-slate-400';
+        container.innerHTML = `<div class="p-8 text-center text-slate-500 font-mono text-sm border border-dashed border-slate-800 rounded-xl">現在実行中のジョブはありません（待機中）</div>`;
+        return;
+      }
+
+      badge.innerText = 'PROCESSING';
+      badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono bg-sky-950 text-sky-300 border border-sky-800 animate-pulse';
+
+      container.innerHTML = `
+        <div class="p-4 rounded-xl bg-slate-900/90 border border-sky-500/30 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white text-base truncate max-w-md">${job.filename}</span>
+            <span class="text-xs font-mono text-sky-400 bg-sky-950 px-2 py-0.5 rounded border border-sky-800">${job.current_step || 'starting'}</span>
+          </div>
+          <div class="text-xs font-mono text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+            <span>Job: <code class="text-slate-300">${job.job_id}</code></span>
+            <span>User: <code class="text-sky-300 font-semibold">${job.user_name || job.user_id}</code></span>
+          </div>
+          <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div class="bg-gradient-to-r from-sky-400 to-purple-500 h-full w-2/3 animate-pulse"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderQueueList(queue) {
+      const container = document.getElementById('queue-list-container');
+      if (!queue || queue.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-500 text-center py-6">待機中のジョブはありません</div>`;
+        return;
+      }
+      container.innerHTML = queue.map((j, idx) => `
+        <div class="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between text-xs">
+          <div class="truncate max-w-[170px]">
+            <div class="flex items-center gap-1">
+              <span class="text-slate-500 font-mono">#${idx+1}</span>
+              <span class="text-slate-200 font-medium truncate">${j.filename}</span>
+            </div>
+            <div class="text-[10px] text-slate-400 font-mono truncate">${j.user_name || j.user_id}</div>
+          </div>
+          <span class="text-[10px] font-mono text-amber-400 bg-amber-950/60 border border-amber-800/60 px-1.5 py-0.5 rounded">WAIT</span>
+        </div>
+      `).join('');
+    }
+
+    // 2. Fetch Jobs (Split View)
+    async function fetchJobs() {
+      try {
+        const res = await aliceFetch('/admin/api/jobs?limit=50');
+        if (!res || !res.ok) return;
+        allJobs = await res.json();
+        updateUserFilterOptions();
+        renderJobList();
+      } catch (e) {
+        console.error('Failed to fetch jobs:', e);
+      }
+    }
+
+    function updateUserFilterOptions() {
+      const select = document.getElementById('job-user-filter');
+      if (!select || !Array.isArray(allJobs)) return;
+      const currentVal = select.value || 'ALL';
+
+      const usersMap = new Map();
+      allJobs.forEach(j => {
+        const uid = j.user_id || 'unknown';
+        const uname = j.user_name || uid;
+        if (!usersMap.has(uid)) {
+          usersMap.set(uid, uname);
+        }
+      });
+
+      let optionsHtml = '<option value="ALL" class="bg-slate-900 text-slate-200">全員のJob</option>';
+      usersMap.forEach((uname, uid) => {
+        optionsHtml += `<option value="${escapeHtml(uid)}" class="bg-slate-900 text-slate-200">👤 ${escapeHtml(uname)}</option>`;
+      });
+      select.innerHTML = optionsHtml;
+      if ([...usersMap.keys()].includes(currentVal) || currentVal === 'ALL') {
+        select.value = currentVal;
+      }
+    }
+
+    function setUserFilter(userId) {
+      const select = document.getElementById('job-user-filter');
+      if (select) {
+        select.value = userId;
+        filterJobs();
+      }
+    }
+
+    function setJobFilter(filter) {
+      currentJobFilter = filter;
+      ['all', 'completed', 'failed'].forEach(f => {
+        const el = document.getElementById('filter-' + f);
+        if (f.toUpperCase() === filter) {
+          el.className = 'px-2.5 py-1 rounded-lg bg-sky-950 text-sky-300 border border-sky-800 font-bold';
+        } else {
+          el.className = 'px-2.5 py-1 rounded-lg hover:bg-slate-800 text-slate-400';
+        }
+      });
+      renderJobList();
+    }
+
+    function filterJobs() {
+      renderJobList();
+    }
+
+    function renderJobList() {
+      const container = document.getElementById('jobs-list');
+      const query = (document.getElementById('job-search-input')?.value || '').toLowerCase().trim();
+      const userFilter = document.getElementById('job-user-filter')?.value || 'ALL';
+
+      let filtered = allJobs.filter(j => {
+        if (currentJobFilter !== 'ALL' && j.status !== currentJobFilter) return false;
+        if (userFilter !== 'ALL' && j.user_id !== userFilter && (j.user_name || '') !== userFilter) return false;
+        if (query) {
+          const fMatch = (j.filename || '').toLowerCase().includes(query);
+          const idMatch = (j.job_id || '').toLowerCase().includes(query);
+          const uMatch = (j.user_name || '').toLowerCase().includes(query) || (j.user_id || '').toLowerCase().includes(query);
+          return fMatch || idMatch || uMatch;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 text-slate-500 text-xs font-mono">該当するジョブはありません</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(j => {
+        const isSelected = selectedJob && selectedJob.job_id === j.job_id;
+        const statusBadge = j.status === 'COMPLETED' 
+          ? '<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">DONE</span>'
+          : j.status === 'RUNNING'
+          ? '<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800 animate-pulse">RUN</span>'
+          : '<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">FAIL</span>';
+
+        const createdStr = j.created_at ? j.created_at.slice(5, 16).replace('T', ' ') : '-';
+        const wfTag = Array.isArray(j.workflow) ? j.workflow.join('→') : '';
+
+        return `
+          <div onclick="selectJob('${j.job_id}')" class="p-3 rounded-xl cursor-pointer transition-all ${isSelected ? 'glass-panel-active border-l-4 border-sky-400' : 'hover:bg-slate-800/40'}">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-medium text-xs text-white truncate max-w-[200px]" title="${escapeHtml(j.filename)}">${escapeHtml(j.filename)}</span>
+              ${statusBadge}
+            </div>
+            <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+              <span onclick="event.stopPropagation(); setUserFilter('${escapeHtml(j.user_id)}')" class="truncate max-w-[140px] px-1.5 py-0.5 rounded bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-800/60 font-medium cursor-pointer transition-colors" title="このユーザーで絞り込み">👤 ${escapeHtml(j.user_name || j.user_id)}</span>
+              <span>${createdStr}</span>
+            </div>
+            ${wfTag ? `<div class="mt-1 flex items-center gap-1.5"><span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800/80 text-sky-400/90 border border-slate-700/50">${escapeHtml(wfTag)}</span></div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    let currentSelectedJobId = null;
+
+    function selectJob(jobId) {
+      selectedJob = allJobs.find(j => j.job_id === jobId);
+      if (!selectedJob) return;
+      currentSelectedJobId = jobId;
+
+      renderJobList(); // update highlight
+
+      // Update right header
+      document.getElementById('selected-job-title').innerText = selectedJob.filename;
+      document.getElementById('selected-job-meta').innerText = 
+        `Job ID: ${selectedJob.job_id} | User: ${selectedJob.user_name || selectedJob.user_id} | Status: ${selectedJob.status} | Workflow: ${JSON.stringify(selectedJob.workflow)}`;
+
+      // Update Action Button
+      const btnView = document.getElementById('btn-web-view');
+      const actionDiv = document.getElementById('artifact-action-buttons');
+      actionDiv.classList.remove('hidden');
+
+      // Render Artifact Tabs
+      const tabsContainer = document.getElementById('artifact-tabs');
+      const allFiles = [...selectedJob.artifacts, ...selectedJob.logs];
+
+      if (allFiles.length === 0) {
+        tabsContainer.innerHTML = '<span class="text-slate-500 text-xs">生成された成果物はありません</span>';
+        document.getElementById('artifact-content-display').innerText = 'ファイルが存在しません。';
+        if (btnView) btnView.href = '#';
+        return;
+      }
+
+      tabsContainer.innerHTML = allFiles.map((f, idx) => `
+        <button onclick="loadArtifactContent('${selectedJob.job_id}', '${f.rel_path}', this)" 
+                class="art-tab-btn px-2.5 py-1 rounded-lg text-xs font-mono transition-colors ${idx === 0 ? 'bg-sky-950 text-sky-300 border border-sky-700 font-bold' : 'hover:bg-slate-800 text-slate-400'}">
+          ${f.name}
+        </button>
+      `).join('');
+
+      // Auto load first file
+      loadArtifactContent(selectedJob.job_id, allFiles[0].rel_path, tabsContainer.querySelector('.art-tab-btn'));
+
+      // Smooth scroll to viewer on mobile
+      if (window.innerWidth < 1024) {
+        setTimeout(() => {
+          const vh = document.getElementById('viewer-header');
+          if (vh) vh.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+
+    async function deleteCurrentJob() {
+      if (!currentSelectedJobId) return;
+      if (!confirm(`ジョブ [${currentSelectedJobId}] を完全に削除しますか？
+（成果物・ログ・検索インデックスからも安全に削除されます）`)) {
+        return;
+      }
+      try {
+        const res = await aliceFetch(`/admin/api/jobs/${encodeURIComponent(currentSelectedJobId)}`, { method: 'DELETE' });
+        if (res && res.ok) {
+          alert(`ジョブ ${currentSelectedJobId} を削除しました。`);
+          currentSelectedJobId = null;
+          selectedJob = null;
+          document.getElementById('artifact-action-buttons').classList.add('hidden');
+          document.getElementById('selected-job-title').innerText = 'ジョブを選択してください';
+          document.getElementById('selected-job-meta').innerText = '左の一覧から確認したいJobをクリックしてください';
+          document.getElementById('artifact-tabs').innerHTML = '<span class="text-slate-600 text-xs">成果物:</span>';
+          document.getElementById('artifact-content-display').innerText = 'ジョブが削除されました。';
+          await fetchJobs();
+          await fetchLogCatalog();
+        } else {
+          const err = await res.json();
+          alert('ジョブ削除に失敗しました: ' + (err.detail || '不明なエラー'));
+        }
+      } catch (e) {
+        alert('通信エラーが発生しました: ' + e);
+      }
+    }
+
+    async function loadArtifactContent(jobId, path, btnElement) {
+      document.querySelectorAll('.art-tab-btn').forEach(b => {
+        b.className = 'art-tab-btn px-2.5 py-1 rounded-lg text-xs font-mono transition-colors hover:bg-slate-800 text-slate-400';
+      });
+      if (btnElement) {
+        btnElement.className = 'art-tab-btn px-2.5 py-1 rounded-lg text-xs font-mono transition-colors bg-sky-950 text-sky-300 border border-sky-700 font-bold';
+      }
+
+      // Update Web View button URL to point to this artifact
+      const btnView = document.getElementById('btn-web-view');
+      if (btnView) {
+        btnView.href = `/admin/jobs/${jobId}/view?path=${encodeURIComponent(path)}`;
+      }
+
+      const display = document.getElementById('artifact-content-display');
+      display.innerText = '読み込み中...';
+
+      try {
+        const res = await aliceFetch(`/admin/api/jobs/${jobId}/artifact?path=${encodeURIComponent(path)}`);
+        if (!res || !res.ok) {
+          display.innerText = 'ファイルの取得に失敗しました。';
+          return;
+        }
+        const data = await res.json();
+        display.innerText = data.content;
+      } catch (e) {
+        display.innerText = 'エラーが発生しました: ' + e;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 3. Multi-Category Log Terminal & Cleanup
+    // -------------------------------------------------------------
+    let logCatalog = { core: [], transcript: [], summary: [], minutes: [] };
+
+    async function fetchLogCatalog() {
+      try {
+        const res = await aliceFetch('/admin/api/logs/catalog');
+        if (!res || !res.ok) return;
+        logCatalog = await res.json();
+        populateLogFileList();
+      } catch (e) {
+        console.error('Failed to fetch log catalog:', e);
+      }
+    }
+
+    function onLogCategoryChange() {
+      populateLogFileList();
+      fetchSystemLogs();
+    }
+
+    function populateLogFileList() {
+      const catSelect = document.getElementById('log-category-select');
+      const fileSelect = document.getElementById('log-file-select');
+      if (!catSelect || !fileSelect) return;
+
+      const cat = catSelect.value || 'core';
+      const files = logCatalog[cat] || [];
+      fileSelect.innerHTML = '';
+
+      if (files.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.className = 'bg-slate-900 text-slate-200';
+        opt.innerText = '(ログがありません)';
+        fileSelect.appendChild(opt);
+        return;
+      }
+
+      files.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f.id;
+        opt.className = 'bg-slate-900 text-slate-200';
+        opt.innerText = f.name;
+        fileSelect.appendChild(opt);
+      });
+    }
+
+    async function fetchSystemLogs() {
+      const fileSelect = document.getElementById('log-file-select');
+      const levelSelect = document.getElementById('log-level-select');
+      const terminal = document.getElementById('system-log-terminal');
+      if (!fileSelect || !terminal) return;
+
+      const file = fileSelect.value;
+      if (!file) {
+        terminal.innerText = '選択可能なログファイルがありません。';
+        return;
+      }
+      const level = levelSelect ? levelSelect.value : 'ALL';
+
+      try {
+        const res = await aliceFetch(`/admin/api/logs?file=${encodeURIComponent(file)}&tail=300&level=${level}`);
+        if (!res || !res.ok) {
+          terminal.innerText = 'ログの取得に失敗しました (HTTP ' + (res ? res.status : 'ERR') + ')';
+          return;
+        }
+        const data = await res.json();
+
+        const statusInfo = document.getElementById('log-status-info');
+        if (statusInfo) {
+          statusInfo.innerText = `${data.file_label || data.file} (${data.lines.length} 行表示中 / 全 ${data.total_lines} 行)`;
+        }
+        terminal.innerText = data.lines.join('\n');
+        terminal.scrollTop = terminal.scrollHeight;
+      } catch (e) {
+        terminal.innerText = 'ログ取得エラー: ' + e;
+      }
+    }
+
+    async function cleanupOldLogs() {
+      const confirmMsg = "2週間（14日間）以上経過した古いログおよび空ファイルを整理（削除）しますか？\n（稼働中の最新ログおよび各ジョブの重要成果物は安全に保護されます）";
+      if (!confirm(confirmMsg)) {
+        return;
+      }
+      try {
+        const res = await aliceFetch('/admin/api/logs/cleanup?days=14', { method: 'POST' });
+        if (!res) return;
+        const data = await res.json();
+        if (res.ok) {
+          const freedKb = (data.freed_bytes / 1024).toFixed(1);
+          alert("ログ整理完了:\n- 削除ファイル数: " + data.deleted_count + " 件\n- 削減容量: " + freedKb + " KB\n- 残存ログ数: " + data.remaining_count + " 件");
+          await fetchLogCatalog();
+          fetchSystemLogs();
+        } else {
+          alert('ログ整理に失敗しました: ' + (data.detail || '不明なエラー'));
+        }
+      } catch (e) {
+        alert('通信エラー: ' + e);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Dynamic Splash Screen Controller
+    // -------------------------------------------------------------
+    let splashDismissed = false;
+    function dismissSplash() {
+      if (splashDismissed) return;
+      splashDismissed = true;
+      const splash = document.getElementById('alice-splash-screen');
+      if (splash) {
+        splash.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => splash.remove(), 700);
+      }
+    }
+
+    function updateSplash(pct, status) {
+      if (splashDismissed) return;
+      const bar = document.getElementById('splash-progress-bar');
+      const pctTxt = document.getElementById('splash-percent-text');
+      const statusTxt = document.getElementById('splash-status-text');
+      if (bar) bar.style.width = pct + '%';
+      if (pctTxt) pctTxt.innerText = pct + '%';
+      if (status && statusTxt) statusTxt.innerText = status;
+    }
+
+    // 万が一のスクリプト遅延時でも2.5秒後に確実にスプラッシュを消去するフェールセーフ
+    setTimeout(dismissSplash, 2500);
+
+    // Init Sequence
+    function initCockpit() {
+      updateSplash(45, 'CONNECTING TO ALICE CORE...');
+      
+      // 即時メトリクスとジョブを取得
+      fetchMetrics();
+      fetchJobs();
+
+      setTimeout(() => {
+        updateSplash(100, 'SYSTEM READY');
+        setTimeout(dismissSplash, 200);
+      }, 350);
+
+      let savedSec = 3;
+      try {
+        const stored = localStorage.getItem('alice_metrics_interval');
+        if (stored && updateIntervals.includes(Number(stored))) {
+          savedSec = Number(stored);
+        }
+      } catch (e) {}
+      applyMetricsInterval(savedSec);
+
+      try {
+        fetchLogCatalog().then(() => fetchSystemLogs()).catch(e => console.warn(e));
+      } catch (e) {
+        console.warn(e);
+      }
+
+      try {
+        const hashTab = (window.location.hash || '').replace('#', '');
+        if (['dashboard', 'jobs', 'logs', 'users', 'chat'].includes(hashTab)) {
+          switchTab(hashTab);
+        }
+      } catch (e) {}
+    }
+
+    // ==========================================
+    // User Directory Management
+    // ==========================================
+    let allUsers = [];
+
+    async function fetchUsers() {
+      try {
+        const res = await aliceFetch('/admin/api/users');
+        if (!res || !res.ok) throw new Error('Failed to fetch users');
+        allUsers = await res.json();
+        renderUserTable();
+      } catch (e) {
+        console.error('Failed to load users:', e);
+        showUserToast('⚠️ ユーザー情報の読み込みに失敗しました: ' + e.message, true);
+      }
+    }
+
+    function renderUserTable() {
+      const tbody = document.getElementById('user-table-body');
+      const countEl = document.getElementById('user-count');
+      if (countEl) countEl.innerText = allUsers.length;
+
+      const userSearchEl = document.getElementById('user-search-input');
+      const q = (userSearchEl && userSearchEl.value ? userSearchEl.value : '').toLowerCase();
+      const filtered = allUsers.filter(u => 
+        (u.display_name || '').toLowerCase().includes(q) || (u.user_id || '').toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500 font-mono text-xs">該当するユーザーはいません</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((u, idx) => {
+        const initial = (u.display_name && u.display_name.trim().length > 0) ? u.display_name.trim().charAt(0) : '?';
+        const isReady = u.status === 'READY';
+        const isWait = u.status === 'WAIT_INVITE_CODE';
+        const isReject = u.status === 'REJECTED';
+
+        let selectClass = 'bg-slate-950 border rounded-lg px-2.5 py-1 text-[11px] font-semibold focus:outline-none ';
+        if (isReady) selectClass += 'border-emerald-800/80 text-emerald-300';
+        else if (isWait) selectClass += 'border-amber-800/80 text-amber-300';
+        else selectClass += 'border-rose-800/80 text-rose-300';
+
+        return `
+          <tr id="row-user-${idx}" class="hover:bg-slate-800/30 transition-colors">
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-sky-950 border border-sky-800 flex items-center justify-center text-sky-300 font-bold text-xs shrink-0">
+                  ${initial}
+                </div>
+                <input id="input-name-${idx}" type="text" value="${u.display_name || ''}" class="bg-slate-950 border border-slate-700 hover:border-slate-500 focus:border-sky-400 rounded-lg px-2.5 py-1 text-white font-bold text-xs focus:outline-none transition-colors w-36 sm:w-44">
+              </div>
+            </td>
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-1.5 text-slate-400">
+                <span class="font-mono text-[11px]">${u.user_id}</span>
+                <button onclick="copyUserId('${u.user_id}')" title="IDをコピー" class="p-1 text-slate-500 hover:text-sky-300 transition-colors">📋</button>
+              </div>
+            </td>
+            <td class="py-3 px-4">
+              <select id="status-select-${idx}" onchange="updateUserStatusColor(this)" class="${selectClass}">
+                <option value="READY" class="bg-slate-900 text-slate-200" ${isReady ? 'selected' : ''}>🟢 READY (利用可)</option>
+                <option value="WAIT_INVITE_CODE" class="bg-slate-900 text-slate-200" ${isWait ? 'selected' : ''}>🟡 WAIT_INVITE (招待待機)</option>
+                <option value="REJECTED" class="bg-slate-900 text-slate-200" ${isReject ? 'selected' : ''}>🔴 REJECTED (アクセス拒否)</option>
+              </select>
+            </td>
+            <td class="py-3 px-4 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <button onclick="saveUserRow('${u.user_id}', ${idx})" class="px-2.5 py-1 rounded-lg bg-sky-900 hover:bg-sky-800 text-sky-200 border border-sky-700/60 font-semibold text-xs transition-all">
+                  保存
+                </button>
+                <button onclick="deleteUserRow('${u.user_id}', '${u.display_name || u.user_id}')" title="このユーザーを削除" class="px-2.5 py-1 rounded-lg bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800/80 font-semibold text-xs flex items-center gap-1 transition-all">
+                  <svg class="w-3.5 h-3.5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  <span>削除</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateUserStatusColor(selectEl) {
+      if (selectEl.value === 'READY') {
+        selectEl.className = 'bg-slate-950 border border-emerald-800/80 rounded-lg px-2.5 py-1 text-[11px] text-emerald-300 font-semibold focus:outline-none';
+      } else if (selectEl.value === 'WAIT_INVITE_CODE') {
+        selectEl.className = 'bg-slate-950 border border-amber-800/80 rounded-lg px-2.5 py-1 text-[11px] text-amber-300 font-semibold focus:outline-none';
+      } else if (selectEl.value === 'REJECTED') {
+        selectEl.className = 'bg-slate-950 border border-rose-800/80 rounded-lg px-2.5 py-1 text-[11px] text-rose-300 font-semibold focus:outline-none';
+      }
+    }
+
+    function filterUsers() {
+      renderUserTable();
+    }
+
+    function copyUserId(id) {
+      navigator.clipboard.writeText(id).then(() => {
+        showUserToast(`📋 LINE IDをコピーしました: ${id.substring(0, 12)}...`);
+      });
+    }
+
+    async function saveUserRow(userId, idx) {
+      const nameInput = document.getElementById('input-name-' + idx);
+      const newName = nameInput ? nameInput.value.trim() : '';
+      const statusSelect = document.getElementById('status-select-' + idx);
+      const newStatus = statusSelect ? statusSelect.value : 'READY';
+
+      if (!newName) {
+        alert('表示名を入力してください');
+        return;
+      }
+
+      try {
+        const res = await aliceFetch(`/admin/api/users/${userId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ display_name: newName, status: newStatus })
+        });
+        if (!res || !res.ok) throw new Error('Update failed');
+        showUserToast(`✓ 「${newName}」の設定を保存しました (ステータス: ${newStatus})`);
+        fetchUsers();
+      } catch (e) {
+        console.error('Failed to update user:', e);
+        showUserToast('⚠️ 保存に失敗しました: ' + e.message, true);
+      }
+    }
+
+    async function deleteUserRow(userId, defaultName) {
+      if (!confirm(`「${defaultName}」を削除しますか？
+※削除されたユーザーはLINEからのアクセス権限が解除されます。`)) {
+        return;
+      }
+
+      try {
+        const res = await aliceFetch(`/admin/api/users/${userId}`, { method: 'DELETE' });
+        if (!res || !res.ok) throw new Error('Delete failed');
+        showUserToast(`🗑️ 「${defaultName}」を削除しました`);
+        fetchUsers();
+      } catch (e) {
+        console.error('Failed to delete user:', e);
+        showUserToast('⚠️ 削除に失敗しました: ' + e.message, true);
+      }
+    }
+
+    function showUserToast(msg, isErr=false) {
+      const toast = document.getElementById('user-toast-msg');
+      if (!toast) return;
+      toast.innerText = msg;
+      toast.className = 'text-center text-xs font-mono ' + (isErr ? 'text-rose-400' : 'text-emerald-400') + ' transition-opacity';
+      toast.classList.remove('opacity-0');
+      setTimeout(() => toast.classList.add('opacity-0'), 2500);
+    }
+
+    async function handleLogout() {
+      try {
+        await aliceFetch('/admin/logout', { method: 'POST' });
+      } catch (e) {
+        console.error('Logout error:', e);
+      } finally {
+        window.location.href = '/cdn-cgi/access/logout';
+      }
+    }
+
+    // =========================================================================
+    // AI Console / Chat Logic (Assistant & Dev CoPilot)
+    // =========================================================================
+    let currentChatMode = 'assistant';
+    let chatSessionId = 'web_assistant';
+    let chatStatusPollTimer = null;
+    let isChatStreaming = false;
+
+    function initChatTab() {
+      loadChatHistory(currentChatMode);
+      fetchChatStatus();
+      if (!chatStatusPollTimer) {
+        chatStatusPollTimer = setInterval(fetchChatStatus, 5000);
+      }
+    }
+
+    async function fetchChatStatus() {
+      try {
+        const res = await aliceFetch('/admin/api/chat/status');
+        if (!res || !res.ok) return;
+        const data = await res.json();
+
+        // Update Ollama Badge
+        const ollama = data.ollama || {};
+        const dotPing = document.getElementById('ollama-dot-ping');
+        const dot = document.getElementById('ollama-dot');
+        const modelTxt = document.getElementById('ollama-model-text');
+        const vramTxt = document.getElementById('ollama-vram-text');
+
+        if (modelTxt) modelTxt.textContent = ollama.model || 'qwen3.5:9b';
+        if (ollama.online) {
+          if (dot) dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-emerald-400';
+          if (ollama.vram_loaded) {
+            if (dotPing) dotPing.classList.remove('hidden');
+            if (vramTxt) {
+              vramTxt.className = 'px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30';
+              vramTxt.textContent = '⚡ VRAM LOADED';
+              if (ollama.size_vram_mb) vramTxt.title = `${ollama.size_vram_mb} MB 使用中`;
+            }
+          } else {
+            if (dotPing) dotPing.classList.add('hidden');
+            if (vramTxt) {
+              vramTxt.className = 'px-1.5 py-0.5 rounded text-[9px] bg-slate-800 text-slate-400 font-sans';
+              vramTxt.textContent = '💤 STANDBY (解放済)';
+              vramTxt.title = '直近のリクエストがなくVRAM解放中';
+            }
+          }
+        } else {
+          if (dotPing) dotPing.classList.add('hidden');
+          if (dot) dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-rose-500';
+          if (vramTxt) {
+            vramTxt.className = 'px-1.5 py-0.5 rounded text-[9px] bg-rose-950/60 text-rose-400';
+            vramTxt.textContent = 'OFFLINE';
+          }
+        }
+
+        // Update Antigravity Badge
+        const ag = data.antigravity || {};
+        const agDot = document.getElementById('antigravity-dot');
+        const agState = document.getElementById('antigravity-state-text');
+
+        if (ag.active) {
+          if (agDot) agDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-purple-400 animate-pulse';
+          if (agState) {
+            agState.className = 'px-1.5 py-0.5 rounded text-[9px] bg-purple-500/30 text-purple-200 border border-purple-500/40 font-bold animate-pulse';
+            agState.textContent = ag.current_tool ? `ACTIVE (${ag.current_tool})` : 'ACTIVE';
+          }
+        } else {
+          if (agDot) agDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-slate-500';
+          if (agState) {
+            agState.className = 'px-1.5 py-0.5 rounded text-[9px] bg-slate-800 text-slate-400 font-sans';
+            agState.textContent = 'IDLE';
+          }
+        }
+
+        // Model selector update
+        const modelSelect = document.getElementById('antigravity-model-select');
+        if (modelSelect && ag.selected_model) {
+          if (document.activeElement !== modelSelect) {
+            modelSelect.value = ag.selected_model;
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch chat status:', err);
+      }
+    }
+
+    
+    function showToast(msg, isErr=false) {
+      let toast = document.getElementById('global-toast-msg');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'global-toast-msg';
+        document.body.appendChild(toast);
+      }
+      toast.innerText = msg;
+      toast.className = 'fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl text-xs font-mono shadow-2xl transition-opacity duration-300 pointer-events-none ' + 
+        (isErr ? 'bg-rose-950/90 text-rose-300 border border-rose-800' : 'bg-emerald-950/90 text-emerald-300 border border-emerald-800');
+      toast.classList.remove('opacity-0');
+      setTimeout(() => toast.classList.add('opacity-0'), 2500);
+    }
+
+    async function changeAntigravityModel(modelId) {
+      try {
+        const res = await aliceFetch('/admin/api/chat/antigravity/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model_id: modelId })
+        });
+        if (res && res.ok) {
+          showToast(`Antigravityモデルを「${modelId}」に変更しました`);
+          fetchChatStatus();
+        } else {
+          showToast('モデル変更に失敗しました', true);
+        }
+      } catch (err) {
+        console.error('Failed to change Antigravity model:', err);
+        showToast('モデル変更エラーが発生しました', true);
+      }
+    }
+
+    function switchChatMode(mode) {
+      if (currentChatMode === mode) return;
+      currentChatMode = mode;
+      chatSessionId = `web_${mode}`;
+
+      const btnAssistant = document.getElementById('chat-mode-assistant');
+      const btnCopilot = document.getElementById('chat-mode-copilot');
+      const desc = document.getElementById('chat-mode-desc');
+      const sendBtn = document.getElementById('chat-send-btn');
+      const welcomeAvatar = document.getElementById('chat-welcome-avatar');
+      const welcomeTitle = document.getElementById('chat-welcome-title');
+      const welcomeSub = document.getElementById('chat-welcome-subtitle');
+      const suggestions = document.getElementById('chat-suggestions');
+
+      if (mode === 'assistant') {
+        btnAssistant.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-500/10 cursor-pointer';
+        btnCopilot.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 cursor-pointer';
+        if (desc) desc.textContent = 'スケジュール・タスク・会議録・日常業務支援';
+        document.getElementById('ollama-status-badge')?.classList.remove('hidden');
+        document.getElementById('antigravity-status-badge')?.classList.add('hidden');
+        if (sendBtn) sendBtn.className = 'h-11 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed';
+        if (welcomeAvatar) {
+          welcomeAvatar.textContent = '👔';
+          welcomeAvatar.className = 'w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/20 mx-auto';
+        }
+        if (welcomeTitle) welcomeTitle.textContent = 'ALICE 秘書コンソール';
+        if (welcomeSub) welcomeSub.textContent = 'Google Tasks、カレンダー、人員動静、システムメトリクス、過去の会議録を横断検索・管理できます。「明日の予定は？」「タスク一覧」「今日のVRAMピーク」など気軽にどうぞ。';
+        if (suggestions) {
+          suggestions.innerHTML = `
+            <button onclick="applySuggestion('明日の予定と動静を教えて')" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 text-slate-300 text-xs transition-colors cursor-pointer">📅 明日の予定と動静</button>
+            <button onclick="applySuggestion('現在のToDo・タスク一覧')" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 text-slate-300 text-xs transition-colors cursor-pointer">📋 ToDo一覧</button>
+            <button onclick="applySuggestion('システム負荷とVRAM温度を確認')" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/50 text-slate-300 text-xs transition-colors cursor-pointer">⚡ サーバー状態</button>
+          `;
+        }
+      } else {
+        btnCopilot.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm shadow-purple-500/10 cursor-pointer';
+        btnAssistant.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 cursor-pointer';
+        if (desc) desc.textContent = 'Project_ALICE システム開発・コードベース調査・自律改善 (Antigravity一本化)';
+        document.getElementById('ollama-status-badge')?.classList.add('hidden');
+        document.getElementById('antigravity-status-badge')?.classList.remove('hidden');
+        if (sendBtn) sendBtn.className = 'h-11 px-5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-slate-950 font-bold text-sm transition-all shadow-lg shadow-purple-500/20 cursor-pointer flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed';
+        if (welcomeAvatar) {
+          welcomeAvatar.textContent = '🛠️';
+          welcomeAvatar.className = 'w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-3xl shadow-lg shadow-purple-500/20 mx-auto';
+        }
+        if (welcomeTitle) welcomeTitle.textContent = 'ALICE Dev CoPilot (Antigravity)';
+        if (welcomeSub) welcomeSub.textContent = 'コードベース調査、Gitコミット履歴、単体テスト実行、自律改善レビューを即座に実行できます。';
+        if (suggestions) {
+          suggestions.innerHTML = `
+            <button onclick="applySuggestion('直近のALICE_Searchコミットと修正差分を調べて')" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 text-slate-300 text-xs transition-colors cursor-pointer">🔍 ALICE_Search直近コミット</button>
+            <button onclick="applySuggestion('CoPilotの単体テストを実行して')" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 text-slate-300 text-xs transition-colors cursor-pointer">⚙️ 単体テスト実行</button>
+            <button onclick="applySuggestion('昨晩のAntigravity自律改善レポートを確認して')" class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/50 text-slate-300 text-xs transition-colors cursor-pointer">📊 夜間自律改善レポート</button>
+          `;
+        }
+      }
+
+      loadChatHistory(mode);
+    }
+
+    async function loadChatHistory(mode) {
+      const container = document.getElementById('chat-messages-container');
+      const welcomeBox = document.getElementById('chat-welcome-box');
+
+      try {
+        const res = await aliceFetch(`/admin/api/chat/history?mode=${mode}`);
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        const messages = data.messages || [];
+
+        // Clear existing messages except welcome box
+        container.querySelectorAll('.chat-bubble-row').forEach(el => el.remove());
+
+        if (messages.length === 0) {
+          if (welcomeBox) welcomeBox.classList.remove('hidden');
+        } else {
+          if (welcomeBox) welcomeBox.classList.add('hidden');
+          messages.forEach(msg => {
+            appendChatBubble(msg.role, msg.content, false);
+          });
+          scrollChatToBottom();
+        }
+      } catch (err) {
+        console.error('Failed to load chat history:', err);
+      }
+    }
+
+    function scrollChatToBottom() {
+      const container = document.getElementById('chat-messages-container');
+      if (container) container.scrollTop = container.scrollHeight;
+    }
+
+    function renderMarkdownToHtml(text) {
+      if (!text) return '';
+
+      if (window.marked && typeof window.marked.parse === 'function') {
+        try {
+          let html = window.marked.parse(text, { breaks: true, gfm: true });
+          // Wrap tables in responsive horizontal scroll wrapper
+          html = html.replace(/<table>/g, '<div class="table-wrapper"><table>').replace(/<\/table>/g, '</table></div>');
+          // Style code blocks with copy button
+          html = html.replace(/<pre><code(?:\s+class="language-([^"]*)")?>([\s\S]*?)<\/code><\/pre>/g, function(match, lang, code) {
+            const language = lang || 'code';
+            return `
+              <div class="relative my-2.5 group/code rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+                <div class="flex items-center justify-between px-3 py-1.5 bg-slate-900/80 border-b border-slate-800/80 text-[10px] font-mono text-slate-400">
+                  <span>${escapeHtml(language)}</span>
+                  <button onclick="copyCodeBlock(this)" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer flex items-center gap-1 select-none">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                    <span class="code-copy-lbl">コピー</span>
+                  </button>
+                </div>
+                <pre class="p-3 text-xs font-mono text-emerald-300 overflow-x-auto select-text cursor-text"><code>${code}</code></pre>
+              </div>
+            `;
+          });
+          return html;
+        } catch (err) {
+          console.warn('marked.parse failed, using fallback:', err);
+        }
+      }
+
+      // Robust fallback renderer (handles tables, headings, lists, bold, inline code)
+      let html = escapeHtml(text);
+      // Code blocks with copy button
+      html = html.replace(/```([a-zA-Z0-9_\-]+)?\n([\s\S]*?)```/g, function(match, lang, code) {
+        return `
+          <div class="relative my-2.5 group/code rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+            <div class="flex items-center justify-between px-3 py-1.5 bg-slate-900/80 border-b border-slate-800/80 text-[10px] font-mono text-slate-400">
+              <span>${lang || 'code'}</span>
+              <button onclick="copyCodeBlock(this)" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-300 transition-colors cursor-pointer flex items-center gap-1 select-none">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                <span class="code-copy-lbl">コピー</span>
+              </button>
+            </div>
+            <pre class="p-3 text-xs font-mono text-emerald-300 overflow-x-auto select-text cursor-text"><code>${code}</code></pre>
+          </div>
+        `;
+      });
+      // Headings
+      html = html.replace(/^###\s+(.+)$/gm, '<h3 class="text-sm font-bold text-sky-400 mt-3 mb-1">$1</h3>');
+      html = html.replace(/^##\s+(.+)$/gm, '<h2 class="text-base font-bold text-white mt-3.5 mb-1.5">$1</h2>');
+      html = html.replace(/^#\s+(.+)$/gm, '<h1 class="text-lg font-bold text-white mt-4 mb-2 pb-1 border-b border-slate-800">$1</h1>');
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-slate-800 text-pink-300 font-mono text-xs select-text cursor-text">$1</code>');
+      // Bold
+      html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong class="font-bold text-white select-text">$1</strong>');
+      // Lists (- or *)
+      html = html.replace(/^\s*[\-\*]\s+(.+)$/gm, '<li class="ml-4 list-disc text-slate-300 select-text">$1</li>');
+      // Line breaks
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
+
+    async function copyBubbleText(btn) {
+      const bubble = btn.closest('.group\/content').querySelector('.chat-bubble-content');
+      if (!bubble) return;
+      const text = bubble.innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        const lbl = btn.querySelector('.copy-label');
+        if (lbl) lbl.textContent = '✓ コピー完了';
+        btn.classList.add('text-emerald-300', 'border-emerald-500/50');
+        setTimeout(() => {
+          if (lbl) lbl.textContent = 'コピー';
+          btn.classList.remove('text-emerald-300', 'border-emerald-500/50');
+        }, 2000);
+      } catch (err) {
+        console.warn('Copy failed:', err);
+      }
+    }
+
+    async function copyCodeBlock(btn) {
+      const pre = btn.closest('.group\/code').querySelector('pre code');
+      if (!pre) return;
+      const text = pre.innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        const lbl = btn.querySelector('.code-copy-lbl');
+        if (lbl) lbl.textContent = '✓ 完了';
+        btn.classList.add('text-emerald-300');
+        setTimeout(() => {
+          if (lbl) lbl.textContent = 'コピー';
+          btn.classList.remove('text-emerald-300');
+        }, 2000);
+      } catch (err) {
+        console.warn('Code copy failed:', err);
+      }
+    }
+
+    function appendChatBubble(role, initialContent = '', isLive = false) {
+      const container = document.getElementById('chat-messages-container');
+      const welcomeBox = document.getElementById('chat-welcome-box');
+      if (welcomeBox) welcomeBox.classList.add('hidden');
+
+      const isUser = role === 'user';
+      const row = document.createElement('div');
+      row.className = `chat-bubble-row flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in duration-150`;
+
+      const avatarBg = isUser ? 'bg-sky-600' : (currentChatMode === 'copilot' ? 'bg-purple-600' : 'bg-emerald-600');
+      const avatarIcon = isUser ? '👤' : (currentChatMode === 'copilot' ? '🛠️' : '👔');
+
+      let bubbleContentHtml = isUser 
+        ? `<div class="max-w-[85%] sm:max-w-[75%] px-4 py-3 rounded-2xl rounded-tr-sm bg-gradient-to-br from-sky-600 to-blue-700 text-white text-sm leading-relaxed shadow-lg shadow-sky-900/20 whitespace-pre-wrap select-text cursor-text">${escapeHtml(initialContent)}</div>`
+        : `
+          <div class="flex gap-3 max-w-[92%] sm:max-w-[85%] w-full">
+            <div class="w-8 h-8 rounded-xl ${avatarBg} flex items-center justify-center text-sm shadow-md shrink-0 select-none">
+              ${avatarIcon}
+            </div>
+            <div class="flex-1 space-y-2 min-w-0">
+              <div class="chat-steps-container space-y-1.5"></div>
+              <div class="relative group/content">
+                <div class="chat-bubble-content select-text cursor-text px-4 py-3 rounded-2xl rounded-tl-sm bg-slate-900/90 border border-slate-800 text-slate-200 text-sm leading-relaxed shadow-lg pr-12">
+                  ${renderMarkdownToHtml(initialContent)}
+                </div>
+                <button onclick="copyBubbleText(this)" class="absolute top-2.5 right-2.5 px-2 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-[10px] text-slate-300 opacity-70 hover:opacity-100 transition-all cursor-pointer flex items-center gap-1 shadow select-none" title="全文コピー">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                  <span class="copy-label">コピー</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+      row.innerHTML = bubbleContentHtml;
+      container.appendChild(row);
+      scrollChatToBottom();
+      return row;
+    }
+
+    async function handleChatSubmit(e) {
+      if (e) e.preventDefault();
+      if (isChatStreaming) return;
+
+      const textarea = document.getElementById('chat-input-textarea');
+      const prompt = textarea.value.trim();
+      if (!prompt) return;
+
+      textarea.value = '';
+      textarea.style.height = 'auto';
+
+      appendChatBubble('user', prompt);
+
+      const aiRow = appendChatBubble('assistant', '', true);
+      const contentEl = aiRow.querySelector('.chat-bubble-content');
+      const stepsContainer = aiRow.querySelector('.chat-steps-container');
+      const sendBtn = document.getElementById('chat-send-btn');
+      const floater = document.getElementById('antigravity-live-floater');
+      const floaterLabel = document.getElementById('antigravity-step-label');
+      const floaterTool = document.getElementById('antigravity-step-tool');
+
+      isChatStreaming = true;
+      if (sendBtn) sendBtn.disabled = true;
+
+      let accumulatedContent = '';
+
+      try {
+        const response = await fetch('/admin/api/chat/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            prompt: prompt,
+            mode: currentChatMode,
+            session_id: chatSessionId,
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP Error ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop(); // Keep incomplete chunk
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data:')) continue;
+            const jsonStr = trimmed.replace(/^data:\s*/, '');
+            try {
+              const event = JSON.parse(jsonStr);
+
+              if (event.type === 'delta') {
+                accumulatedContent += event.content || '';
+                if (contentEl) contentEl.innerHTML = renderMarkdownToHtml(accumulatedContent);
+                scrollChatToBottom();
+              } else if (event.type === 'status') {
+                if (floater) {
+                  floater.classList.remove('hidden');
+                  if (floaterLabel) floaterLabel.textContent = event.message || '';
+                  if (floaterTool) floaterTool.textContent = currentChatMode;
+                }
+              } else if (event.type === 'antigravity_step') {
+                if (floater) {
+                  floater.classList.remove('hidden');
+                  if (floaterLabel) floaterLabel.textContent = `🤖 ${event.tool} (${event.status})`;
+                  if (floaterTool) floaterTool.textContent = event.tool;
+                }
+                // Add accordion step
+                if (stepsContainer && event.status === 'running') {
+                  const stepBadge = document.createElement('div');
+                  stepBadge.className = 'px-3 py-1.5 rounded-xl bg-purple-950/40 border border-purple-800/50 text-[11px] font-mono text-purple-300 flex items-center justify-between animate-in fade-in duration-150';
+                  stepBadge.innerHTML = `<span>⚙️ <strong>${escapeHtml(event.tool)}</strong> 実行中...</span><span class="text-[9px] text-purple-400">Antigravity</span>`;
+                  stepsContainer.appendChild(stepBadge);
+                  scrollChatToBottom();
+                }
+              } else if (event.type === 'done') {
+                if (event.full_content) {
+                  accumulatedContent = event.full_content;
+                  if (contentEl) contentEl.innerHTML = renderMarkdownToHtml(accumulatedContent);
+                }
+                scrollChatToBottom();
+              } else if (event.type === 'error') {
+                accumulatedContent += `\n\n⚠️ エラー: ${event.message || ''}`;
+                if (contentEl) contentEl.innerHTML = renderMarkdownToHtml(accumulatedContent);
+              }
+            } catch (jsonErr) {
+              console.warn('SSE JSON parse error:', jsonErr);
+            }
+          }
+        }
+      } catch (err) {
+        if (contentEl) contentEl.innerHTML = `<span class="text-rose-400">通信エラーが発生しました: ${escapeHtml(err.message)}</span>`;
+      } finally {
+        isChatStreaming = false;
+        if (sendBtn) sendBtn.disabled = false;
+        if (floater) floater.classList.add('hidden');
+        fetchChatStatus();
+        scrollChatToBottom();
+      }
+    }
+
+    function handleChatKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleChatSubmit(e);
+      }
+    }
+
+    function applySuggestion(text) {
+      const textarea = document.getElementById('chat-input-textarea');
+      if (textarea) {
+        textarea.value = text;
+        handleChatSubmit();
+      }
+    }
+
+    async function clearChatSession() {
+      if (!confirm(`${currentChatMode === 'assistant' ? '秘書' : 'CoPilot'}の会話履歴をクリアしますか？`)) return;
+      try {
+        await aliceFetch('/admin/api/chat/clear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: currentChatMode, session_id: chatSessionId }),
+        });
+        loadChatHistory(currentChatMode);
+      } catch (err) {
+        alert('クリアに失敗しました: ' + err.message);
+      }
+    }
+
+    // =========================================================================
+    // Full-Duplex Real-Time Voice Conversation Controller
+    // =========================================================================
+    let voiceRecognition = null;
+    let isVoiceActive = false;
+    let voiceState = 'idle'; // 'listening' | 'thinking' | 'speaking'
+    let currentSpeechUtterance = null;
+    let voiceTranscriptAccumulator = '';
+    let voiceSilenceTimer = null;
+
+    function openVoiceChatModal() {
+      const modal = document.getElementById('voice-chat-modal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      isVoiceActive = true;
+      initVoiceRecognition();
+      startVoiceListening();
+    }
+
+    function closeVoiceChatModal() {
+      const modal = document.getElementById('voice-chat-modal');
+      if (modal) modal.classList.add('hidden');
+      isVoiceActive = false;
+      stopVoiceSpeaking();
+      if (voiceRecognition) {
+        try { voiceRecognition.stop(); } catch(e) {}
+      }
+      setVoiceState('idle');
+    }
+
+    function setVoiceState(state) {
+      voiceState = state;
+      const glow = document.getElementById('voice-orb-glow');
+      const ring = document.getElementById('voice-orb-ring');
+      const core = document.getElementById('voice-orb-core');
+      const badge = document.getElementById('voice-state-badge');
+      const icon = document.getElementById('voice-orb-icon');
+
+      if (state === 'listening') {
+        if (glow) glow.className = 'absolute w-56 h-56 rounded-full bg-sky-500/25 blur-3xl transition-all duration-500 animate-pulse';
+        if (ring) ring.className = 'absolute w-44 h-44 rounded-full border-2 border-sky-400/50 scale-100 transition-all duration-300 animate-ping';
+        if (core) core.className = 'relative w-32 h-32 rounded-full bg-gradient-to-tr from-sky-500 via-teal-400 to-indigo-500 shadow-2xl shadow-sky-500/40 flex items-center justify-center transition-all duration-300 cursor-pointer scale-100';
+        if (badge) {
+          badge.textContent = 'LISTENING...';
+          badge.className = 'px-4 py-1.5 rounded-full text-xs font-mono font-bold bg-sky-500/20 text-sky-300 border border-sky-400/30 tracking-wider transition-all duration-300';
+        }
+        if (icon) icon.textContent = '🎙️';
+      } else if (state === 'thinking') {
+        if (glow) glow.className = 'absolute w-56 h-56 rounded-full bg-purple-500/30 blur-3xl transition-all duration-500 animate-pulse';
+        if (ring) ring.className = 'absolute w-44 h-44 rounded-full border-2 border-purple-400/60 scale-105 transition-all duration-300 animate-spin';
+        if (core) core.className = 'relative w-32 h-32 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-indigo-600 shadow-2xl shadow-purple-500/50 flex items-center justify-center transition-all duration-300 cursor-pointer scale-95';
+        if (badge) {
+          badge.textContent = 'THINKING...';
+          badge.className = 'px-4 py-1.5 rounded-full text-xs font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-400/40 tracking-wider transition-all duration-300';
+        }
+        if (icon) icon.textContent = '🧠';
+      } else if (state === 'speaking') {
+        if (glow) glow.className = 'absolute w-60 h-60 rounded-full bg-emerald-500/30 blur-3xl transition-all duration-300 animate-pulse';
+        if (ring) ring.className = 'absolute w-48 h-48 rounded-full border-2 border-emerald-400/70 scale-110 transition-all duration-200';
+        if (core) core.className = 'relative w-36 h-36 rounded-full bg-gradient-to-tr from-emerald-400 via-teal-300 to-sky-500 shadow-2xl shadow-emerald-500/50 flex items-center justify-center transition-all duration-300 cursor-pointer scale-105';
+        if (badge) {
+          badge.textContent = 'SPEAKING...';
+          badge.className = 'px-4 py-1.5 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 tracking-wider transition-all duration-300';
+        }
+        if (icon) icon.textContent = '🔊';
+      } else {
+        if (badge) {
+          badge.textContent = 'IDLE';
+          badge.className = 'px-4 py-1.5 rounded-full text-xs font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700 tracking-wider';
+        }
+        if (icon) icon.textContent = '⏸️';
+      }
+    }
+
+    function handleOrbClick() {
+      if (!isVoiceActive) return;
+      if (voiceState === 'speaking') {
+        stopVoiceSpeaking();
+        startVoiceListening();
+      } else if (voiceState === 'listening') {
+        if (voiceTranscriptAccumulator.trim()) {
+          processVoicePrompt(voiceTranscriptAccumulator.trim());
+        }
+      }
+    }
+
+    function initVoiceRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('お使いのブラウザは音声認識 (Web Speech API) に未対応です。Chrome または Safari をご利用ください。');
+        closeVoiceChatModal();
+        return;
+      }
+
+      if (!voiceRecognition) {
+        voiceRecognition = new SpeechRecognition();
+        voiceRecognition.continuous = true;
+        voiceRecognition.interimResults = true;
+        voiceRecognition.lang = 'ja-JP';
+
+        voiceRecognition.onresult = (event) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          if (voiceState === 'speaking' || window.speechSynthesis.speaking) {
+            stopVoiceSpeaking();
+            setVoiceState('listening');
+          }
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          const currentText = (voiceTranscriptAccumulator + ' ' + finalTranscript + ' ' + interimTranscript).trim();
+          const userEl = document.getElementById('voice-user-text');
+          if (userEl) userEl.textContent = currentText ? `「${currentText}」` : '';
+
+          if (finalTranscript) {
+            voiceTranscriptAccumulator = (voiceTranscriptAccumulator + ' ' + finalTranscript).trim();
+          }
+
+          clearTimeout(voiceSilenceTimer);
+          if (voiceTranscriptAccumulator.trim()) {
+            voiceSilenceTimer = setTimeout(() => {
+              if (isVoiceActive && voiceState === 'listening') {
+                const query = voiceTranscriptAccumulator.trim();
+                voiceTranscriptAccumulator = '';
+                processVoicePrompt(query);
+              }
+            }, 1200);
+          }
+        };
+
+        voiceRecognition.onerror = (event) => {
+          console.warn('[Voice Recognition Error]', event.error);
+          if (event.error === 'not-allowed') {
+            alert('マイクへのアクセスが許可されていません。ブラウザの設定でマイクを許可してください。');
+            closeVoiceChatModal();
+          }
+        };
+
+        voiceRecognition.onend = () => {
+          if (isVoiceActive && voiceState !== 'thinking') {
+            try { voiceRecognition.start(); } catch(e) {}
+          }
+        };
+      }
+    }
+
+    function startVoiceListening() {
+      setVoiceState('listening');
+      const aiEl = document.getElementById('voice-ai-text');
+      if (aiEl) aiEl.textContent = '';
+      if (voiceRecognition) {
+        try { voiceRecognition.start(); } catch(e) {}
+      }
+    }
+
+    function stopVoiceSpeaking() {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      currentSpeechUtterance = null;
+    }
+
+    async function processVoicePrompt(promptText) {
+      if (!promptText || !isVoiceActive) return;
+      setVoiceState('thinking');
+      const userEl = document.getElementById('voice-user-text');
+      const aiEl = document.getElementById('voice-ai-text');
+      if (userEl) userEl.textContent = `あなた: 「${promptText}」`;
+      if (aiEl) aiEl.textContent = 'ALICE 考え中...';
+
+      let accumulatedAnswer = '';
+      let sentenceQueue = [];
+
+      function speakNextSentence() {
+        if (!isVoiceActive || sentenceQueue.length === 0) {
+          if (sentenceQueue.length === 0 && !isChatStreaming) {
+            setTimeout(() => {
+              if (isVoiceActive && !window.speechSynthesis.speaking) {
+                startVoiceListening();
+              }
+            }, 400);
+          }
+          return;
+        }
+
+        const sentence = sentenceQueue.shift().trim();
+        if (!sentence) {
+          speakNextSentence();
+          return;
+        }
+
+        setVoiceState('speaking');
+        const utter = new SpeechSynthesisUtterance(sentence);
+        utter.lang = 'ja-JP';
+        utter.rate = 1.05;
+        utter.pitch = 1.02;
+
+        const voices = window.speechSynthesis.getVoices();
+        const jaVoice = voices.find(v => v.lang.startsWith('ja') && (v.name.includes('Kyoko') || v.name.includes('Otoya') || v.name.includes('Nanami') || v.name.includes('Google') || v.name.includes('Natural')));
+        if (jaVoice) utter.voice = jaVoice;
+
+        utter.onend = () => { speakNextSentence(); };
+        utter.onerror = () => { speakNextSentence(); };
+
+        currentSpeechUtterance = utter;
+        window.speechSynthesis.speak(utter);
+      }
+
+      let lastSpokenText = '';
+
+      function queueSentenceIfReady(text, isFinal = false) {
+        const parts = text.split(/([。！？\n]+)/);
+        let completed = '';
+        for (let i = 0; i < parts.length - 1; i += 2) {
+          completed += parts[i] + parts[i+1];
+        }
+        if (completed && completed !== lastSpokenText) {
+          const newPart = completed.slice(lastSpokenText.length);
+          if (newPart.trim()) {
+            sentenceQueue.push(newPart.trim());
+            lastSpokenText = completed;
+            if (!window.speechSynthesis.speaking) {
+              speakNextSentence();
+            }
+          }
+        }
+        if (isFinal) {
+          const remaining = text.slice(lastSpokenText.length).trim();
+          if (remaining) {
+            sentenceQueue.push(remaining);
+            if (!window.speechSynthesis.speaking) {
+              speakNextSentence();
+            }
+          }
+        }
+      }
+
+      try {
+        const response = await fetch('/admin/api/chat/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            prompt: promptText,
+            mode: 'assistant',
+            session_id: chatSessionId,
+          })
+        });
+
+        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data:')) continue;
+            const jsonStr = trimmed.replace(/^data:\s*/, '');
+            try {
+              const event = JSON.parse(jsonStr);
+              if (event.type === 'delta') {
+                accumulatedAnswer += event.content || '';
+                if (aiEl) aiEl.textContent = accumulatedAnswer;
+                queueSentenceIfReady(accumulatedAnswer, false);
+              } else if (event.type === 'done') {
+                if (event.full_content) accumulatedAnswer = event.full_content;
+                if (aiEl) aiEl.textContent = accumulatedAnswer;
+                queueSentenceIfReady(accumulatedAnswer, true);
+              }
+            } catch(e) {}
+          }
+        }
+        queueSentenceIfReady(accumulatedAnswer, true);
+      } catch (err) {
+        if (aiEl) aiEl.textContent = `エラー: ${err.message}`;
+        setTimeout(startVoiceListening, 2000);
+      }
+    }
+
+    // =========================================================================
+    // Maintenance Mode Controller
+    // =========================================================================
+    const DEFAULT_MAINTENANCE_MSG = "只今システムメンテナンスおよびアップデート作業を行っております。\nご不便をおかけしますが、再開までしばらくお待ちください。\n（作業完了次第、自動的に通常応答へ復帰いたします）";
+
+    function updateMaintenanceUI(isActive) {
+      const topBanner = document.getElementById('maintenance-top-banner');
+      const badge = document.getElementById('maintenance-badge-status');
+      const indicator = document.getElementById('maintenance-indicator');
+
+      if (isActive) {
+        if (topBanner) topBanner.classList.remove('hidden');
+        if (badge) {
+          badge.className = 'px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 font-bold text-[11px] animate-pulse';
+          badge.innerText = 'ON (メンテ中)';
+        }
+        if (indicator) {
+          indicator.className = 'w-2 h-2 rounded-full bg-amber-400 animate-ping';
+        }
+      } else {
+        if (topBanner) topBanner.classList.add('hidden');
+        if (badge) {
+          badge.className = 'px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-semibold text-[11px]';
+          badge.innerText = 'OFF';
+        }
+        if (indicator) {
+          indicator.className = 'w-2 h-2 rounded-full bg-emerald-500';
+        }
+      }
+    }
+
+    async function openMaintenanceModal() {
+      const modal = document.getElementById('maintenance-modal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+
+      try {
+        const res = await fetch('/admin/api/maintenance');
+        if (res.ok) {
+          const data = await res.json();
+          const toggle = document.getElementById('modal-maintenance-toggle');
+          const msgBox = document.getElementById('modal-maintenance-message');
+          const bypassBox = document.getElementById('modal-maintenance-bypass');
+          const statusText = document.getElementById('modal-status-text');
+
+          if (toggle) toggle.checked = !!data.maintenance_mode;
+          if (msgBox) msgBox.value = data.maintenance_message || DEFAULT_MAINTENANCE_MSG;
+          if (bypassBox) bypassBox.checked = data.admin_bypass !== false;
+          if (statusText) {
+            statusText.innerText = data.maintenance_mode ? 'ON (メンテ中)' : 'OFF (通常稼働)';
+            statusText.className = data.maintenance_mode
+              ? 'text-xs px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700 font-mono font-bold'
+              : 'text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono';
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load maintenance settings:', e);
+      }
+    }
+
+    function closeMaintenanceModal() {
+      const modal = document.getElementById('maintenance-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function onMaintenanceToggleChange() {
+      const toggle = document.getElementById('modal-maintenance-toggle');
+      const statusText = document.getElementById('modal-status-text');
+      if (toggle && statusText) {
+        statusText.innerText = toggle.checked ? 'ON (メンテ中)' : 'OFF (通常稼働)';
+        statusText.className = toggle.checked
+          ? 'text-xs px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700 font-mono font-bold'
+          : 'text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono';
+      }
+    }
+
+    function resetDefaultMaintenanceMessage() {
+      const msgBox = document.getElementById('modal-maintenance-message');
+      if (msgBox) msgBox.value = DEFAULT_MAINTENANCE_MSG;
+    }
+
+    async function saveMaintenanceSettings() {
+      const btn = document.getElementById('btn-save-maintenance');
+      const toggle = document.getElementById('modal-maintenance-toggle');
+      const msgBox = document.getElementById('modal-maintenance-message');
+      const bypassBox = document.getElementById('modal-maintenance-bypass');
+
+      const payload = {
+        maintenance_mode: toggle ? toggle.checked : false,
+        maintenance_message: msgBox ? msgBox.value.trim() : '',
+        admin_bypass: bypassBox ? bypassBox.checked : true
+      };
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '保存中...';
+      }
+
+      try {
+        const res = await fetch('/admin/api/maintenance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const resData = await res.json();
+          updateMaintenanceUI(payload.maintenance_mode);
+          closeMaintenanceModal();
+        } else {
+          alert('設定の保存に失敗しました。');
+        }
+      } catch (e) {
+        console.error('Failed to save maintenance settings:', e);
+        alert('エラーが発生しました: ' + e);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = '設定を保存して適用';
+        }
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', initCockpit);
+    } else {
+      initCockpit();
+    }
+  </script>
+</body>
+</html>

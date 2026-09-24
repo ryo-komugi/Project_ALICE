@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+.aider*
+.env
+
+.codeboarding/*.db
+
+.archive
+archive/
+.myenv
+myenv/
+
+# Database & Credentials
+database/*.db*
+database/*.pem
+
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environments
+.env
+venv/
+.venv/
+env/
+.myenv/
+myenv/
+
+# Logs & Temporary
+logs/
+*.log
+.mypy_cache/
+.pytest_cache/
+
+*token.txt
