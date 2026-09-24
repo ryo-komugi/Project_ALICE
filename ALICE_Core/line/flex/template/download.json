@@ -1,0 +1,71 @@
+{
+    "type": "flex",
+    "altText": "${TITLE}",
+    "contents": {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "Project ALICE",
+                    "weight": "bold",
+                    "size": "xl"
+                },
+                {
+                    "type": "separator",
+                    "margin": "md"
+                },
+                {
+                    "type": "text",
+                    "text": "${TITLE}",
+                    "weight": "bold",
+                    "size": "lg",
+                    "wrap": true,
+                    "margin": "lg"
+                },
+                {
+                    "type": "text",
+                    "text": "${FILENAME}",
+                    "size": "sm",
+                    "color": "#888888",
+                    "wrap": true,
+                    "margin": "sm"
+                },
+                {
+                    "type": "text",
+                    "text": "ダウンロードの準備が完了しました。",
+                    "wrap": true,
+                    "margin": "md"
+                }
+            ]
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "action": {
+                        "type": "uri",
+                        "label": "📖 Webで開く",
+                        "uri": "${VIEW_URL}"
+                    }
+                },
+                {
+                    "type": "button",
+                    "style": "secondary",
+                    "action": {
+                        "type": "uri",
+                        "label": "📥 ファイルを保存",
+                        "uri": "${DOWNLOAD_URL}"
+                    }
+                }
+            ]
+        }
+    }
+}

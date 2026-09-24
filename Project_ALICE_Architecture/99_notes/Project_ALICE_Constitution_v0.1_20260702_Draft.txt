@@ -1,0 +1,67 @@
+Project_ALICE Constitution v0.1 (Draft)
+
+※ この文書はドラフト版です。
+レビューを前提としており、今後変更される可能性があります。
+
+Preamble
+
+Project_ALICEは、日々の課題を解決するために生まれたAIプロジェクトである。
+
+本プロジェクトは議事録生成から始まり、
+知識の蓄積・整理・再利用へと成長していく。
+
+本Constitutionは、Project_ALICEに関わる
+すべての設計・実装・運用の基本理念を定める。
+
+Chapter 1 : Project
+
+Article 1 Project_ALICEは実際の利用から進化する。
+設計は現実の要求を起点とし、
+将来の可能性だけを理由に現在を複雑化しない。
+
+Article 2 Project_ALICEはモジュール型システムである。
+各Moduleは独立して開発・運用できるものとする。
+
+Chapter 2 : Architecture
+
+Article 3 各Moduleは公開Contractを通じてのみ連携する。
+内部実装への依存を禁止する。
+
+Article 4 各Moduleは単一責務を持つ。
+一つのModuleは一つの目的に集中する。
+
+Article 5 内部成果物とユーザー成果物は明確に分離する。
+内部構造は利用者へ公開しない。
+
+Chapter 3 : Development
+
+Article 6 Project_ALICEは再利用可能な成果物を生成する。
+生成物は後続Moduleから利用できることを前提とする。
+
+Article 7 設計判断には理由を残す。
+重要なArchitecture変更はADRとして記録する。
+
+Chapter 4 : Evolution
+
+Article 8 Project_ALICEは継続的な改善を前提として設計する。
+完成形を固定せず、利用とともに成長する。
+
+Article 9 Project全体の整合性を優先する。 Module単体の最適化よりも、
+Project全体の一貫性を優先する。
+
+Chapter 5 : Governance
+
+Article 10 ConstitutionはProject_ALICEの最上位設計原則である。
+下位仕様（Standards、Contracts、Interfaces、実装）は
+本Constitutionに従わなければならない。
+
+レビュー時の論点
+
+・保守性を独立した条文として追加するか
+・シンプルさ(KISS/YAGNI)を独立した条文として追加するか
+
+メモ
+
+・本ドラフトはレビュー用。
+・条文の順番、章構成、表現は今後変更される可能性がある。
+・まず全体像をレビューし、その後1条ずつ精査する。

@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.py[cod]
+.aider*
+.env
+
+# Database & Credentials
+database/*.db*
+database/*.pem
+

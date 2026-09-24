@@ -1,0 +1,19 @@
+{
+  "name": "Project_Alice Management Cockpit",
+  "short_name": "Project_Alice",
+  "description": "Project_Alice Hardware & Job Management Cockpit",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8fafc",
+  "theme_color": "#060913",
+  "icons": [
+    {
+      "src": "/static/admin/alice_logo.jpg",
+      "sizes": "192x192 512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

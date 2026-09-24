@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Environments
+.env
+venv/
+.venv/
+env/
+
+# Logs & Temporary
+logs/
+*.log
+.mypy_cache/
+.pytest_cache/
