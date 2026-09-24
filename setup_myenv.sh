@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Project_ALICE: Virtual Environment Setup Script
-# Docs/requirements_*.txt を源泉として myenv/ 配下に各 venv を自動構築します。
+# pyenv & Python 3.10 の自動導入から、Docs/requirements_*.txt を源泉とした
+# myenv/ 配下の各 venv 自動構築までをワンストップで実行します。
 # ==============================================================================
 set -e
 
@@ -17,29 +18,87 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
 MYENV_DIR="$PROJECT_ROOT/myenv"
 DOCS_DIR="$PROJECT_ROOT/Docs"
+TARGET_PY_VER="3.10.20"
 
-echo -e "${BLUE}=== Project_ALICE 仮想環境（venv）自動セットアップ ===${NC}"
+echo -e "${BLUE}============================================================${NC}"
+echo -e "${BLUE}=== Project_ALICE 開発・本番環境 自動セットアップ ===${NC}"
+echo -e "${BLUE}============================================================${NC}"
 echo -e "作業ディレクトリ: ${PROJECT_ROOT}"
 
-# 2. Python 3.10 インタプリタの自動検出（PyTorch等の互換性確保）
-PYTHON_BIN=""
-if [ -x "$HOME/.pyenv/versions/3.10.20/bin/python" ]; then
-    PYTHON_BIN="$HOME/.pyenv/versions/3.10.20/bin/python"
-elif command -v pyenv &>/dev/null && pyenv which python3.10 &>/dev/null; then
-    PYTHON_BIN="$(pyenv which python3.10)"
-elif command -v python3.10 &>/dev/null; then
-    PYTHON_BIN="$(command -v python3.10)"
-else
-    PYTHON_BIN="python3"
+# 2. pyenv 環境のロード＆自動インストール
+export PYENV_ROOT="${PYENV_ROOT:-$HOME/.pyenv}"
+if [ -d "$PYENV_ROOT/bin" ]; then
+    export PATH="$PYENV_ROOT/bin:$PATH"
 fi
 
-PY_VER=$("$PYTHON_BIN" --version 2>&1)
-echo -e "使用 Python: ${GREEN}${PYTHON_BIN}${NC} (${PY_VER})"
+if ! command -v pyenv &>/dev/null; then
+    echo ""
+    echo -e "${YELLOW}[WARN] pyenv がシステムに見つかりません。${NC}"
+    echo -e "${YELLOW}pyenv の自動インストールを開始します (https://pyenv.run)...${NC}"
+    if command -v curl &>/dev/null; then
+        curl -fsSL https://pyenv.run | bash
+    elif command -v wget &>/dev/null; then
+        wget -qO- https://pyenv.run | bash
+    elif command -v git &>/dev/null; then
+        git clone https://github.com/pyenv/pyenv.git "$PYENV_ROOT"
+    else
+        echo -e "${RED}[ERROR] curl, wget, git のいずれかが必要です。手動で pyenv をインストールしてください。${NC}"
+        exit 1
+    fi
+    export PATH="$PYENV_ROOT/bin:$PATH"
+fi
+
+# pyenv の shims パスを有効化
+if [ -d "$PYENV_ROOT/shims" ]; then
+    export PATH="$PYENV_ROOT/shims:$PATH"
+fi
+eval "$(pyenv init -)" 2>/dev/null || true
+
+echo -e "pyenv バージョン: ${GREEN}$(pyenv --version)${NC}"
+
+# 3. Python 3.10 の存在確認＆自動インストール
+PYTHON_BIN=""
+if pyenv versions --bare | grep -E "^3\.10\." &>/dev/null; then
+    # すでに 3.10.x がインストール済み
+    INSTALLED_VER=$(pyenv versions --bare | grep -E "^3\.10\." | tail -n 1)
+    echo -e "Python 3.10 検出: ${GREEN}${INSTALLED_VER}${NC} (インストール済みのためスキップ)"
+    PYTHON_BIN="$PYENV_ROOT/versions/$INSTALLED_VER/bin/python"
+else
+    echo ""
+    echo -e "${YELLOW}------------------------------------------------------------${NC}"
+    echo -e "${YELLOW}[INFO] Python 3.10 が見つかりません。${TARGET_PY_VER} のインストールを開始します...${NC}"
+    echo -e "${YELLOW}（※ 初回ビルドには数分かかります。そのままお待ちください）${NC}"
+    echo -e "${YELLOW}------------------------------------------------------------${NC}"
+    
+    if pyenv install "$TARGET_PY_VER"; then
+        echo -e "${GREEN}✔ Python ${TARGET_PY_VER} のインストールに成功しました！${NC}"
+        PYTHON_BIN="$PYENV_ROOT/versions/$TARGET_PY_VER/bin/python"
+    else
+        echo -e "${RED}[ERROR] Python ${TARGET_PY_VER} のビルドに失敗しました。${NC}"
+        echo -e "${YELLOW}Ubuntu/Debian の場合、以下のビルド依存ライブラリが必要です:${NC}"
+        echo "sudo apt-get update && sudo apt-get install -y build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libffi-dev liblzma-dev"
+        exit 1
+    fi
+fi
+
+# フォールバックパス解決
+if [ -z "$PYTHON_BIN" ] || [ ! -x "$PYTHON_BIN" ]; then
+    if [ -x "$PYENV_ROOT/versions/$TARGET_PY_VER/bin/python" ]; then
+        PYTHON_BIN="$PYENV_ROOT/versions/$TARGET_PY_VER/bin/python"
+    elif pyenv which python3.10 &>/dev/null; then
+        PYTHON_BIN="$(pyenv which python3.10)"
+    else
+        PYTHON_BIN="python3"
+    fi
+fi
+
+PY_VER_STR=$("$PYTHON_BIN" --version 2>&1)
+echo -e "仮想環境用 Python: ${GREEN}${PYTHON_BIN}${NC} (${PY_VER_STR})"
 
 # myenv ディレクトリの準備
 mkdir -p "$MYENV_DIR"
 
-# 3. 仮想環境の定義（[環境名]="源泉requirementsファイル"）
+# 4. 仮想環境の定義（[環境名]="源泉requirementsファイル"）
 declare -A ENV_MAP=(
     ["core_env"]="requirements_core_env.txt"
     ["copilot_env"]="requirements_copilot_env.txt"
@@ -47,7 +106,7 @@ declare -A ENV_MAP=(
     ["pyannote_env"]="requirements_pyannote_env.txt"
 )
 
-# 4. 単一環境の構築関数
+# 5. 単一環境の構築関数
 setup_single_env() {
     local env_name="$1"
     local req_file="$2"
@@ -102,7 +161,7 @@ setup_single_env() {
     echo -e "${GREEN}✔ ${env_name} の構築が正常に完了しました！${NC}"
 }
 
-# 5. 引数オプション解析
+# 6. 引数オプション解析
 CLEAN_MODE="false"
 TARGET_ARG=""
 
@@ -134,7 +193,7 @@ for arg in "$@"; do
     esac
 done
 
-# 6. 実行ループ
+# 7. 実行ループ
 if [ -n "$TARGET_ARG" ]; then
     setup_single_env "$TARGET_ARG" "${ENV_MAP[$TARGET_ARG]}"
 else
