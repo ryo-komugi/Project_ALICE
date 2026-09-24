@@ -4,7 +4,11 @@
 # pyenv & Python 3.10 の自動導入から、Docs/requirements_*.txt を源泉とした
 # myenv/ 配下の各 venv 自動構築までをワンストップで実行します。
 # ==============================================================================
-set -e
+if [ -z "${BASH_VERSION:-}" ]; then
+    echo "Error: このスクリプトは Bash 専用です。bash setup_myenv.sh [オプション] で実行してください。" >&2
+    exit 2
+fi
+set -euo pipefail
 
 # 色設定（視認性向上）
 GREEN='\033[0;32m'
@@ -25,73 +29,47 @@ echo -e "${BLUE}=== Project_ALICE 開発・本番環境 自動セットアップ
 echo -e "${BLUE}============================================================${NC}"
 echo -e "作業ディレクトリ: ${PROJECT_ROOT}"
 
-# 2. pyenv 環境のロード＆自動インストール
+# 2. pyenv の確認＆自動インストール（PATH は変更せず、絶対パスで実行）
 export PYENV_ROOT="${PYENV_ROOT:-$HOME/.pyenv}"
-if [ -d "$PYENV_ROOT/bin" ]; then
-    export PATH="$PYENV_ROOT/bin:$PATH"
-fi
+PYENV_BIN="$PYENV_ROOT/bin/pyenv"
 
-if ! command -v pyenv &>/dev/null; then
-    echo ""
-    echo -e "${YELLOW}[WARN] pyenv がシステムに見つかりません。${NC}"
-    echo -e "${YELLOW}pyenv の自動インストールを開始します (https://pyenv.run)...${NC}"
-    if command -v curl &>/dev/null; then
-        curl -fsSL https://pyenv.run | bash
-    elif command -v wget &>/dev/null; then
-        wget -qO- https://pyenv.run | bash
-    elif command -v git &>/dev/null; then
+if [ ! -x "$PYENV_BIN" ]; then
+    if command -v pyenv >/dev/null 2>&1; then
+        PYENV_BIN="$(command -v pyenv)"
+        PYENV_ROOT="$("$PYENV_BIN" root)"
+        export PYENV_ROOT
+    elif [ -e "$PYENV_ROOT" ]; then
+        echo -e "${RED}[ERROR] ${PYENV_ROOT}/bin/pyenv が実行できません。${NC}" >&2
+        echo "既存の pyenv を修復するか、PYENV_ROOT を変更してください。" >&2
+        exit 1
+    else
+        if ! command -v git >/dev/null 2>&1; then
+            echo -e "${RED}[ERROR] pyenv のインストールには git が必要です。${NC}" >&2
+            exit 1
+        fi
+        echo -e "${YELLOW}[INFO] pyenv を ${PYENV_ROOT} にインストールします。${NC}"
         git clone https://github.com/pyenv/pyenv.git "$PYENV_ROOT"
-    else
-        echo -e "${RED}[ERROR] curl, wget, git のいずれかが必要です。手動で pyenv をインストールしてください。${NC}"
-        exit 1
+        PYENV_BIN="$PYENV_ROOT/bin/pyenv"
     fi
-    export PATH="$PYENV_ROOT/bin:$PATH"
 fi
 
-# pyenv の shims パスを有効化
-if [ -d "$PYENV_ROOT/shims" ]; then
-    export PATH="$PYENV_ROOT/shims:$PATH"
-fi
-eval "$(pyenv init -)" 2>/dev/null || true
+echo -e "pyenv バージョン: ${GREEN}$("$PYENV_BIN" --version)${NC}"
 
-echo -e "pyenv バージョン: ${GREEN}$(pyenv --version)${NC}"
-
-# 3. Python 3.10 の存在確認＆自動インストール
-PYTHON_BIN=""
-if pyenv versions --bare | grep -E "^3\.10\." &>/dev/null; then
-    # すでに 3.10.x がインストール済み
-    INSTALLED_VER=$(pyenv versions --bare | grep -E "^3\.10\." | tail -n 1)
-    echo -e "Python 3.10 検出: ${GREEN}${INSTALLED_VER}${NC} (インストール済みのためスキップ)"
-    PYTHON_BIN="$PYENV_ROOT/versions/$INSTALLED_VER/bin/python"
-else
-    echo ""
-    echo -e "${YELLOW}------------------------------------------------------------${NC}"
-    echo -e "${YELLOW}[INFO] Python 3.10 が見つかりません。${TARGET_PY_VER} のインストールを開始します...${NC}"
-    echo -e "${YELLOW}（※ 初回ビルドには数分かかります。そのままお待ちください）${NC}"
-    echo -e "${YELLOW}------------------------------------------------------------${NC}"
-    
-    if pyenv install "$TARGET_PY_VER"; then
-        echo -e "${GREEN}✔ Python ${TARGET_PY_VER} のインストールに成功しました！${NC}"
-        PYTHON_BIN="$PYENV_ROOT/versions/$TARGET_PY_VER/bin/python"
-    else
-        echo -e "${RED}[ERROR] Python ${TARGET_PY_VER} のビルドに失敗しました。${NC}"
-        echo -e "${YELLOW}Ubuntu/Debian の場合、以下のビルド依存ライブラリが必要です:${NC}"
-        echo "sudo apt-get update && sudo apt-get install -y build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libffi-dev liblzma-dev"
+# 3. 仮想環境には指定した Python のみを使用し、システム Python へはフォールバックしない。
+if ! "$PYENV_BIN" versions --bare | grep -Fxq "$TARGET_PY_VER"; then
+    echo -e "${YELLOW}[INFO] Python ${TARGET_PY_VER} をインストールします。${NC}"
+    if ! "$PYENV_BIN" install "$TARGET_PY_VER"; then
+        echo -e "${RED}[ERROR] Python ${TARGET_PY_VER} のビルドに失敗しました。${NC}" >&2
+        echo "Ubuntu/Debian では、build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libffi-dev liblzma-dev が必要です。" >&2
         exit 1
     fi
 fi
 
-# フォールバックパス解決
-if [ -z "$PYTHON_BIN" ] || [ ! -x "$PYTHON_BIN" ]; then
-    if [ -x "$PYENV_ROOT/versions/$TARGET_PY_VER/bin/python" ]; then
-        PYTHON_BIN="$PYENV_ROOT/versions/$TARGET_PY_VER/bin/python"
-    elif pyenv which python3.10 &>/dev/null; then
-        PYTHON_BIN="$(pyenv which python3.10)"
-    else
-        PYTHON_BIN="python3"
-    fi
+PYTHON_BIN="$PYENV_ROOT/versions/$TARGET_PY_VER/bin/python"
+if [ ! -x "$PYTHON_BIN" ]; then
+    echo -e "${RED}[ERROR] 指定した Python が見つかりません: ${PYTHON_BIN}${NC}" >&2
+    exit 1
 fi
-
 PY_VER_STR=$("$PYTHON_BIN" --version 2>&1)
 echo -e "仮想環境用 Python: ${GREEN}${PYTHON_BIN}${NC} (${PY_VER_STR})"
 
