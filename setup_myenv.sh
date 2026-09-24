@@ -30,27 +30,22 @@ echo -e "${BLUE}============================================================${NC
 echo -e "作業ディレクトリ: ${PROJECT_ROOT}"
 
 # 2. pyenv の確認＆自動インストール（PATH は変更せず、絶対パスで実行）
-export PYENV_ROOT="${PYENV_ROOT:-$HOME/.pyenv}"
+export PYENV_ROOT="$PROJECT_ROOT/.pyenv"
 PYENV_BIN="$PYENV_ROOT/bin/pyenv"
 
 if [ ! -x "$PYENV_BIN" ]; then
-    if command -v pyenv >/dev/null 2>&1; then
-        PYENV_BIN="$(command -v pyenv)"
-        PYENV_ROOT="$("$PYENV_BIN" root)"
-        export PYENV_ROOT
-    elif [ -e "$PYENV_ROOT" ]; then
+    if [ -e "$PYENV_ROOT" ]; then
         echo -e "${RED}[ERROR] ${PYENV_ROOT}/bin/pyenv が実行できません。${NC}" >&2
         echo "既存の pyenv を修復するか、PYENV_ROOT を変更してください。" >&2
         exit 1
-    else
-        if ! command -v git >/dev/null 2>&1; then
-            echo -e "${RED}[ERROR] pyenv のインストールには git が必要です。${NC}" >&2
-            exit 1
-        fi
-        echo -e "${YELLOW}[INFO] pyenv を ${PYENV_ROOT} にインストールします。${NC}"
-        git clone https://github.com/pyenv/pyenv.git "$PYENV_ROOT"
-        PYENV_BIN="$PYENV_ROOT/bin/pyenv"
     fi
+    if ! command -v git >/dev/null 2>&1; then
+        echo -e "${RED}[ERROR] pyenv のインストールには git が必要です。${NC}" >&2
+        exit 1
+    fi
+    echo -e "${YELLOW}[INFO] pyenv を ${PYENV_ROOT} にインストールします。${NC}"
+    git clone https://github.com/pyenv/pyenv.git "$PYENV_ROOT"
+    PYENV_BIN="$PYENV_ROOT/bin/pyenv"
 fi
 
 echo -e "pyenv バージョン: ${GREEN}$("$PYENV_BIN" --version)${NC}"

@@ -34,3 +34,6 @@ logs/
 .pytest_cache/
 
 *token.txt
+
+# Local pyenv installation for this project
+.pyenv/
