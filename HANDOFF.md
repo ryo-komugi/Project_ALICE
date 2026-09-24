@@ -13,6 +13,7 @@
 |------|------|
 | **Core Project** | `Project_ALICE` (ALICE_Core, LINE連携, 音声処理, メモリ同期等) |
 | **Server** | `alice-server` (SSH: `takuya@alice-server`, Repo: `/home/takuya/Project_ALICE`) |
+| **GitHub Remote** | `git@github.com:ryo-komugi/Project_ALICE.git` (branch: `main`) |
 | **Home Relay Node** | `home-tablet` (SSH: `ssh home-tablet`, Tailscale: `100.72.47.67:8022`) — 自宅LAN常時給電リレー・WoL基点 |
 | **Shared Memory (Windows)** | `C:\Users\TA_51\ALICE_Memory` (Syncthing `alice-memory` で常時自動同期) |
 | **Shared Memory (Linux)** | `/data/memory` |
@@ -25,8 +26,8 @@
 
 ## 2. Latest Status & Handoff
 
-- **Last Updated**: 2026-09-24 00:45 (Device: takuya_MainPC/alice-server via Antigravity)
-- **Current Milestone**: Phase 2 完了・Phase 3（Antigravity CLI 常駐タスクキュー＆コンテキスト共有基盤 配備完了）
+- **Last Updated**: 2026-09-25 01:25 (Device: takuya_MainPC/alice-server via Antigravity)
+- **Current Milestone**: Phase 3（GitHub管理移行完了・Requirementsファイル名整理・プッシュ完了）
 - **Direct Next Action**: リアルタイム音声会話の品質改善（Barge-in / STT / TTS）
 
 ---
@@ -50,8 +51,6 @@
 |---------|-------|------|
 | `alice-core.service` | 8000 | systemctl |
 | `alice-copilot.service` | 8005 | systemctl |
-| `code-server.service` | 8080 | systemctl |
-| `beszel-agent.service` | 8090 | systemctl |
 | Nightly Reviewer | — | cron 03:00 JST |
 | Morning Briefing | — | cron 07:30 JST |
 
@@ -59,7 +58,7 @@
 
 | 項目 | 値 |
 |-----|---|
-| CoPilot LLM | `gemma4:e4b` (Ollama, keep_alive 24h) |
+| CoPilot LLM | `qwen3.5:9b` (Ollama, keep_alive 24h) |
 | Minutes/Summary LLM | `gemma4:12b` (Ollama, think: False) |
 | Whisper モデル | `large-v3` |
 | バックアップ先 | `/data/backup_alice/*.git` |
