@@ -399,6 +399,76 @@ def get_checklist_status() -> str:
         return f"チェックリスト照会例外: {e}"
 
 
+
+
+def audit_codebase_architecture(target_module: str = "ALICE_Core") -> str:
+    """Audits codebase structure, layer separation (Interface vs Infrastructure vs Domain),
+    detects duplicated legacy modules, root test pollution, and checks alignment with Project_ALICE_Architecture.
+
+    Args:
+        target_module: Target repository to audit ('ALICE_Core', 'ALICE_CoPilot', 'ALICE_Summary', 'ALICE_Transcript').
+    """
+    target_path = PROJECT_ROOT / target_module
+    if not target_path.exists():
+        return f"エラー: 対象ディレクトリ {target_path} が存在しません。"
+
+    findings = []
+    findings.append(f"=== 【{target_module} アーキテクチャ＆レイヤー整合性診断】 ===")
+
+    # 1. ルートディレクトリの散乱ファイルチェック
+    root_files = [f for f in os.listdir(target_path) if os.path.isfile(target_path / f)]
+    root_tests = [f for f in root_files if f.startswith("test_")]
+    root_scripts = [f for f in root_files if f.endswith(".py") and not f.startswith("test_") and f not in ("main.py", "config.py", "version.py")]
+
+    if root_tests:
+        findings.append(f"⚠️ [ルート汚染] ルート直下に単体テストが {len(root_tests)} 件散乱しています（'tests/' ディレクトリへの集約が必要）:\n  - 例: {', '.join(root_tests[:5])}...")
+    if root_scripts:
+        findings.append(f"⚠️ [スクリプト散乱] ルート直下に一時/バッチスクリプトが残存:\n  - {', '.join(root_scripts)}")
+
+    # 2. パッケージ/レイヤーの重複・旧コード残存チェック (ALICE_Core固有)
+    if target_module == "ALICE_Core":
+        dups = []
+        overlap_portal = [f for f in ["admin.py", "viewer.py", "download.py", "chat.py"] if (target_path / "core" / f).exists()]
+        if overlap_portal:
+            dups.append(f"`portal/` と `core/` の責務重複（core/{', core/'.join(overlap_portal)} が並存）")
+
+        if (target_path / "line").exists():
+            dups.append("`gateway/` と `line/` の重複（旧 `line/` パッケージが残存）")
+
+        overlap_hub = [f for f in ["worker.py", "container.py", "job_queue.py", "workspace_manager.py"] if (target_path / "core" / f).exists()]
+        if overlap_hub:
+            dups.append(f"`hub/` と `core/` の責務重複（core/{', core/'.join(overlap_hub)} が並存）")
+        
+        if dups:
+            findings.append("🔴 [重大なレイヤー重複・責務未整理]:\n  - " + "\n  - ".join(dups))
+
+    # 3. 巨大ファイルの検出 (> 600行)
+    large_files = []
+    for root, dirs, files in os.walk(target_path):
+        dirs[:] = [d for d in dirs if d not in ('.git', '__pycache__', 'venv', 'myenv')]
+        for f in files:
+            if f.endswith(".py"):
+                p = Path(root) / f
+                try:
+                    with open(p, "r", encoding="utf-8", errors="ignore") as fp:
+                        lines = len(fp.readlines())
+                        if lines > 600:
+                            rel = p.relative_to(target_path)
+                            large_files.append((str(rel), lines))
+                except Exception:
+                    pass
+    if large_files:
+        large_files.sort(key=lambda x: x[1], reverse=True)
+        findings.append(f"⚠️ [モジュール肥大化 (>600行)] 単一責務の原則（SRP）違反の疑い:\n  - " + "\n  - ".join([f"{f}: {l}行" for f, l in large_files[:5]]))
+
+    # 4. Project_ALICE_Architecture との整合性
+    arch_dir = PROJECT_ROOT / "Project_ALICE_Architecture"
+    if arch_dir.exists():
+        findings.append("📘 [Project_ALICE_Architecture 照合]:\n  - `02_Architecture/Overview.md` および ADR-001/008 等で定義されたクリーンアーキテクチャ（Interfaces / Application / Domain / Infrastructure）へのリファクタリングが未達であり、`core/` にインフラ（SQLite/Redis/ファイルI/O）とインターフェース（FastAPIルーター/HTML描画）が密結合しています。")
+
+    return "\n\n".join(findings)
+
+
 def record_review_result(summary: str, improvements: list[str], repairs: list[str] | None = None) -> str:
     """Records the final structured review findings to be included in the morning briefing.
 

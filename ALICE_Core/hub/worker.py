@@ -13,7 +13,7 @@ from core.alert_notifier import send_discord_alert
 from hub.queue import JobQueue
 from hub.workspace import WorkspaceManager
 from publisher.publisher import Publisher
-from line.message_sender import MessageSender
+from gateway.sender import MessageSender
 import config
 
 logger = logging.getLogger(__name__)

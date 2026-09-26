@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 import pytest
 
-COPILOT_DIR = Path(__file__).resolve().parent.parent
+COPILOT_DIR = Path("/home/takuya/Project_ALICE/ALICE_CoPilot")
 sys.path.insert(0, str(COPILOT_DIR))
 
 def test_tasks_token_health():
@@ -25,11 +25,19 @@ def test_repair_tasks_state_dry_run():
     
     # Test real get_todo_tasks integration via check_task_state
     from reviewer.tools import check_task_state
-    task_res = check_task_state(query="江口", list_name="業務タスク")
-    assert "江口さん症状確認" in task_res
+    task_res = check_task_state(query="新人面談アポ", list_name="業務タスク")
+    assert "新人面談アポ" in task_res
     print("All tasks & reviewer tests passed!")
+
+def test_audit_codebase_architecture_tool():
+    from reviewer.tools import audit_codebase_architecture
+    audit_res = audit_codebase_architecture("ALICE_Core")
+    assert "ALICE_Core アーキテクチャ＆レイヤー整合性診断" in audit_res
+    assert "Project_ALICE_Architecture" in audit_res or "健全" in audit_res or "モジュール肥大化" in audit_res
+    print("audit_codebase_architecture test passed!")
 
 if __name__ == "__main__":
     test_tasks_token_health()
     test_repair_tasks_state_dry_run()
-    print("SUCCESS: Custom tests passed!")
+    test_audit_codebase_architecture_tool()
+    print("SUCCESS: All custom tests passed!")

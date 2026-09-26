@@ -3,8 +3,8 @@ import shutil
 import config
 from urllib.parse import quote
 from pathlib import Path
-from line.message_sender import MessageSender
-from line.flex.download import DownloadFlex
+from gateway.sender import MessageSender
+from gateway.flex.download import DownloadFlex
 
 
 logger = logging.getLogger(__name__)

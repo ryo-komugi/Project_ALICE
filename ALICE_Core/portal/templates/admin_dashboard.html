@@ -727,8 +727,9 @@
         <div class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl p-3.5 flex flex-col h-[280px] lg:h-full overflow-hidden">
           <div class="flex items-center gap-1.5 pb-3 border-b border-slate-800/80 text-xs font-mono text-slate-400 px-1">
             <button onclick="setJobFilter('ALL')" id="filter-all" class="px-2.5 py-1 rounded-lg bg-sky-950 text-sky-300 border border-sky-800">ALL</button>
-            <button onclick="setJobFilter('COMPLETED')" id="filter-completed" class="px-2.5 py-1 rounded-lg hover:bg-slate-800">COMPLETED</button>
-            <button onclick="setJobFilter('FAILED')" id="filter-failed" class="px-2.5 py-1 rounded-lg hover:bg-slate-800">FAILED</button>
+            <button onclick="setJobFilter('COMPLETED')" id="filter-completed" class="px-2.5 py-1 rounded-lg hover:bg-slate-800">DONE</button>
+            <button onclick="setJobFilter('WAIT')" id="filter-wait" class="px-2.5 py-1 rounded-lg hover:bg-slate-800">WAIT</button>
+            <button onclick="setJobFilter('FAILED')" id="filter-failed" class="px-2.5 py-1 rounded-lg hover:bg-slate-800">FAIL</button>
           </div>
 
           <div id="jobs-list" class="flex-1 overflow-y-auto divide-y divide-slate-800/40 mt-2 pr-1 space-y-1">
@@ -740,15 +741,16 @@
         <div class="lg:col-span-8 xl:col-span-9 glass-panel rounded-2xl p-4 sm:p-5 flex flex-col min-h-[550px] h-[65vh] lg:h-full overflow-hidden relative">
           
           <!-- Viewer Header -->
-          <div id="viewer-header" class="pb-3 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h3 id="selected-job-title" class="text-base font-bold text-white truncate max-w-xl">ジョブを選択してください</h3>
-              <p id="selected-job-meta" class="text-xs font-mono text-slate-400 mt-0.5">左の一覧から確認したいJobをクリックしてください</p>
+          <div id="viewer-header" class="pb-3 border-b border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <h3 id="selected-job-title" class="text-base font-bold text-white truncate">ジョブを選択してください</h3>
+              <p id="selected-job-meta" class="text-xs font-mono text-slate-400 mt-0.5 truncate">左の一覧から確認したいJobをクリックしてください</p>
             </div>
-            <div id="artifact-action-buttons" class="hidden flex items-center gap-2">
-              <a id="btn-web-view" href="#" target="_blank" class="px-3 py-1.5 rounded-lg text-xs font-mono bg-sky-600/30 text-sky-300 border border-sky-500/40 hover:bg-sky-600/50">Webで開く</a>
-              <button id="btn-delete-job" onclick="deleteCurrentJob()" class="px-3 py-1.5 rounded-lg text-xs font-mono bg-rose-950/60 text-rose-300 border border-rose-700/60 hover:bg-rose-900/80 transition-colors flex items-center gap-1" title="このジョブを完全に削除">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <div id="artifact-action-buttons" class="hidden flex items-center gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap">
+              <a id="btn-web-view" href="#" target="_blank" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-mono bg-sky-600/30 text-sky-300 border border-sky-500/40 hover:bg-sky-600/50 inline-flex items-center gap-1 flex-shrink-0">Webで開く</a>
+              <div id="step-action-container" class="flex items-center gap-1.5 flex-shrink-0"></div>
+              <button id="btn-delete-job" onclick="deleteCurrentJob()" class="whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-mono bg-rose-950/60 text-rose-300 border border-rose-700/60 hover:bg-rose-900/80 transition-colors inline-flex items-center gap-1 flex-shrink-0" title="このジョブを完全に削除">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 <span>削除</span>
               </button>
             </div>
@@ -1710,7 +1712,11 @@
       const userFilter = document.getElementById('job-user-filter')?.value || 'ALL';
 
       let filtered = allJobs.filter(j => {
-        if (currentJobFilter !== 'ALL' && j.status !== currentJobFilter) return false;
+        if (currentJobFilter === 'WAIT') {
+          if (!(j.status === 'QUEUED' || j.status === 'CREATED' || j.status === 'WAITING' || j.status === 'PENDING')) return false;
+        } else if (currentJobFilter !== 'ALL' && j.status !== currentJobFilter) {
+          return false;
+        }
         if (userFilter !== 'ALL' && j.user_id !== userFilter && (j.user_name || '') !== userFilter) return false;
         if (query) {
           const fMatch = (j.filename || '').toLowerCase().includes(query);
@@ -1728,10 +1734,14 @@
 
       container.innerHTML = filtered.map(j => {
         const isSelected = selectedJob && selectedJob.job_id === j.job_id;
-        const statusBadge = j.status === 'COMPLETED' 
-          ? '<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">DONE</span>'
-          : j.status === 'RUNNING'
+        const isGen = (j.status === 'RUNNING' || (j.current_step && j.current_step.startsWith('generating_')));
+        const isWait = (j.status === 'QUEUED' || j.status === 'CREATED' || j.status === 'WAITING' || j.status === 'PENDING' || (j.current_step && j.current_step.startsWith('queued_')));
+        const statusBadge = isGen
           ? '<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800 animate-pulse">RUN</span>'
+          : isWait
+          ? '<span class="text-[10px] font-mono px-1.5 py-0.5 rounded text-amber-400 bg-amber-950/60 border border-amber-800/60">WAIT</span>'
+          : j.status === 'COMPLETED' 
+          ? '<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">DONE</span>'
           : '<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">FAIL</span>';
 
         const createdStr = j.created_at ? j.created_at.slice(5, 16).replace('T', ' ') : '-';
@@ -1771,6 +1781,44 @@
       const btnView = document.getElementById('btn-web-view');
       const actionDiv = document.getElementById('artifact-action-buttons');
       actionDiv.classList.remove('hidden');
+
+      // Update Step Action Buttons (Add Minutes / Summary)
+      const stepActionContainer = document.getElementById('step-action-container');
+      if (stepActionContainer) {
+        stepActionContainer.innerHTML = '';
+        const artifacts = selectedJob.artifacts || [];
+        const hasTranscript = artifacts.some(a => a.module === 'transcript' || (a.name && a.name.includes('transcript')));
+        const hasMinutes = artifacts.some(a => a.module === 'minutes' || (a.name && a.name.includes('minutes')));
+        const hasSummary = artifacts.some(a => a.module === 'summary' || (a.name && a.name.includes('summary')));
+        const isGenerating = selectedJob.current_step && selectedJob.current_step.startsWith('generating_');
+
+        if (isGenerating) {
+          const genStepName = selectedJob.current_step.replace('generating_', '') === 'minutes' ? '議事録' : '要約';
+          stepActionContainer.innerHTML = `
+            <div class="whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-mono bg-amber-950/60 text-amber-300 border border-amber-700/60 inline-flex items-center gap-1.5 animate-pulse flex-shrink-0">
+              <svg class="w-3.5 h-3.5 animate-spin text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              <span>${genStepName}を生成中...</span>
+            </div>
+          `;
+        } else if (hasTranscript) {
+          if (!hasMinutes) {
+            const btnMin = document.createElement('button');
+            btnMin.className = 'whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-mono bg-emerald-950/70 text-emerald-300 border border-emerald-700/70 hover:bg-emerald-900/90 transition-colors inline-flex items-center gap-1 flex-shrink-0';
+            btnMin.innerHTML = `<svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg><span>＋ 議事録を生成</span>`;
+            btnMin.title = '未生成の議事録を追加生成します';
+            btnMin.onclick = () => openStepModal('minutes');
+            stepActionContainer.appendChild(btnMin);
+          }
+          if (!hasSummary) {
+            const btnSum = document.createElement('button');
+            btnSum.className = 'whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-mono bg-sky-950/70 text-sky-300 border border-sky-700/70 hover:bg-sky-900/90 transition-colors inline-flex items-center gap-1 flex-shrink-0';
+            btnSum.innerHTML = `<svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg><span>＋ 要約を生成</span>`;
+            btnSum.title = '未生成の要約を追加生成します';
+            btnSum.onclick = () => openStepModal('summary');
+            stepActionContainer.appendChild(btnSum);
+          }
+        }
+      }
 
       // Render Artifact Tabs
       const tabsContainer = document.getElementById('artifact-tabs');
@@ -3098,11 +3146,183 @@
       }
     }
 
+    
+    let currentGenerateTargetStep = null;
+    let stepPollInterval = null;
+
+    function openStepModal(step) {
+      if (!currentSelectedJobId) return;
+      currentGenerateTargetStep = step;
+      const modal = document.getElementById('step-gen-modal');
+      const title = document.getElementById('step-modal-title');
+      const desc = document.getElementById('step-modal-desc');
+      const tplGroup = document.getElementById('step-modal-template-group');
+      const tplSelect = document.getElementById('step-modal-template');
+
+      if (step === 'minutes') {
+        title.innerHTML = `
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>議事録を追加生成</span>
+        `;
+        const hasSum = (selectedJob.artifacts || []).some(a => a.module === 'summary' || (a.name && a.name.includes('summary')));
+        if (hasSum) {
+          desc.innerText = '既存の要約データを元に議事録を新規作成します。（所要時間: 約1〜2分）';
+        } else {
+          desc.innerText = '文字起こしデータを元に、要約（要約・解説講評）と議事録をセットで自動生成します。（所要時間: 約2〜3分）';
+        }
+        tplGroup.classList.remove('hidden');
+        tplSelect.value = 'auto';
+      } else {
+        title.innerHTML = `
+          <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>要約を追加生成</span>
+        `;
+        desc.innerText = '文字起こしデータを元に3段階要約（要約・解説講評）を新規作成します。（所要時間: 1〜2分）';
+        tplGroup.classList.add('hidden');
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeStepModal() {
+      const modal = document.getElementById('step-gen-modal');
+      if (modal) modal.classList.add('hidden');
+      currentGenerateTargetStep = null;
+    }
+
+    async function submitGenerateStep() {
+      if (!currentSelectedJobId || !currentGenerateTargetStep) return;
+      const btn = document.getElementById('step-modal-submit-btn');
+      const template = document.getElementById('step-modal-template')?.value || 'auto';
+      const step = currentGenerateTargetStep;
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '開始中...';
+      }
+
+      try {
+        const res = await aliceFetch(`/admin/api/jobs/${encodeURIComponent(currentSelectedJobId)}/generate-step`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: step, template: template })
+        });
+
+        if (res && res.ok) {
+          const data = await res.json();
+          closeStepModal();
+          await fetchJobs();
+          selectJob(currentSelectedJobId);
+          startStepPolling(currentSelectedJobId, step);
+        } else {
+          const err = await res.json().catch(() => ({ detail: 'リクエスト失敗' }));
+          alert('追加生成の開始に失敗しました: ' + (err.detail || '不明なエラー'));
+        }
+      } catch (e) {
+        console.error('Failed to start step generation:', e);
+        alert('通信エラーが発生しました: ' + e);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = '生成を開始';
+        }
+      }
+    }
+
+    function startStepPolling(jobId, step) {
+      if (stepPollInterval) clearInterval(stepPollInterval);
+      const stepName = step === 'minutes' ? '議事録' : '要約';
+
+      stepPollInterval = setInterval(async () => {
+        try {
+          const res = await aliceFetch('/admin/api/jobs?limit=50');
+          if (res && res.ok) {
+            allJobs = await res.json();
+            renderJobList();
+
+            const targetJob = allJobs.find(j => j.job_id === jobId);
+            if (!targetJob) {
+              clearInterval(stepPollInterval);
+              return;
+            }
+
+            if (currentSelectedJobId === jobId) {
+              selectedJob = targetJob;
+              selectJob(jobId);
+            }
+
+            const isGenerating = targetJob.current_step && targetJob.current_step.startsWith('generating_');
+            const hasTargetArtifact = (targetJob.artifacts || []).some(a => a.module === step || (a.name && a.name.includes(step)));
+
+            if (!isGenerating && hasTargetArtifact) {
+              clearInterval(stepPollInterval);
+              stepPollInterval = null;
+              alert(`🎉 [${targetJob.filename}] の${stepName}の追加生成が完了しました！`);
+              selectJob(jobId);
+              const art = (targetJob.artifacts || []).find(a => a.module === step && (a.name.endsWith('.md') || a.name.endsWith('.txt')));
+              if (art) {
+                const tabs = document.querySelectorAll('.art-tab-btn');
+                tabs.forEach(t => {
+                  if (t.innerText.trim() === art.name) {
+                    loadArtifactContent(jobId, art.rel_path, t);
+                  }
+                });
+              }
+            } else if (!isGenerating && targetJob.error_message) {
+              clearInterval(stepPollInterval);
+              stepPollInterval = null;
+              alert(`⚠️ ${stepName}の追加生成に失敗しました: ${targetJob.error_message}`);
+            }
+          }
+        } catch (err) {
+          console.error('Error during step polling:', err);
+        }
+      }, 4000);
+    }
+
+
     if (document.readyState === 'loading') {
       window.addEventListener('DOMContentLoaded', initCockpit);
     } else {
       initCockpit();
     }
   </script>
+
+  <!-- Step Generation Modal -->
+  <div id="step-gen-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-panel rounded-2xl p-6 max-w-md w-full border border-slate-700/80 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="step-modal-title" class="text-base font-bold text-white flex items-center gap-2">
+          <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>成果物の追加生成</span>
+        </h3>
+        <button onclick="closeStepModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <p id="step-modal-desc" class="text-xs text-slate-300 leading-relaxed"></p>
+
+      <div id="step-modal-template-group" class="space-y-1.5">
+        <label class="text-xs font-mono text-slate-400">テンプレート形式</label>
+        <select id="step-modal-template" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+          <option value="auto">✨ 自動判別 (会話内容・要約から最適判定) [推奨]</option>
+          <option value="standard">📄 通常 (standard) - 定例会議・標準議事録</option>
+          <option value="interview">👥 面談 (interview) - 1on1・ヒアリング・評価面談</option>
+          <option value="consultation">🤝 相談 (consultation) - 業務相談・アドバイス</option>
+          <option value="executive">👔 役員 (executive) - 役員・経営幹部向け</option>
+        </select>
+        <p class="text-[11px] text-slate-400">※「自動判別」を選択すると、要約情報や会話文脈から最適な形式を自動選定します。</p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
+        <button onclick="closeStepModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">キャンセル</button>
+        <button id="step-modal-submit-btn" onclick="submitGenerateStep()" class="px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors flex items-center gap-1.5 shadow-lg shadow-emerald-950">
+          <span>生成を開始</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
