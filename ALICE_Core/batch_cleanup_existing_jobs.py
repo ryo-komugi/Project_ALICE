@@ -4,7 +4,7 @@ Batch cleanup script for existing jobs in /data/runtime/workspaces
 import sys
 from pathlib import Path
 
-CORE_ROOT = Path("/home/takuya/Project_ALICE/ALICE_Core")
+CORE_ROOT = Path(__file__).resolve().parent
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))
 

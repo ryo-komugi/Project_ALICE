@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from unittest.mock import MagicMock
 
-PROJECT_ROOT = Path("/home/takuya/Project_ALICE")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CORE_ROOT = PROJECT_ROOT / "ALICE_Core"
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))
@@ -179,7 +179,7 @@ def test_5_summary_failure_prevents_publish():
     test_runners = dict(MODULE_RUNNERS)
     test_runners["transcript"] = {
         "python_bin": "/usr/bin/python3",
-        "cli_path": "/home/takuya/Project_ALICE/ALICE_Transcript/cli.py", # or dummy
+        "cli_path": str(PROJECT_ROOT / "ALICE_Transcript" / "cli.py"), # or dummy
         "artifact_dir": "transcript",
         "primary_artifact": "transcript.txt"
     }
@@ -193,7 +193,7 @@ def test_5_summary_failure_prevents_publish():
     # Use dummy for transcript to avoid re-running heavy GPU in test 5
     dummy_transcript_runner = {
         "python_bin": "/usr/bin/python3",
-        "cli_path": "/home/takuya/Project_ALICE/ALICE_Core/models/job.py", # returns 0 exit
+        "cli_path": str(PROJECT_ROOT / "ALICE_Core" / "models" / "job.py"), # returns 0 exit
         "artifact_dir": "transcript",
         "primary_artifact": "transcript.txt"
     }

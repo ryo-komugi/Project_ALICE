@@ -10,10 +10,10 @@ from pathlib import Path
 import subprocess
 from typing import Any, Optional
 
-PROJECT_ROOT = Path("/home/takuya/Project_ALICE")
+PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(Path(__file__).resolve().parent.parent.parent)))
 COPILOT_DIR = PROJECT_ROOT / "ALICE_CoPilot"
 CORE_DIR = PROJECT_ROOT / "ALICE_Core"
-PYTHON_BIN = PROJECT_ROOT / "myenv/copilot_env/bin/python3"
+PYTHON_BIN = PROJECT_ROOT / "myenv" / "copilot_env" / "bin" / "python3"
 
 # State storage populated during the agent run
 REVIEW_STATE: dict[str, Any] = {

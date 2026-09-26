@@ -9,8 +9,11 @@ logger = logging.getLogger(__name__)
 class UserRepository:
 
     def __init__(self):
+        from pathlib import Path
+        db_dir = Path(__file__).resolve().parent.parent / "database"
+        db_dir.mkdir(parents=True, exist_ok=True)
         self.connection = sqlite3.connect(
-            "database/users.db",
+            str(db_dir / "users.db"),
             timeout=10.0,
             check_same_thread=False
         )

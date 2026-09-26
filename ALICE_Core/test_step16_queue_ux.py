@@ -2,7 +2,7 @@ import sys
 import os
 from pathlib import Path
 
-PROJECT_ROOT = Path("/home/takuya/Project_ALICE")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CORE_ROOT = PROJECT_ROOT / "ALICE_Core"
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))

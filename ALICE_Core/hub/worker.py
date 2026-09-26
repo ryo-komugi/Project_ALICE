@@ -18,35 +18,7 @@ import config
 
 logger = logging.getLogger(__name__)
 
-# ==========================================
-# Core Module Runners Definition (Registry & Artifact Contract)
-# ==========================================
-MODULE_RUNNERS = {
-    "transcript": {
-        "python_bin": "/home/takuya/Project_ALICE/myenv/whisper_env/bin/python",
-        "cli_path": "/home/takuya/Project_ALICE/ALICE_Transcript/cli.py",
-        "module_cwd": "/home/takuya/Project_ALICE/ALICE_Transcript",
-        "artifact_dir": "transcript",
-        "primary_artifact": "transcript.txt",
-        "contract_artifacts": ["transcript.json", "transcript.txt", "metadata.json"],
-    },
-    "summary": {
-        "python_bin": "/home/takuya/Project_ALICE/myenv/core_env/bin/python",
-        "cli_path": "/home/takuya/Project_ALICE/ALICE_Summary/cli.py",
-        "module_cwd": "/home/takuya/Project_ALICE/ALICE_Summary",
-        "artifact_dir": "summary",
-        "primary_artifact": "summary.txt",
-        "contract_artifacts": ["summary.md", "summary.txt", "analysis.json", "metadata.json"],
-    },
-    "minutes": {
-        "python_bin": "/home/takuya/Project_ALICE/myenv/core_env/bin/python",
-        "cli_path": "/home/takuya/Project_ALICE/ALICE_Minutes/cli.py",
-        "module_cwd": "/home/takuya/Project_ALICE/ALICE_Minutes",
-        "artifact_dir": "minutes",
-        "primary_artifact": "minutes.md",
-        "contract_artifacts": ["minutes.txt", "minutes.md", "analysis.json", "metadata.json"],
-    },
-}
+# Core Module Runners Definition is imported from hub.runners (line 1)
 
 
 class CoreWorker:
@@ -505,7 +477,7 @@ class CoreWorker:
         - Core と Search は直接 import せず、Workspace Driven CLI (subprocess) で疎結合に連携する。
         - 失敗時は WARNING ログを記録し、Job 処理は正常終了とする。
         """
-        search_cli = Path("/home/takuya/Project_ALICE/ALICE_Search/cli.py")
+        search_cli = config.PROJECT_ROOT / "ALICE_Search" / "cli.py"
         if not search_cli.exists():
             logger.debug(f"[CoreWorker] ALICE_Search CLI not found at {search_cli}. Skipping search index update.")
             return

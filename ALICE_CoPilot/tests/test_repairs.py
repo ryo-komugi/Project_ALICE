@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 import pytest
 
-COPILOT_DIR = Path("/home/takuya/Project_ALICE/ALICE_CoPilot")
+COPILOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(COPILOT_DIR))
 
 def test_tasks_token_health():

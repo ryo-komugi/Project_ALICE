@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from models.job import Job, JobStatus
 from core.alert_notifier import send_discord_alert
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +268,7 @@ class WorkspaceManager:
 
             # ALICE_Search インデックスの再構築
             try:
-                search_cli = Path("/home/takuya/Project_ALICE/ALICE_Search/cli.py")
+                search_cli = config.PROJECT_ROOT / "ALICE_Search" / "cli.py"
                 if search_cli.exists():
                     import subprocess
                     subprocess.run(["python3", str(search_cli), "--reindex"], timeout=10, capture_output=True)

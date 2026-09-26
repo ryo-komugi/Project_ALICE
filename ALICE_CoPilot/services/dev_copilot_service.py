@@ -23,7 +23,7 @@ import config
 from google.antigravity import Agent, LocalOpenAIAgentConfig
 from memory.short_term import save_message, get_recent_messages
 
-PROJECT_ROOT = Path("/home/takuya/Project_ALICE")
+PROJECT_ROOT = config.PROJECT_ROOT
 COPILOT_DIR = PROJECT_ROOT / "ALICE_CoPilot"
 CORE_DIR = PROJECT_ROOT / "ALICE_Core"
 COPILOT_PYTHON = PROJECT_ROOT / "myenv/copilot_env/bin/python3"

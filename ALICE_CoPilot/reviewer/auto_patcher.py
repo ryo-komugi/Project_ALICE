@@ -12,16 +12,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-PROJECT_ROOT = Path("/home/takuya/Project_ALICE")
-COPILOT_DIR = PROJECT_ROOT / "ALICE_CoPilot"
-CORE_DIR = PROJECT_ROOT / "ALICE_Core"
-COPILOT_PYTHON = PROJECT_ROOT / "myenv/copilot_env/bin/python3"
-CORE_PYTHON = PROJECT_ROOT / "myenv/core_env/bin/python3"
-
+COPILOT_DIR = Path(__file__).resolve().parent.parent
 if str(COPILOT_DIR) not in sys.path:
     sys.path.insert(0, str(COPILOT_DIR))
 
 import config
+
+PROJECT_ROOT = config.PROJECT_ROOT
+CORE_DIR = PROJECT_ROOT / "ALICE_Core"
+COPILOT_PYTHON = PROJECT_ROOT / "myenv" / "copilot_env" / "bin" / "python3"
+CORE_PYTHON = PROJECT_ROOT / "myenv" / "core_env" / "bin" / "python3"
 from google.antigravity import Agent, LocalOpenAIAgentConfig
 
 # Execution state tracking

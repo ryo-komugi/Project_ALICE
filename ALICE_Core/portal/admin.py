@@ -425,9 +425,9 @@ async def restart_service_api(service_name: str):
 
         import time
         time.sleep(1.0)
-        copilot_python = "/home/takuya/Project_ALICE/myenv/copilot_env/bin/python"
-        copilot_main = "/home/takuya/Project_ALICE/ALICE_CoPilot/main.py"
-        copilot_dir = "/home/takuya/Project_ALICE/ALICE_CoPilot"
+        copilot_python = str(config.PROJECT_ROOT / "myenv" / "copilot_env" / "bin" / "python")
+        copilot_main = str(config.PROJECT_ROOT / "ALICE_CoPilot" / "main.py")
+        copilot_dir = str(config.PROJECT_ROOT / "ALICE_CoPilot")
         try:
             log_out = open("/data/runtime/logs/copilot.log", "a", encoding="utf-8")
         except Exception:

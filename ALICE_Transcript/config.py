@@ -18,7 +18,11 @@ tiny, base, small, medium, large, large-v2, large-v3, deepdml/faster-whisper-lar
 # ===========================
 # pyannote
 # ===========================
-PYANNOTE_PYTHON = "/home/takuya/Project_ALICE/myenv/pyannote_env/bin/python"
+import os
+from pathlib import Path
+TRANSCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(TRANSCRIPT_DIR.parent)))
+PYANNOTE_PYTHON = str(PROJECT_ROOT / "myenv" / "pyannote_env" / "bin" / "python")
 
 # ===========================
 # Supported audio fileType

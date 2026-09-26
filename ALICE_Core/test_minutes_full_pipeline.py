@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock
 
-CORE_ROOT = Path("/home/takuya/Project_ALICE/ALICE_Core")
+CORE_ROOT = Path(__file__).resolve().parent
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))
 
@@ -121,7 +121,7 @@ def main():
     print(f"[+] job.json input_metadata.audio_cleared: True")
 
     # 5. ALICE_Search Verification
-    search_cli = Path("/home/takuya/Project_ALICE/ALICE_Search/cli.py")
+    search_cli = (Path(__file__).resolve().parent.parent / "ALICE_Search" / "cli.py")
     # 検索してみる（議事録の中の単語、あるいはユーザー名で検索）
     res = subprocess.run(
         [sys.executable, str(search_cli), "--query", "会議", "--user", test_user_id, "--limit", "5"],
