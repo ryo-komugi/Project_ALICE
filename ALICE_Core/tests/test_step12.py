@@ -10,7 +10,7 @@ PROJECT_ROOT = CORE_ROOT.parent
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))
 
-from core.logger import initialize_logger
+from infrastructure.logger import initialize_logger
 from hub.workspace import WorkspaceManager
 from hub.queue import JobQueue
 from hub.worker import CoreWorker, MODULE_RUNNERS

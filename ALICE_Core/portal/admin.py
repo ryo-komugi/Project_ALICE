@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 import config
 from portal.auth import clear_session_cookie
 from hub.container import core_worker, job_queue, workspace_manager
-from core.system_settings import (
+from infrastructure.system_settings import (
     get_system_settings,
     update_system_settings,
     is_maintenance_active,
@@ -245,7 +245,7 @@ async def restart_service_api(service_name: str):
 async def check_system_ip_api(force_alert: bool = Query(False)):
     """Check current external global IP, compare with cached baseline, and optionally force Discord alert."""
     try:
-        from core.ip_monitor import check_and_notify_ip_change
+        from infrastructure.ip_monitor import check_and_notify_ip_change
         result = check_and_notify_ip_change(force_alert=force_alert)
         return result
     except Exception as e:

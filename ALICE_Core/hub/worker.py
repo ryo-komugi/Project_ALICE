@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from models.job import Job, JobStatus, StepStatus
-from core.alert_notifier import send_discord_alert
+from infrastructure.alert_notifier import send_discord_alert
 from hub.queue import JobQueue
 from hub.workspace import WorkspaceManager
 from publisher.publisher import Publisher

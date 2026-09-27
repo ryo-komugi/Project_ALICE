@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from core.ip_monitor import (
+from infrastructure.ip_monitor import (
     check_and_notify_ip_change,
     fetch_current_global_ip,
     get_cached_global_ip,
@@ -51,8 +51,8 @@ def test_baseline_initialization(tmp_path):
     """First run should save baseline without sending an alert."""
     cache_file = tmp_path / "last_ip.txt"
 
-    with patch("core.ip_monitor.fetch_current_global_ip", return_value="180.196.23.177"):
-        with patch("core.ip_monitor.send_system_alert") as mock_alert:
+    with patch("infrastructure.ip_monitor.fetch_current_global_ip", return_value="180.196.23.177"):
+        with patch("infrastructure.ip_monitor.send_system_alert") as mock_alert:
             res = check_and_notify_ip_change(cache_file=cache_file)
             assert res["status"] == "initialized"
             assert res["current_ip"] == "180.196.23.177"
@@ -70,8 +70,8 @@ def test_ip_unchanged(tmp_path):
     cache_file = tmp_path / "last_ip.txt"
     cache_file.write_text("180.196.23.177", encoding="utf-8")
 
-    with patch("core.ip_monitor.fetch_current_global_ip", return_value="180.196.23.177"):
-        with patch("core.ip_monitor.send_system_alert") as mock_alert:
+    with patch("infrastructure.ip_monitor.fetch_current_global_ip", return_value="180.196.23.177"):
+        with patch("infrastructure.ip_monitor.send_system_alert") as mock_alert:
             res = check_and_notify_ip_change(cache_file=cache_file)
             assert res["status"] == "unchanged"
             assert res["current_ip"] == "180.196.23.177"
@@ -84,8 +84,8 @@ def test_ip_change_triggers_alert(tmp_path):
     cache_file = tmp_path / "last_ip.txt"
     cache_file.write_text("180.196.23.177", encoding="utf-8")
 
-    with patch("core.ip_monitor.fetch_current_global_ip", return_value="133.200.50.60"):
-        with patch("core.ip_monitor.send_system_alert", return_value=True) as mock_alert:
+    with patch("infrastructure.ip_monitor.fetch_current_global_ip", return_value="133.200.50.60"):
+        with patch("infrastructure.ip_monitor.send_system_alert", return_value=True) as mock_alert:
             res = check_and_notify_ip_change(cache_file=cache_file)
             assert res["status"] == "changed"
             assert res["previous_ip"] == "180.196.23.177"

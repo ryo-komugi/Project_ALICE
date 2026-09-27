@@ -4,7 +4,7 @@ Unit tests for ALICE_Core alert_notifier.
 import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from core.alert_notifier import send_discord_alert, send_system_alert
+from infrastructure.alert_notifier import send_discord_alert, send_system_alert
 from models.job import Job, JobStatus
 
 
@@ -32,7 +32,7 @@ def sample_job():
 
 
 def test_send_discord_alert_skipped_when_no_webhook(sample_job):
-    with patch("core.alert_notifier.config") as mock_config:
+    with patch("infrastructure.alert_notifier.config") as mock_config:
         mock_config.DISCORD_ALERT_WEBHOOK_URL = ""
         res = send_discord_alert(sample_job, error_type="TEST_ERROR", message="test message")
         assert res is False
@@ -40,7 +40,7 @@ def test_send_discord_alert_skipped_when_no_webhook(sample_job):
 
 def test_send_discord_alert_success(sample_job):
     fake_url = "https://discord.com/api/webhooks/mock_test_url"
-    with patch("core.alert_notifier.requests.post") as mock_post:
+    with patch("infrastructure.alert_notifier.requests.post") as mock_post:
         mock_response = MagicMock()
         mock_response.status_code = 204
         mock_post.return_value = mock_response
@@ -78,7 +78,7 @@ def test_send_discord_alert_success(sample_job):
 
 def test_send_discord_alert_handles_request_exception(sample_job):
     fake_url = "https://discord.com/api/webhooks/mock_test_url"
-    with patch("core.alert_notifier.requests.post", side_effect=Exception("Network Timeout")):
+    with patch("infrastructure.alert_notifier.requests.post", side_effect=Exception("Network Timeout")):
         res = send_discord_alert(
             sample_job,
             error_type="TIMEOUT_TEST",
@@ -90,7 +90,7 @@ def test_send_discord_alert_handles_request_exception(sample_job):
 
 def test_send_system_alert():
     fake_url = "https://discord.com/api/webhooks/mock_test_url"
-    with patch("core.alert_notifier.requests.post") as mock_post:
+    with patch("infrastructure.alert_notifier.requests.post") as mock_post:
         mock_response = MagicMock()
         mock_response.status_code = 204
         mock_post.return_value = mock_response

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from core.system_settings import (
+from infrastructure.system_settings import (
     get_system_settings,
     update_system_settings,
     is_maintenance_active,

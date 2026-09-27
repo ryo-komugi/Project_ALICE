@@ -35,7 +35,7 @@ class FollowHandler:
             )
             logger.info(f"[FollowHandler] Find user : {user_id}")
 
-        from core.system_settings import is_maintenance_active, get_maintenance_message
+        from infrastructure.system_settings import is_maintenance_active, get_maintenance_message
         if is_maintenance_active():
             self.sender.reply_text(
                 reply_token,

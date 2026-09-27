@@ -4,7 +4,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 from models.job import Job, JobStatus
-from core.alert_notifier import send_discord_alert
+from infrastructure.alert_notifier import send_discord_alert
 import config
 
 logger = logging.getLogger(__name__)

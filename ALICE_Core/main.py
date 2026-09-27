@@ -5,8 +5,8 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 import config
-from core.logger import initialize_logger
-from core.ip_monitor import ip_monitor_loop
+from infrastructure.logger import initialize_logger
+from infrastructure.ip_monitor import ip_monitor_loop
 
 # New Layer Imports
 from gateway.webhook import router as webhook_router

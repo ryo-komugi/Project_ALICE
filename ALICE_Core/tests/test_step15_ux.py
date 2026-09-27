@@ -8,7 +8,7 @@ PROJECT_ROOT = CORE_ROOT.parent
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))
 
-from core.logger import initialize_logger
+from infrastructure.logger import initialize_logger
 from gateway.handlers.message import MessageHandler
 from repository.user_repository import UserRepository
 

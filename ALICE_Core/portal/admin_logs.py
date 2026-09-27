@@ -183,7 +183,7 @@ async def get_system_logs(
 async def cleanup_logs_api(days: int = Query(14, ge=1, le=90)):
     """Clean up old archive logs and empty log files (default 14 days)."""
     try:
-        from core.logger import cleanup_logs, ARCHIVE_DIR
+        from infrastructure.logger import cleanup_logs, ARCHIVE_DIR
         res = cleanup_logs(archive_dir=ARCHIVE_DIR, retention_days=days)
         return {
             "status": "ok",

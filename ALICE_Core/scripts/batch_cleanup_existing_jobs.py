@@ -8,7 +8,7 @@ CORE_ROOT = Path(__file__).resolve().parent
 if str(CORE_ROOT) not in sys.path:
     sys.path.insert(0, str(CORE_ROOT))
 
-from core.logger import initialize_logger
+from infrastructure.logger import initialize_logger
 from hub.workspace import WorkspaceManager
 from models.job import JobStatus
 

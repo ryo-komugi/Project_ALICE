@@ -10,7 +10,7 @@ from gateway.session import SessionManager
 from gateway.downloader import ContentDownloader
 from gateway.richmenu.richmane import RichMenu
 from hub.container import job_service, job_queue, workspace_manager, core_worker
-from core.system_settings import is_maintenance_active, get_maintenance_message, is_admin_bypass_allowed
+from infrastructure.system_settings import is_maintenance_active, get_maintenance_message, is_admin_bypass_allowed
 
 
 logger = logging.getLogger(__name__)

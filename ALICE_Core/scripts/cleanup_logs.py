@@ -12,7 +12,7 @@ import sys
 # ALICE_Core ディレクトリを path に追加
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from core.logger import cleanup_logs, ARCHIVE_DIR
+from infrastructure.logger import cleanup_logs, ARCHIVE_DIR
 
 
 def main():
