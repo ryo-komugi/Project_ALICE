@@ -735,6 +735,26 @@
           <div id="jobs-list" class="flex-1 overflow-y-auto divide-y divide-slate-800/40 mt-2 pr-1 space-y-1">
             <div class="text-center py-12 text-slate-500 text-xs font-mono">ジョブを読み込み中...</div>
           </div>
+
+          <!-- Pagination & Count Footer -->
+          <div id="jobs-pagination" class="pt-2.5 pb-0.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] font-mono text-slate-400 px-1 mt-1">
+            <div id="jobs-count-info" class="flex items-center gap-1.5 truncate">
+              <span id="jobs-range-text" class="text-sky-300 font-bold">0-0</span>
+              <span class="text-slate-600">/</span>
+              <span>全<span id="jobs-total-text" class="text-slate-300 font-medium">0</span>件</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <select id="jobs-page-size" onchange="changeJobPageSize(this.value)" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-[10px] text-slate-300 focus:outline-none cursor-pointer mr-1">
+                <option value="25">25件</option>
+                <option value="50" selected>50件</option>
+                <option value="100">100件</option>
+                <option value="200">200件</option>
+              </select>
+              <button id="btn-prev-page" onclick="changeJobPage(-1)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 text-slate-200 cursor-pointer disabled:cursor-not-allowed" title="前のページ">◀</button>
+              <span id="page-num-text" class="px-1 text-sky-400 font-bold">1</span>
+              <button id="btn-next-page" onclick="changeJobPage(1)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:hover:bg-slate-800 text-slate-200 cursor-pointer disabled:cursor-not-allowed" title="次のページ">▶</button>
+            </div>
+          </div>
         </div>
 
         <!-- Right Column: Artifact & Log Split Viewer (8 cols on lg, 9 cols on xl) -->
@@ -1644,17 +1664,65 @@
       `).join('');
     }
 
-    // 2. Fetch Jobs (Split View)
-    async function fetchJobs() {
+    // 2. Fetch Jobs (Split View with Pagination)
+    let jobOffset = 0;
+    let jobLimit = 50;
+    let jobTotalCount = 0;
+
+    async function fetchJobs(resetPage = false) {
+      if (resetPage) {
+        jobOffset = 0;
+      }
       try {
-        const res = await aliceFetch('/admin/api/jobs?limit=50');
+        const res = await aliceFetch(`/admin/api/jobs?offset=${jobOffset}&limit=${jobLimit}`);
         if (!res || !res.ok) return;
+        const totalHeader = res.headers.get('X-Total-Count');
+        if (totalHeader !== null) {
+          jobTotalCount = parseInt(totalHeader, 10) || 0;
+        }
         allJobs = await res.json();
         updateUserFilterOptions();
         renderJobList();
+        updatePaginationUI();
       } catch (e) {
         console.error('Failed to fetch jobs:', e);
       }
+    }
+
+    function changeJobPage(delta) {
+      const newOffset = jobOffset + (delta * jobLimit);
+      if (newOffset < 0) return;
+      if (jobTotalCount > 0 && newOffset >= jobTotalCount) return;
+      jobOffset = newOffset;
+      fetchJobs();
+    }
+
+    function changeJobPageSize(newSize) {
+      jobLimit = parseInt(newSize, 10) || 50;
+      jobOffset = 0;
+      fetchJobs();
+    }
+
+    function updatePaginationUI() {
+      const rangeText = document.getElementById('jobs-range-text');
+      const totalText = document.getElementById('jobs-total-text');
+      const pageNumText = document.getElementById('page-num-text');
+      const btnPrev = document.getElementById('btn-prev-page');
+      const btnNext = document.getElementById('btn-next-page');
+
+      const total = jobTotalCount || allJobs.length;
+      const start = total === 0 ? 0 : jobOffset + 1;
+      const end = Math.min(jobOffset + (allJobs ? allJobs.length : 0), total);
+
+      if (rangeText) rangeText.textContent = `${start}-${end}`;
+      if (totalText) totalText.textContent = total;
+
+      const currentPage = Math.floor(jobOffset / jobLimit) + 1;
+      const maxPage = Math.max(1, Math.ceil(total / jobLimit));
+
+      if (pageNumText) pageNumText.textContent = `${currentPage}/${maxPage}`;
+      if (btnPrev) btnPrev.disabled = (jobOffset <= 0);
+      if (btnNext) btnNext.disabled = (jobOffset + jobLimit >= total);
     }
 
     function updateUserFilterOptions() {
@@ -3235,7 +3303,7 @@
 
       stepPollInterval = setInterval(async () => {
         try {
-          const res = await aliceFetch('/admin/api/jobs?limit=50');
+          const res = await aliceFetch(`/admin/api/jobs?offset=${jobOffset}&limit=${jobLimit}`);
           if (res && res.ok) {
             allJobs = await res.json();
             renderJobList();

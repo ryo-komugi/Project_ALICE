@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
@@ -70,16 +70,30 @@ def _extract_job_filename(job: Any) -> str:
 
 
 @router.get("/api/jobs")
-async def list_jobs(limit: int = Query(50, ge=1, le=200)):
-    """List recent workspaces with artifact & log metadata."""
+async def list_jobs(
+    response: Response = None,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=500),
+):
+    """List recent workspaces with artifact & log metadata, pagination support and X-Total-Count header."""
     if not _get_active_wm() or not _get_active_wm().base_dir.exists():
+        if response is not None:
+            response.headers["X-Total-Count"] = "0"
         return []
 
     jobs_list = []
     dirs = [d for d in _get_active_wm().base_dir.iterdir() if d.is_dir() and (d / "job.json").exists()]
-    dirs.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+    total_count = len(dirs)
+    if response is not None:
+        response.headers["X-Total-Count"] = str(total_count)
 
-    for ws_dir in dirs[:limit]:
+    dirs.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+    # Handle direct function calls where offset/limit might be Query objects
+    real_offset = offset.default if hasattr(offset, "default") else int(offset)
+    real_limit = limit.default if hasattr(limit, "default") else int(limit)
+    target_dirs = dirs[real_offset : real_offset + real_limit]
+
+    for ws_dir in target_dirs:
         try:
             job = _get_active_wm().load_job(ws_dir)
             
