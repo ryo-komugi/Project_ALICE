@@ -74,7 +74,11 @@ def is_trusted_network(request: Request) -> bool:
     return False
 
 
+_ephemeral_signing_key: Optional[bytes] = None
+
+
 def _get_signing_key() -> bytes:
+    global _ephemeral_signing_key
     secret = (
         getattr(config, "ADMIN_SECRET_KEY", None)
         or os.getenv("ADMIN_SECRET_KEY")
@@ -82,7 +86,13 @@ def _get_signing_key() -> bytes:
         or os.getenv("SECRET_KEY")
     )
     if not secret:
-        secret = "alice_in_cyber_wonderland_fallback_secret_key_2026"
+        if _ephemeral_signing_key is None:
+            _ephemeral_signing_key = secrets.token_bytes(32)
+            logger.warning(
+                "[AdminAuth] ADMIN_SECRET_KEY/SECRET_KEY is not configured! "
+                "Generated ephemeral 256-bit cryptographic signing key for this session."
+            )
+        return _ephemeral_signing_key
     return secret.encode("utf-8")
 
 
@@ -128,10 +138,25 @@ def verify_session_token(token: str) -> Optional[str]:
         return None
 
 
-def set_session_cookie(response: Response, username: str, remember_me: bool = True):
+def set_session_cookie(
+    response: Response,
+    username: str,
+    remember_me: bool = True,
+    request: Optional[Request] = None,
+):
     """Attach 180-day persistent session cookie to response."""
     duration = DEFAULT_SESSION_DURATION
     token = create_session_token(username, duration)
+
+    # Cloudflare Access やリバースプロキシ経由の HTTPS では secure=True にする
+    is_secure = False
+    if request:
+        proto = (
+            request.headers.get("x-forwarded-proto")
+            or request.headers.get("X-Forwarded-Proto")
+            or ""
+        ).lower()
+        is_secure = (proto == "https") or (request.url.scheme == "https")
 
     response.set_cookie(
         key=COOKIE_NAME,
@@ -139,7 +164,7 @@ def set_session_cookie(response: Response, username: str, remember_me: bool = Tr
         max_age=duration,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=is_secure,
         path="/",
     )
 
@@ -206,7 +231,7 @@ class AdminAuthMiddleware(BaseHTTPMiddleware):
 
             response = await call_next(request)
             if not token and isinstance(response, Response):
-                set_session_cookie(response, admin_user, remember_me=True)
+                set_session_cookie(response, admin_user, remember_me=True, request=request)
             return response
 
         # 4. Unauthenticated External Handling (No Zero Trust, No Trusted Network, No Cookie)

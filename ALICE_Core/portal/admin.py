@@ -300,15 +300,20 @@ DASHBOARD_TEMPLATE_PATH = Path(__file__).resolve().parent / "templates" / "admin
 if not DASHBOARD_TEMPLATE_PATH.exists():
     DASHBOARD_TEMPLATE_PATH = Path(__file__).resolve().parent.parent / "core" / "templates" / "admin_dashboard.html"
 _DASHBOARD_HTML_CACHE: str | None = None
+_DASHBOARD_HTML_MTIME: float | None = None
 
 
 def get_dashboard_html() -> str:
-    """Read and cache admin cockpit HTML template."""
-    global _DASHBOARD_HTML_CACHE
-    if _DASHBOARD_HTML_CACHE is None:
-        if not DASHBOARD_TEMPLATE_PATH.exists():
-            raise FileNotFoundError(f"Admin dashboard template not found at {DASHBOARD_TEMPLATE_PATH}")
+    """Read and cache admin cockpit HTML template (reloads automatically when the file changes)."""
+    global _DASHBOARD_HTML_CACHE, _DASHBOARD_HTML_MTIME
+    if not DASHBOARD_TEMPLATE_PATH.exists():
+        if _DASHBOARD_HTML_CACHE is not None:
+            return _DASHBOARD_HTML_CACHE
+        raise FileNotFoundError(f"Admin dashboard template not found at {DASHBOARD_TEMPLATE_PATH}")
+    mtime = DASHBOARD_TEMPLATE_PATH.stat().st_mtime
+    if _DASHBOARD_HTML_CACHE is None or _DASHBOARD_HTML_MTIME != mtime:
         _DASHBOARD_HTML_CACHE = DASHBOARD_TEMPLATE_PATH.read_text(encoding="utf-8")
+        _DASHBOARD_HTML_MTIME = mtime
     return _DASHBOARD_HTML_CACHE
 
 

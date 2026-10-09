@@ -353,6 +353,12 @@ def test_5_startup_recovery_for_interrupted_jobs():
     job_queued.status = JobStatus.QUEUED
     wm.save_job_json(job_queued)
 
+    # 4. オンデマンド議事録生成中にサーバー停止したジョブ (generating_minutes)
+    job_ondemand = wm.create_workspace("user_rec_4", SAMPLE_AUDIO, ["transcript", "summary"], "ondemand.mp3")
+    job_ondemand.status = JobStatus.COMPLETED
+    job_ondemand.current_step = "generating_minutes"
+    wm.save_job_json(job_ondemand)
+
     # リカバリ実行
     aborted, requeued = wm.recover_interrupted_jobs(queue)
 
@@ -374,6 +380,12 @@ def test_5_startup_recovery_for_interrupted_jobs():
     # 検証: job_completed は COMPLETED のまま影響を受けないか
     reloaded_completed = wm.load_job(job_completed.workspace_dir)
     assert reloaded_completed.status == JobStatus.COMPLETED
+
+    # 検証: job_ondemand は COMPLETED に復帰し、current_step がクリアされたか
+    reloaded_ondemand = wm.load_job(job_ondemand.workspace_dir)
+    assert reloaded_ondemand.status == JobStatus.COMPLETED
+    assert reloaded_ondemand.current_step is None
+    assert "中断されました" in reloaded_ondemand.error_message
 
     print(">>> Test 5 PASSED!")
 

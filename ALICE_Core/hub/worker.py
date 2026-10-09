@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from models.job import Job, JobStatus, StepStatus
 from infrastructure.alert_notifier import send_discord_alert
+from hub.gpu_lock import acquire_gpu_lock
 from hub.queue import JobQueue
 from hub.workspace import WorkspaceManager
 from publisher.publisher import Publisher
@@ -270,15 +271,16 @@ class CoreWorker:
                     if attempt > 0:
                         lf.write(f"\n--- RETRY ATTEMPT {attempt}/{max_retries} ({datetime.now().isoformat()}) ---\n")
                         lf.flush()
-                    res = subprocess.run(
-                        cmd,
-                        cwd=module_cwd,
-                        env=env,
-                        stdout=lf,
-                        stderr=subprocess.STDOUT,
-                        check=False,
-                        timeout=timeout_sec,
-                    )
+                    with acquire_gpu_lock(timeout=float(timeout_sec), step_name=f"{job.job_id}:{module_name}"):
+                        res = subprocess.run(
+                            cmd,
+                            cwd=module_cwd,
+                            env=env,
+                            stdout=lf,
+                            stderr=subprocess.STDOUT,
+                            check=False,
+                            timeout=timeout_sec,
+                        )
 
                 collected_artifacts = self._collect_artifacts(
                     job, module_name, artifact_dir, primary_artifact, contract_artifacts

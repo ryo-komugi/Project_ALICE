@@ -23,6 +23,7 @@ from pydantic import BaseModel
 import config
 from models.job import Job, JobStatus
 from hub.container import core_worker, job_queue, workspace_manager
+from hub.gpu_lock import acquire_gpu_lock
 
 logger = logging.getLogger("ALICE_Core.Admin.Jobs")
 
@@ -313,7 +314,7 @@ def _execute_step_generation(job_id: str, step: str, template: str = "auto") -> 
         if not job:
             return
 
-        job.status = JobStatus.RUNNING
+        # 元のジョブステータス（COMPLETED等）を壊さず、current_step のみ generating_{step} に設定
         job.current_step = f"generating_{step}"
         _get_active_wm().save_job_json(job)
 
@@ -362,9 +363,10 @@ def _execute_step_generation(job_id: str, step: str, template: str = "auto") -> 
 
         logger.info(f"[Admin] Executing command: {' '.join(cmd)}")
         with open(log_file_path, "w", encoding="utf-8") as log_f:
-            res = subprocess.run(
-                cmd, cwd=str(cwd), env=env, stdout=log_f, stderr=subprocess.STDOUT, timeout=600, check=False
-            )
+            with acquire_gpu_lock(timeout=600.0, step_name=f"admin_ondemand:{job_id}:{step}"):
+                res = subprocess.run(
+                    cmd, cwd=str(cwd), env=env, stdout=log_f, stderr=subprocess.STDOUT, timeout=600, check=False
+                )
 
         elapsed = round(time.time() - start_time, 2)
         job = _get_active_wm().get_job(job_id)
@@ -456,8 +458,7 @@ async def generate_job_step(
         if primary.exists():
             raise HTTPException(status_code=400, detail="要約はすでに生成されています")
 
-    # ステータスを QUEUED / queued_step に更新してキューに登録
-    job.status = JobStatus.QUEUED
+    # 待機中ステータスとして current_step を queued_{step} に設定（元の status は維持）
     job.current_step = f"queued_{step}"
     _get_active_wm().save_job_json(job)
 
@@ -541,13 +542,15 @@ async def view_job_artifact(job_id: str, path: str = Query(..., description="Rel
     original_title = _extract_job_filename(job) if job else job_id
 
     tpl_path = Path(__file__).resolve().parent / "templates" / "artifact_viewer.html"
-    tpl = tpl_path.read_text(encoding="utf-8")
-    html_content = tpl.format(
-        page_title=f"{html.escape(original_title)} | {html.escape(target_file.name)}",
-        path=html.escape(path),
-        job_id=html.escape(job_id),
-        original_title=html.escape(original_title),
-        rendered_body=rendered_body
+    tpl_source = tpl_path.read_text(encoding="utf-8")
+    
+    html_content = (
+        tpl_source
+        .replace("{{ page_title }}", f"{html.escape(original_title)} | {html.escape(target_file.name)}")
+        .replace("{{ path }}", html.escape(path))
+        .replace("{{ job_id }}", html.escape(job_id))
+        .replace("{{ original_title }}", html.escape(original_title))
+        .replace("{{ rendered_body | safe }}", rendered_body)
     )
     return HTMLResponse(content=html_content, status_code=200)
 

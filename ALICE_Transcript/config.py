@@ -31,6 +31,9 @@ SUPPORTED_AUDIO_EXTENSIONS = (
     ".mp3",
     ".m4a",
     ".wav",
+    ".aac",
+    ".flac",
+    ".ogg",
 )
 
 # ===========================
