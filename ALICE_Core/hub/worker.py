@@ -9,44 +9,17 @@ import time
 from datetime import datetime
 from pathlib import Path
 from models.job import Job, JobStatus, StepStatus
-from core.alert_notifier import send_discord_alert
+from infrastructure.alert_notifier import send_discord_alert
+from hub.gpu_lock import acquire_gpu_lock
 from hub.queue import JobQueue
 from hub.workspace import WorkspaceManager
 from publisher.publisher import Publisher
-from line.message_sender import MessageSender
+from gateway.sender import MessageSender
 import config
 
 logger = logging.getLogger(__name__)
 
-# ==========================================
-# Core Module Runners Definition (Registry & Artifact Contract)
-# ==========================================
-MODULE_RUNNERS = {
-    "transcript": {
-        "python_bin": "/home/takuya/Project_ALICE/myenv/whisper_env/bin/python",
-        "cli_path": "/home/takuya/Project_ALICE/ALICE_Transcript/cli.py",
-        "module_cwd": "/home/takuya/Project_ALICE/ALICE_Transcript",
-        "artifact_dir": "transcript",
-        "primary_artifact": "transcript.txt",
-        "contract_artifacts": ["transcript.json", "transcript.txt", "metadata.json"],
-    },
-    "summary": {
-        "python_bin": "/home/takuya/Project_ALICE/myenv/core_env/bin/python",
-        "cli_path": "/home/takuya/Project_ALICE/ALICE_Summary/cli.py",
-        "module_cwd": "/home/takuya/Project_ALICE/ALICE_Summary",
-        "artifact_dir": "summary",
-        "primary_artifact": "summary.txt",
-        "contract_artifacts": ["summary.md", "summary.txt", "analysis.json", "metadata.json"],
-    },
-    "minutes": {
-        "python_bin": "/home/takuya/Project_ALICE/myenv/core_env/bin/python",
-        "cli_path": "/home/takuya/Project_ALICE/ALICE_Minutes/cli.py",
-        "module_cwd": "/home/takuya/Project_ALICE/ALICE_Minutes",
-        "artifact_dir": "minutes",
-        "primary_artifact": "minutes.md",
-        "contract_artifacts": ["minutes.txt", "minutes.md", "analysis.json", "metadata.json"],
-    },
-}
+# Core Module Runners Definition is imported from hub.runners (line 1)
 
 
 class CoreWorker:
@@ -298,15 +271,16 @@ class CoreWorker:
                     if attempt > 0:
                         lf.write(f"\n--- RETRY ATTEMPT {attempt}/{max_retries} ({datetime.now().isoformat()}) ---\n")
                         lf.flush()
-                    res = subprocess.run(
-                        cmd,
-                        cwd=module_cwd,
-                        env=env,
-                        stdout=lf,
-                        stderr=subprocess.STDOUT,
-                        check=False,
-                        timeout=timeout_sec,
-                    )
+                    with acquire_gpu_lock(timeout=float(timeout_sec), step_name=f"{job.job_id}:{module_name}"):
+                        res = subprocess.run(
+                            cmd,
+                            cwd=module_cwd,
+                            env=env,
+                            stdout=lf,
+                            stderr=subprocess.STDOUT,
+                            check=False,
+                            timeout=timeout_sec,
+                        )
 
                 collected_artifacts = self._collect_artifacts(
                     job, module_name, artifact_dir, primary_artifact, contract_artifacts
@@ -505,7 +479,7 @@ class CoreWorker:
         - Core と Search は直接 import せず、Workspace Driven CLI (subprocess) で疎結合に連携する。
         - 失敗時は WARNING ログを記録し、Job 処理は正常終了とする。
         """
-        search_cli = Path("/home/takuya/Project_ALICE/ALICE_Search/cli.py")
+        search_cli = config.PROJECT_ROOT / "ALICE_Search" / "cli.py"
         if not search_cli.exists():
             logger.debug(f"[CoreWorker] ALICE_Search CLI not found at {search_cli}. Skipping search index update.")
             return

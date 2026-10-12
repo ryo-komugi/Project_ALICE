@@ -1,39 +1,68 @@
-# Python
+# ==============================================================================
+# Project_ALICE .gitignore
+# ==============================================================================
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
-.aider*
-.env
+*.py[cod]
+*$py.class
+*.so
 
-.codeboarding/*.db
-
-.archive
-archive/
-.myenv
+# Environments & Virtual Envs
 myenv/
+.myenv/
+venv/
+.venv/
+env/
+.env/
+ENV/
+.pyenv/
 
-# Database & Credentials
-database/*.db*
-database/*.pem
+# Environment Configurations & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*token.txt
+*credentials*.json
+*token*.json
+client_secret*.json
 
+# Databases & Runtime SQLite caches
 *.db
 *.db-journal
 *.db-wal
 *.db-shm
+database/*.db*
+database/*.pem
 
-# Environments
-.env
-venv/
-.venv/
-env/
-.myenv/
-myenv/
+# Testing & Linting Caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Logs & Temporary
+# Logs & Temporary files
 logs/
 *.log
-.mypy_cache/
-.pytest_cache/
+tmp/
+temp/
 
-*token.txt
+# IDE & Editor Configurations
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# Local pyenv installation for this project
-.pyenv/
+# Operating System Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Project-Specific Tooling & Archives
+.aider*
+.codeboarding/
+.archive/
+archive/

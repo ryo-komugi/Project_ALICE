@@ -4,7 +4,8 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 from models.job import Job, JobStatus
-from core.alert_notifier import send_discord_alert
+from infrastructure.alert_notifier import send_discord_alert
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +152,22 @@ class WorkspaceManager:
         all_jobs.sort(key=lambda j: j.created_at)
 
         for job in all_jobs:
+            # 1. 管理画面等からのオンデマンド追加生成中・待機中だったジョブの復旧
+            # (current_step が generating_xxx または queued_xxx の場合、元のジョブ成果物は保持されているため COMPLETED に安全復帰)
+            if job.current_step and (
+                job.current_step.startswith("generating_") or job.current_step.startswith("queued_")
+            ):
+                interrupted_step = job.current_step
+                logger.warning(
+                    f"[WorkspaceManager] Recovering job {job.job_id} from on-demand step ({interrupted_step}) -> Resetting to COMPLETED"
+                )
+                job.status = JobStatus.COMPLETED
+                job.current_step = None
+                job.error_message = f"サーバー再起動により追加生成処理 ({interrupted_step}) が中断されました。必要に応じて再実行してください。"
+                self.save_job_json(job)
+                continue
+
+            # 2. フルパイプライン実行中にサーバー停止したジョブ (RUNNING)
             if job.status == JobStatus.RUNNING:
                 logger.warning(
                     f"[WorkspaceManager] Recovering interrupted RUNNING job {job.job_id} -> Marking as FAILED (RESTART_ABORTED)"
@@ -176,7 +193,38 @@ class WorkspaceManager:
                 except Exception as e:
                     logger.warning(f"[WorkspaceManager] Failed to send restart abort alert: {e}")
 
+            # 3. 待機中にサーバー停止したジョブ (QUEUED, CREATED)
             elif job.status in (JobStatus.QUEUED, JobStatus.CREATED):
+                # 音声ファイル原本が存在するか検証 (クリーンアップ済みプレースホルダーの場合は再キューイング不可)
+                input_dir = job.workspace_dir / "input"
+                has_valid_audio = False
+                if input_dir.exists():
+                    for f in input_dir.iterdir():
+                        if f.is_file() and not f.name.endswith(".txt") and f.stat().st_size > 0:
+                            has_valid_audio = True
+                            break
+
+                has_transcript = (job.workspace_dir / "transcript" / "transcript.json").exists()
+
+                if not has_valid_audio:
+                    if has_transcript:
+                        logger.info(
+                            f"[WorkspaceManager] Job {job.job_id} in {job.status} already has transcript.json and audio cleared -> Resetting to COMPLETED"
+                        )
+                        job.status = JobStatus.COMPLETED
+                        job.current_step = None
+                        self.save_job_json(job)
+                        continue
+                    else:
+                        logger.warning(
+                            f"[WorkspaceManager] Job {job.job_id} in {job.status} has no audio and no transcript -> Marking as FAILED"
+                        )
+                        job.status = JobStatus.FAILED
+                        job.error_message = "音声データが存在しないため、再起動後の自動復旧をスキップしました"
+                        job.current_step = None
+                        self.save_job_json(job)
+                        continue
+
                 logger.info(f"[WorkspaceManager] Requeuing interrupted job {job.job_id} into JobQueue")
                 job_queue.push(job)
                 requeued_count += 1
@@ -267,7 +315,7 @@ class WorkspaceManager:
 
             # ALICE_Search インデックスの再構築
             try:
-                search_cli = Path("/home/takuya/Project_ALICE/ALICE_Search/cli.py")
+                search_cli = config.PROJECT_ROOT / "ALICE_Search" / "cli.py"
                 if search_cli.exists():
                     import subprocess
                     subprocess.run(["python3", str(search_cli), "--reindex"], timeout=10, capture_output=True)

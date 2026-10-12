@@ -5,6 +5,12 @@ from pathlib import Path
 load_dotenv()
 
 # =========================
+# Project Root & Paths
+# =========================
+CORE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(CORE_DIR.parent)))
+
+# =========================
 # LINE
 # =========================
 CHANNEL_SECRET = os.environ["CHANNEL_SECRET"]

@@ -15,7 +15,8 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path("/home/takuya/Project_ALICE")
+COPILOT_DIR = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(COPILOT_DIR.parent)))
 QUEUE_DIR = Path("/data/runtime/patch_queue")
 INBOX_DIR = QUEUE_DIR / "inbox"
 RUNNING_DIR = QUEUE_DIR / "running"
@@ -23,7 +24,7 @@ COMPLETED_DIR = QUEUE_DIR / "completed"
 FAILED_DIR = QUEUE_DIR / "failed"
 LOGS_DIR = QUEUE_DIR / "logs"
 
-AGY_BIN = Path("/home/takuya/.gemini/bin/agy")
+AGY_BIN = Path(os.getenv("AGY_BIN", str(Path.home() / ".gemini" / "bin" / "agy")))
 HANDOFF_PATH = PROJECT_ROOT / "HANDOFF.md"
 SHARED_MEMORY_HANDOFF = Path("/data/memory/HANDOFF.md")
 

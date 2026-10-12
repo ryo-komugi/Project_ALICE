@@ -15,6 +15,8 @@
 | :--- | :--- | :--- | :--- |
 | `summary.txt` | **Primary Artifact** | PlainText | **CoreWorker / Publisher が配信に用いる完成版テキスト** |
 | `summary.md` | Core Document | Markdown | 見出し・箇条書きが施された完成版要約ドキュメント |
+| `commentary.txt` | Optional Primary | PlainText | 面談・1on1時の所見コメントテキスト（Commentator有効時） |
+| `commentary.md` | Optional Document | Markdown | 面談・1on1時の所見コメントMarkdown（Commentator有効時） |
 | `analysis.json` | Intermediate | JSON | Stage 1 で抽出された会話構造化データ |
 | `draft_summary.md` | Intermediate | Markdown | Stage 2 で文章化されたドラフト要約 |
 | `consistency_report.md` | Audit Report | Markdown | Stage 3 による原文照合・7項目監査判定レポート |

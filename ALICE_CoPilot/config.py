@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 
+COPILOT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(COPILOT_DIR.parent)))
+
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:e4b")
 OLLAMA_CONTEXT = int(os.getenv("OLLAMA_CONTEXT", "8192"))

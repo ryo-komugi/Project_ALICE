@@ -14,8 +14,8 @@ import config
 
 logger = logging.getLogger("ALICE_CoPilot.Search")
 
-SEARCH_PYTHON_BIN = "/home/takuya/Project_ALICE/myenv/core_env/bin/python"
-SEARCH_CLI_PATH = "/home/takuya/Project_ALICE/ALICE_Search/cli.py"
+SEARCH_PYTHON_BIN = str(config.PROJECT_ROOT / "myenv" / "core_env" / "bin" / "python")
+SEARCH_CLI_PATH = str(config.PROJECT_ROOT / "ALICE_Search" / "cli.py")
 
 
 def clean_html_snippet(snippet: str) -> str:

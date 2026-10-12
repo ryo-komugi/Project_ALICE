@@ -19,6 +19,13 @@ from pathlib import Path
 from unittest.mock import MagicMock
 import pytest
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+core_path = str(PROJECT_ROOT / "ALICE_Core")
+if core_path not in sys.path:
+    sys.path.insert(0, core_path)
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from ALICE_Core.core.job_queue import JobQueue
 from ALICE_Core.core.worker import CoreWorker
 from ALICE_Core.core.workspace_manager import WorkspaceManager
@@ -33,8 +40,9 @@ def e2e_env():
     ws_root.mkdir(parents=True, exist_ok=True)
     db_path = temp_dir / "alice_index.db"
 
-    cli_path = Path("/home/takuya/Project_ALICE/ALICE_Search/cli.py")
-    python_bin = Path("/home/takuya/Project_ALICE/myenv/core_env/bin/python")
+    project_root = Path(__file__).resolve().parent.parent.parent
+    cli_path = project_root / "ALICE_Search" / "cli.py"
+    python_bin = project_root / "myenv" / "core_env" / "bin" / "python" 
 
     yield {
         "temp_dir": temp_dir,
@@ -245,8 +253,8 @@ def main():
             "temp_dir": td,
             "ws_root": td / "workspaces",
             "db_path": td / "alice_index.db",
-            "cli_path": Path("/home/takuya/Project_ALICE/ALICE_Search/cli.py"),
-            "python_bin": Path("/home/takuya/Project_ALICE/myenv/core_env/bin/python"),
+            "cli_path": Path(__file__).resolve().parent.parent.parent / "ALICE_Search" / "cli.py",
+            "python_bin": Path(__file__).resolve().parent.parent.parent / "myenv" / "core_env" / "bin" / "python",
         }
         env["ws_root"].mkdir(parents=True, exist_ok=True)
 

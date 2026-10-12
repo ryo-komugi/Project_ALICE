@@ -1,6 +1,6 @@
 # ALICE_Search Data & Artifact Contract
 
-> Version: v1.0.0  
+> Version: v1.1.0  
 > Status: Ratified  
 
 本ドキュメントは、`ALICE_Search` と他モジュール（`ALICE_Core`, `ALICE_CoPilot` 等）間で交わされる入出力データ契約、検索結果 JSON スキーマ、およびインデックス対象成果物規約を定義します。
@@ -102,7 +102,7 @@
       "metadata": {
         "status": "COMPLETED",
         "original_filename": "test_line_summary.mp3",
-        "workflow": "[\"transcript\", \"summary\"]"
+        "workflow": "["transcript", "summary"]"
       }
     }
   ]
@@ -119,6 +119,8 @@
 | :--- | :--- | :---: | :--- |
 | `summary/summary.txt` | `summary` | **対象** | LINE配信用の要約テキスト（最重要成果物） |
 | `summary/summary.md` | `summary` | **対象** | 完全版 Markdown 要約 |
+| `summary/commentary.txt` | `summary` | **対象** | 面談講評プレーンテキスト（所見レポート） |
+| `summary/commentary.md` | `summary` | **対象** | 面談講評 Markdown（所見レポート） |
 | `transcript/transcript.txt` | `transcript` | **対象** | 全文文字起こしプレーンテキスト |
 | `minutes/minutes.txt` | `minutes` | **対象** | 議事録テキスト |
 | `minutes/minutes.md` | `minutes` | **対象** | 議事録 Markdown |

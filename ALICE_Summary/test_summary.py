@@ -6,8 +6,9 @@ import subprocess
 import pytest
 from pathlib import Path
 
-PYTHON_BIN = "/home/takuya/Project_ALICE/myenv/core_env/bin/python"
-SUMMARY_CLI = "/home/takuya/Project_ALICE/ALICE_Summary/cli.py"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PYTHON_BIN = str(PROJECT_ROOT / "myenv" / "core_env" / "bin" / "python")
+SUMMARY_CLI = str(PROJECT_ROOT / "ALICE_Summary" / "cli.py")
 
 
 def get_available_real_transcript() -> Path | None:

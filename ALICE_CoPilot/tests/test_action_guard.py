@@ -1,5 +1,6 @@
 import sys
-sys.path.insert(0, "/home/takuya/Project_ALICE/ALICE_CoPilot")
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import asyncio
 import json

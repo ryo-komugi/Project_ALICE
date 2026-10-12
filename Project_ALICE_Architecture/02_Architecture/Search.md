@@ -8,6 +8,7 @@
 Workspace Directory 群 (/data/runtime/workspaces/{job_id}/)
   ├── summary/summary.txt, summary.md
   ├── transcript/transcript.txt
+  ├── minutes/minutes.txt, minutes.md
   └── job.json
           │
           │ [cli.py --index-job <workspace_dir>]
@@ -115,6 +116,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS artifacts_fts USING fts5(
   - `summary/summary.txt`, `summary/summary.md`
   - `transcript/transcript.txt`
   - `minutes/minutes.txt`, `minutes/minutes.md`
+  - `summary/commentary.txt`, `summary/commentary.md`（面談講評・所見レポート）
 - **対象外**:
   - `transcript/transcript.json`（構文トークンによるノイズ防止のため除外。検索結果の `workspace_dir` から取得可能）
   - `analysis.json`, 各種ログファイル（`*.log`）、入力音声バイナリ

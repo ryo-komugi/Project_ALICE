@@ -27,6 +27,8 @@
 │   ├── draft_summary.md    # Stage 2: ドラフト要約
 │   ├── summary.md          # Stage 3: 完成版要約 Markdown
 │   ├── summary.txt         # Stage 3: 完成版テキスト（Primary Artifact）
+│   ├── commentary.txt      # 所見レポート（面談・指導時 / Optional Primary）
+│   ├── commentary.md       # 所見レポート Markdown（面談・指導時）
 │   ├── consistency_report.md# Stage 3: 原文照合・整合性監査レポート
 │   └── metadata.json       # 要約処理メトリクス
 ├── minutes/                # [ALICE_Minutes 専用成果物領域]
@@ -46,15 +48,15 @@
 
 ```text
 [生成] (PENDING)
-  │  Core の MessageHandler が要求受付
-  │  WorkspaceManager がディレクトリ作成
+  │  Gateway Layer が要求受付
+  │  Hub Layer (WorkspaceManager) がディレクトリ作成
   │  入力ファイルを input/ へ保存し job.json を初期化
   ▼
 [キューイング] (QUEUED)
   │  JobQueue にエンキュー
   ▼
 [処理中] (PROCESSING)
-  │  CoreWorker がポップして実行開始
+  │  Hub Layer (CoreWorker) がポップして実行開始 (SLA/リトライ監視)
   │  Step 1: ALICE_Transcript が input/ を読み transcript/ を出力
   │  Step 2: 後続モジュールが transcript/transcript.json を読み出力
   ▼
@@ -77,7 +79,7 @@
 | モジュール | 入力元パス | 出力先パス | 必須入力成果物 | 主な出力成果物 |
 | :--- | :--- | :--- | :--- | :--- |
 | **ALICE_Transcript** | `<ws>/input/` | `<ws>/transcript/` | 音声ファイル (`.wav`, `.mp3`, `.m4a`) | `transcript.json`, `transcript.txt` |
-| **ALICE_Summary** | `<ws>/transcript/` | `<ws>/summary/` | `transcript.json` | `summary.txt`, `summary.md`, `analysis.json` |
+| **ALICE_Summary** | `<ws>/transcript/` | `<ws>/summary/` | `transcript.json` | `summary.txt`, `summary.md`, `commentary.txt/md`, `analysis.json` |
 | **ALICE_Minutes** | `<ws>/transcript/` | `<ws>/minutes/` | `transcript.json` | `minutes.txt`, `minutes.md`, `analysis.json` |
 
 ---

@@ -17,6 +17,17 @@ def test_discover_input_audio(tmp_path):
     assert found == audio1
 
 
+def test_discover_input_audio_uppercase(tmp_path):
+    input_dir = tmp_path / "input"
+    input_dir.mkdir()
+    audio1 = input_dir / "2026-10-09-17-05-34.WAV"
+    audio1.write_text("dummy")
+
+    pipeline = TranscriptPipeline.__new__(TranscriptPipeline)
+    found = pipeline.discover_input_audio(input_dir)
+    assert found == audio1
+
+
 def test_discover_input_audio_not_found(tmp_path):
     input_dir = tmp_path / "input"
     input_dir.mkdir()

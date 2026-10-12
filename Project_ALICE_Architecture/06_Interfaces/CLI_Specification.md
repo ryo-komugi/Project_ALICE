@@ -1,15 +1,18 @@
-# Project_ALICE CLI Interface Specification
+# Project_ALICE CLI Specification & Interface Reference
 
-> Version: v1.2.0  
+> Version: v1.3.0  
 > Status: Ratified  
 
-本仕様書は、`ALICE_Core` および運用オペレーターが各モジュールを CLI から実行する際のコマンドラインインターフェース（CLI Interface）仕様を定義します。
+本ドキュメントは、`ALICE_Core` からサブプロセス起動される各モジュール（`ALICE_Transcript`, `ALICE_Summary`, `ALICE_Minutes`, `ALICE_Search`）および `ALICE_CoPilot` のコマンドライン引数仕様、環境変数、終了コード規約を定義します。
 
 ---
 
-## 1. モジュール実行環境一覧
+## 1. 共通実行規約
 
-| モジュール | 専用 Python 仮想環境パス | CLI スクリプトパス |
+### 1.1 Python インタープリタパス契約
+各モジュールは隔離された Python 仮想環境で動作します。Core は以下の絶対パスでインタープリタを呼び出します。
+
+| モジュール | Python インタープリタパス | エントリポイント |
 | :--- | :--- | :--- |
 | **ALICE_Transcript** | `/home/takuya/Project_ALICE/myenv/whisper_env/bin/python` | `/home/takuya/Project_ALICE/ALICE_Transcript/cli.py` |
 | **ALICE_Summary** | `/home/takuya/Project_ALICE/myenv/core_env/bin/python` | `/home/takuya/Project_ALICE/ALICE_Summary/cli.py` |
@@ -24,12 +27,19 @@
 ### 2.1 ALICE_Transcript CLI
 
 ```bash
-/home/takuya/Project_ALICE/myenv/whisper_env/bin/python /home/takuya/Project_ALICE/ALICE_Transcript/cli.py --workspace <workspace_dir>
+/home/takuya/Project_ALICE/myenv/whisper_env/bin/python /home/takuya/Project_ALICE/ALICE_Transcript/cli.py --workspace <workspace_dir> [OPTIONS]
 ```
 
 #### 引数
 - `--workspace <path>` (**必須**): Job Workspace の絶対パス。`<path>/input/` 配下の音声（`.wav`, `.mp3`, `.m4a` 等）を自動探索して処理する。
 - `--model <name>` (任意): Whisper モデル名（デフォルト: `large-v3-turbo`）。
+- `--device <cuda|cpu>` (任意): 実行デバイス（デフォルト: `cuda`）。
+- `--language <ja|...>` (任意): 文字起こし言語コード（デフォルト: `ja`）。
+
+#### 成果物
+- `<workspace>/transcript/transcript.json` (Source of Truth)
+- `<workspace>/transcript/transcript.txt` (**Primary Artifact**)
+- `<workspace>/transcript/metadata.json`
 
 ---
 
@@ -42,10 +52,17 @@
 #### 引数
 - `--workspace <path>` (**必須**): Job Workspace の絶対パス。`<path>/transcript/transcript.json` を入力とする。
 - `--model <name>` (任意): 使用する Ollama モデル名（デフォルト: `gemma4:12b`）。
-- `--stage2-only` (任意): 既存の `analysis.json` を使用し、Stage 2 以降を再実行。
-- `--stage3-only` (任意): 既存の `draft_summary.md` を使用し、Stage 3（整合性チェック）のみ再実行。
-- `--skip-stage3` (任意): Stage 3 の原文照合監査をスキップし、Stage 2 ドラフトを完成版とする。
-- `--force-all` (任意): 既存の中間成果物を無視して Stage 1 から完全再生成。
+- `--stage2-only` (任意): 既存の `analysis.json` を使用し、Stage 2（要約文章化）のみ再実行。
+- `--stage3-only` (任意): 既存の `draft_summary.md` を使用し、Stage 3（整合性検査）のみ再実行。
+- `--force-stage1` (任意): 既存の中間成果物を上書きして最初から実行。
+
+#### 成果物
+- `<workspace>/summary/summary.txt` (**Primary Artifact**)
+- `<workspace>/summary/summary.md`
+- `<workspace>/summary/commentary.txt` / `commentary.md`（面談タイプ時）
+- `<workspace>/summary/analysis.json`
+- `<workspace>/summary/draft_summary.md`
+- `<workspace>/summary/consistency_report.md`
 
 ---
 
@@ -57,9 +74,16 @@
 
 #### 引数
 - `--workspace <path>` (**必須**): Job Workspace の絶対パス。`<path>/transcript/transcript.json` を入力とする。
-- `--model <name>` (任意): 使用する Ollama モデル名（デフォルト: `qwen3:14b` または `gemma4:12b`）。
+- `--template {standard,interview,executive,consultation}` (任意): 使用する議事録テンプレート（デフォルト: `standard`）。
+- `--model <name>` (任意): 使用する Ollama モデル名（デフォルト: `gemma4:12b`）。
 - `--stage2-only` (任意): 既存の `analysis.json` を使用し、Stage 2（議事録文章化）のみ再実行。
 - `--force-stage1` (任意): 既存の中間成果物を上書きして最初から実行。
+
+#### 成果物
+- `<workspace>/minutes/minutes.txt` (**Primary Artifact**)
+- `<workspace>/minutes/minutes.md`
+- `<workspace>/minutes/analysis.json`
+- `<workspace>/minutes/metadata.json`
 
 ---
 
@@ -78,27 +102,26 @@
 - `--module <name>` (任意): モジュール種別（`summary`, `transcript`, `minutes`）で絞り込み。
 - `--from-date <YYYY-MM-DD>` (任意): 指定日以降のジョブに絞り込み。
 - `--to-date <YYYY-MM-DD>` (任意): 指定日以前のジョブに絞り込み。
-- `--limit <int>` (任意): 取得最大件数（デフォルト: `10`）。
+- `--status <status>` (任意): ジョブステータス（`COMPLETED`, `FAILED` 等）で絞り込み。
+- `--limit <int>` (任意): 取得上限件数（デフォルト: 20）。
+- `--offset <int>` (任意): ページネーションオフセット（デフォルト: 0）。
 
-#### (2) 単一 Workspace インデックス登録・更新モード (`--index-job`)
-CoreWorker から Job 完了時に呼び出され、当該 Workspace の成果物をインデックスに反映します。
-- `--index-job <path>`: 対象 Workspace の絶対パス。
-- 終了コード: 成功時 `0`、失敗時 `1`。
+#### (2) ジョブインデックス登録・更新モード (`--index-job`)
+Core の Job 完了時、Workspace 内のテキスト成果物をインデックスに反映します。
+- `--index-job <workspace_dir>` (**必須**): 対象 Workspace の絶対パス。
 
-#### (3) 全体再インデックスモード (`--reindex`)
-全 Workspace ディレクトリを走査し、検索データベース（`alice_index.db`）を 0 から完全再構築します。
-- `--reindex`: オプション指定のみで実行。
-- 終了コード: 成功時 `0`、失敗時 `1`。
+#### (3) インデックス完全再構築モード (`--reindex`)
+全 Workspace ディレクトリを走査し、インデックス DB をゼロから再構築します。
+- `--reindex`: 派生キャッシュ DB を再生成するフラグ。
+- `--workspaces-dir <dir>` (任意): Workspace 親ディレクトリ（デフォルト: `/data/runtime/workspaces`）。
 
 ---
 
-### 2.5 ALICE_CoPilot CLI
+## 3. 終了コード規約
 
-```bash
-/home/takuya/Project_ALICE/myenv/core_env/bin/python /home/takuya/Project_ALICE/ALICE_CoPilot/main.py [OPTIONS]
-```
-
-#### 引数
-- `--discord`: Discord Bot を起動してメッセージ待受を開始（`#search` による `ALICE_Search` 連携機能を含む）。
-- `--sync-obsidian`: メモリ原本から Obsidian バウルトへの同期を手動実行（起動時にも自動実行）。
-- `--search <query>`: 蓄積された長期メモリ（決定・アイデア・ナレッジ）のキーワード検索を実行。
+| 終了コード | 意味 | Core側のハンドリング |
+| :---: | :--- | :--- |
+| `0` | **正常終了 (SUCCESS)** | ワークフローの後続ステップへ進む。Primary Artifact の存在確認へ。 |
+| `1` | **一般エラー (ERROR)** | ジョブを `FAILED` として中断。エラーログを記録。 |
+| `2` | **引数不正 (USAGE)** | ジョブを `FAILED` として中断。CLI 呼び出し設定の不具合と判定。 |
+| `137` | **OOM (Out Of Memory)** | メモリ/VRAM 枯渇。キューを一時停止し、リソース解放後に再試行。 |

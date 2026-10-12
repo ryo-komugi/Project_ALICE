@@ -297,8 +297,10 @@ def _eval_memory_conflicts(spec: Dict[str, Any]) -> Tuple[bool, str]:
 def _eval_unit_tests(spec: Dict[str, Any]) -> Tuple[bool, str]:
     """Run specified unit tests."""
     targets = spec.get("test_target", "tests/test_tools.py")
-    copilot_dir = Path("/home/takuya/Project_ALICE/ALICE_CoPilot")
-    cmd = f"/home/takuya/Project_ALICE/myenv/copilot_env/bin/pytest {targets} -q"
+    copilot_dir = Path(__file__).resolve().parent.parent
+    project_root = Path(os.getenv("PROJECT_ROOT", str(copilot_dir.parent)))
+    pytest_bin = project_root / "myenv" / "copilot_env" / "bin" / "pytest"
+    cmd = f"{pytest_bin} {targets} -q"
     try:
         res = subprocess.run(
             cmd,

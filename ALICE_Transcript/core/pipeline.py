@@ -38,9 +38,11 @@ class TranscriptPipeline:
         self.exporter = exporter or Exporter()
 
     def discover_input_audio(self, input_dir: Path) -> Path:
-        audio_files = []
-        for ext in config.SUPPORTED_AUDIO_EXTENSIONS:
-            audio_files.extend(input_dir.glob(f"*{ext}"))
+        valid_extensions = {ext.lower() for ext in config.SUPPORTED_AUDIO_EXTENSIONS}
+        audio_files = [
+            p for p in input_dir.iterdir()
+            if p.is_file() and p.suffix.lower() in valid_extensions
+        ]
         if not audio_files:
             raise FileNotFoundError(f"No supported audio file found in {input_dir}")
         return sorted(audio_files, key=lambda p: p.stat().st_mtime)[0]
