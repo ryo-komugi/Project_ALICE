@@ -10,6 +10,7 @@
 ## 1. プロジェクト別ランタイム領域 (`{PROJECT_ROOT}/data/runtime`)
 
 Job Workspace と ALICE_Core の運用ログは Project_ALICE ルート配下に保存し、ユーザーごとのプロジェクトフォルダで分離します。
+基準ディレクトリは `ALICE_DATA_DIR` で設定します（既定値: `{PROJECT_ROOT}/data`）。相対パスは `PROJECT_ROOT` から解決し、Workspace は `<ALICE_DATA_DIR>/runtime/workspaces/`、運用ログは `<ALICE_DATA_DIR>/runtime/logs/` に保存します。
 
 ```text
 {PROJECT_ROOT}/data/runtime/

@@ -3,14 +3,19 @@ Log & Conversation Extractor for Nightly Review.
 Fetches past 24h of conversations and system logs for analysis.
 """
 import re
+import os
 import sqlite3
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
 DEFAULT_DB_PATH = Path("/data/runtime/copilot/database/conversations.db")
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_LOG_PATH = PROJECT_ROOT / "data" / "runtime" / "logs" / "copilot.log"
+PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", str(Path(__file__).resolve().parents[2]))).expanduser()
+DATA_DIR = Path(os.environ.get("ALICE_DATA_DIR", str(PROJECT_ROOT / "data"))).expanduser()
+if not DATA_DIR.is_absolute():
+    DATA_DIR = PROJECT_ROOT / DATA_DIR
+LOGS_DIR = DATA_DIR / "runtime" / "logs"
+DEFAULT_LOG_PATH = LOGS_DIR / "copilot.log"
 
 
 def extract_conversations(

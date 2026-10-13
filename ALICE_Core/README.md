@@ -74,7 +74,7 @@ LINE からの要求に応じて、以下の直列 Workflow が自動的に割�
 
 ## 5. 実行時ディレクトリ構成
 
-ジョブワークスペースと Core の運用ログは、このチェックアウトの `{PROJECT_ROOT}/data/runtime/` に作成します。`PROJECT_ROOT` は `ALICE_Core/config.py` が解決する Project_ALICE ルートです。各ユーザーが別々のプロジェクトフォルダを使うことで、Workspace とログを分離します。受信一時ファイルや公開配信領域など、その他の共通ランタイム領域は従来どおり `/data/runtime` を使います。
+ジョブワークスペースと Core の運用ログは、既定で `{PROJECT_ROOT}/data/runtime/` に作成します。`PROJECT_ROOT` は `ALICE_Core/config.py` が解決する Project_ALICE ルートです。各ユーザーが別々のプロジェクトフォルダを使うことで、Workspace とログを分離します。`.env` の `ALICE_DATA_DIR` でデータディレクトリを変更でき、相対パスは `PROJECT_ROOT` から解決します。Workspace は `<ALICE_DATA_DIR>/runtime/workspaces/`、ログは `<ALICE_DATA_DIR>/runtime/logs/` を使用します。受信一時ファイルや公開配信領域など、その他の共通ランタイム領域は従来どおり `/data/runtime` を使います。
 
 ```text
 {PROJECT_ROOT}/data/runtime/
@@ -99,9 +99,15 @@ LINE からの要求に応じて、以下の直列 Workflow が自動的に割�
 │   └── output/
 ```
 
+## 6. 本番起動
+
+Project_ALICE ルートで `./start_alice_core.sh` を実行します。スクリプトは `myenv/core_env` の Python で Core を起動し、`ALICE_Core/.env` を読み込むため `ALICE_Core` を作業ディレクトリにします。起動前に GPU ロックファイルへアクセスできるかを、実際の起動ユーザーで確認します。失敗時は UID/GID と対象パスを表示して起動を中止します。
+
+既定では `127.0.0.1:8000` で待ち受けます。起動時に `./start_alice_core.sh --ip 127.0.0.1 --port 8001` のように指定すると接続先を変更できます。`--ip` と `--port` は任意の順序で指定でき、片方だけの指定も可能です。引数を省略した値は `ALICE_CORE_HOST` と `ALICE_CORE_PORT` 環境変数から取得し、それらも未設定なら既定値を使います。systemd から使う場合は、`ExecStart` にこのスクリプトの絶対パスと必要な引数を指定し、意図したサービスユーザーで実行してください。スクリプトは `sudo` による権限変更を行いません。
+
 ---
 
-## 6. Job Management & 追跡仕様 (ALICE v1.0)
+## 7. Job Management & 追跡仕様 (ALICE v1.0)
 
 ALICE v1.0 では、1件のJobに関する完全なトレーサビリティ（追跡可能性）を保証します。
 
@@ -130,7 +136,7 @@ ALICE v1.0 では、1件のJobに関する完全なトレーサビリティ（�
 
 ---
 
-## 7. ディレクトリ構成
+## 8. ディレクトリ構成
 
 ```text
 ALICE_Core/
@@ -155,7 +161,7 @@ ALICE_Core/
 
 ---
 
-## 8. 将来構想 (Current Scope 外)
+## 9. 将来構想 (Current Scope 外)
 
 以下は今後のフェーズで段階的に検討・拡張される項目であり、現行バージョンでは未実装・予約領域として扱われます。
 

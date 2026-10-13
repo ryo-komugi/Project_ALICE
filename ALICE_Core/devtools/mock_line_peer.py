@@ -9,8 +9,10 @@ import json
 import mimetypes
 import os
 import re
+import time
 import urllib.error
 import urllib.request
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -97,6 +99,104 @@ def event_base(user_id: str, reply_token: str):
     return {"timestamp": 0, "source": {"type": "user", "userId": user_id}, "replyToken": reply_token, "mode": "active"}
 
 
+def _read_data_dir_from_env_file(env_file: Path) -> str | None:
+    """Read only ALICE_DATA_DIR without requiring python-dotenv in the mock client."""
+    try:
+        lines = env_file.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+
+    for line in lines:
+        key, separator, value = line.partition("=")
+        if not separator or key.strip() != "ALICE_DATA_DIR":
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        return value
+    return None
+
+
+def _default_workspace_dir() -> Path:
+    project_root = Path(os.getenv("PROJECT_ROOT", Path(__file__).resolve().parents[2])).expanduser()
+    if not project_root.is_absolute():
+        project_root = Path.cwd() / project_root
+    project_root = project_root.resolve()
+
+    data_dir = os.getenv("ALICE_DATA_DIR")
+    if data_dir is None:
+        data_dir = _read_data_dir_from_env_file(project_root / "ALICE_Core" / ".env")
+    if data_dir is None:
+        data_dir = "data"
+
+    resolved_data_dir = Path(data_dir).expanduser()
+    if not resolved_data_dir.is_absolute():
+        resolved_data_dir = project_root / resolved_data_dir
+    return resolved_data_dir / "runtime" / "workspaces"
+
+
+def _find_job(workspace_dir: Path, user_id: str, filename: str, submitted_at: float):
+    matches = []
+    try:
+        job_files = workspace_dir.glob("job_*/job.json")
+        for job_file in job_files:
+            try:
+                job = json.loads(job_file.read_text(encoding="utf-8"))
+                created_at = datetime.fromisoformat(job["created_at"]).timestamp()
+            except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                continue
+            original_name = job.get("input_metadata", {}).get("original_name")
+            if (
+                job.get("user_id") == user_id
+                and original_name == filename
+                and created_at >= submitted_at - 3
+            ):
+                matches.append((created_at, job_file, job))
+    except OSError:
+        pass
+    return max(matches, key=lambda item: item[0])[1:] if matches else None
+
+
+def wait_for_transcription(
+    workspace_dir: Path, user_id: str, filename: str, submitted_at: float, timeout: float
+) -> int:
+    deadline = time.monotonic() + timeout
+    job_file = None
+    job = None
+
+    while time.monotonic() < deadline:
+        match = _find_job(workspace_dir, user_id, filename, submitted_at)
+        if match:
+            job_file, job = match
+            if job.get("status") in {"COMPLETED", "FAILED"}:
+                break
+        time.sleep(1)
+
+    if not job_file or not job or job.get("status") not in {"COMPLETED", "FAILED"}:
+        print(
+            f"Timed out waiting for transcription ({timeout:g}s). "
+            f"Check job.json under {workspace_dir}.",
+            flush=True,
+        )
+        return 1
+
+    job_id = job.get("job_id", job_file.parent.name)
+    if job.get("status") == "FAILED":
+        print(f"Transcription failed: {job_id}: {job.get('error_message') or 'unknown error'}", flush=True)
+        return 1
+
+    transcript_path = job_file.parent / "transcript" / "transcript.txt"
+    if not transcript_path.is_file():
+        print(f"Job completed but transcript file is missing: {transcript_path}", flush=True)
+        return 1
+
+    print(f"Transcription completed: {job_id}", flush=True)
+    print("----- transcript.txt -----", flush=True)
+    print(transcript_path.read_text(encoding="utf-8").rstrip(), flush=True)
+    print("--------------------------", flush=True)
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--peer", default="http://127.0.0.1:8010", help="Mock LINE API base URL")
@@ -108,8 +208,18 @@ def main():
     sub.add_parser("follow", help="Simulate a LINE follow event")
     text_parser = sub.add_parser("text", help="Send a text message (for example invite code, then 文字起こし)")
     text_parser.add_argument("text")
-    file_parser = sub.add_parser("file", help="Upload a local audio file and submit it as a LINE file message")
+    file_parser = sub.add_parser(
+        "file", help="Upload audio through LINE mock and wait for the transcript"
+    )
     file_parser.add_argument("path", type=Path)
+    file_parser.add_argument(
+        "--timeout", type=float, default=1800,
+        help="Seconds to wait for transcription completion (default: 1800)",
+    )
+    file_parser.add_argument(
+        "--workspace-dir", type=Path, default=None,
+        help="Workspace directory to poll (defaults to ALICE_DATA_DIR/runtime/workspaces)",
+    )
     args = parser.parse_args()
 
     if args.command == "serve":
@@ -131,6 +241,8 @@ def main():
         path = args.path.expanduser().resolve()
         if not path.is_file():
             parser.error(f"File does not exist: {path}")
+        if args.timeout <= 0:
+            parser.error("--timeout must be greater than 0")
         message_id = str(uuid4())
         req = urllib.request.Request(
             args.peer.rstrip("/") + f"/mock/content/{message_id}",
@@ -141,8 +253,16 @@ def main():
         with urllib.request.urlopen(req, timeout=15):
             pass
         event = {**base, "type": "message", "message": {"id": message_id, "type": "file", "fileName": path.name, "fileSize": path.stat().st_size}}
+        submitted_at = time.time()
     send_event(args.core, args.secret, event)
+    if args.command == "file":
+        workspace_dir = args.workspace_dir.expanduser() if args.workspace_dir else _default_workspace_dir()
+        if not workspace_dir.is_absolute():
+            workspace_dir = Path.cwd() / workspace_dir
+        return wait_for_transcription(
+            workspace_dir.resolve(), args.user, path.name, submitted_at, args.timeout
+        )
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

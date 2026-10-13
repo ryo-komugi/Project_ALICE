@@ -12,7 +12,9 @@ LINE_DATA_API_BASE_URL=http://127.0.0.1:8010
 PUBLIC_URL=http://127.0.0.1:8000
 ```
 
-Core の `CHANNEL_ACCESS_TOKEN` はモックでは検証しません。`PROJECT_ROOT` を指定しない場合、Workspace は Project_ALICE ルートの `data/runtime/workspaces/`、Core ログは `data/runtime/logs/` に作成されます。
+Core の `CHANNEL_ACCESS_TOKEN` はモックでは検証しません。`ALICE_DATA_DIR` を指定しない場合、Workspace は Project_ALICE ルートの `data/runtime/workspaces/`、Core ログは `data/runtime/logs/` に作成されます。
+
+保存先の基準を変更する場合は、`.env` に `ALICE_DATA_DIR=/保存先/パス` を設定します。相対パスは `PROJECT_ROOT` から解決します。Workspace は `<ALICE_DATA_DIR>/runtime/workspaces/`、Core / CoPilot の運用ログは `<ALICE_DATA_DIR>/runtime/logs/` に出力されます。Core、Search、CoPilot で同じ設定を使用してください。
 
 ## 2. 起動
 
@@ -40,6 +42,12 @@ python3 ALICE_Core/devtools/mock_line_peer.py --secret 'ここにCHANNEL_SECRET'
 python3 ALICE_Core/devtools/mock_line_peer.py --secret 'ここにCHANNEL_SECRET' file '/path/to/sample.m4a'
 ```
 
-`--user` は全コマンドで同じ値にしてください（既定値は `U_LOCAL_MOCK_USER`）。別ユーザーを試す場合は別の値を指定します。ファイル送信後は、`<PROJECT_ROOT>/data/runtime/workspaces/` に `job_*` ディレクトリができたことを確認します。
+`--user` は全コマンドで同じ値にしてください（既定値は `U_LOCAL_MOCK_USER`）。別ユーザーを試す場合は別の値を指定します。`file` コマンドは Core の受付応答後も終了せず、対象ジョブが完了するまで待機し、`transcript.txt` の内容を表示します。既定の待機時間は30分です。変更する場合は `--timeout 秒数` を指定します。
+
+```bash
+python3 ALICE_Core/devtools/mock_line_peer.py --core http://127.0.0.1:8000 --user U_LOCAL_MOCK_USER file '/path/to/sample.m4a' --timeout 1800
+```
+
+待機先の Workspace は `.env` の `ALICE_DATA_DIR` を使って解決します。Core と異なる保存先を使う場合は `file` コマンドに `--workspace-dir '/path/to/runtime/workspaces'` を指定してください。完了したジョブが失敗した場合、モックはエラーを表示して終了コード1を返します。
 
 Core の受信確認だけなら `/health` を開けます。モック API は受信した返信・Push・リッチメニュー要求をターミナルに表示し、登録済みのアップロードデータを Core に返します。

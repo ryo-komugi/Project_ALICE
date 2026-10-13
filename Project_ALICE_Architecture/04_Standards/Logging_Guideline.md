@@ -17,6 +17,7 @@
 Project_ALICE では、以下の 2 系統でログを出力・保持します。
 
 ### ① プロジェクト運用ログ (`{PROJECT_ROOT}/data/runtime/logs/`)
+保存先は環境変数 `ALICE_DATA_DIR` を基準に `<ALICE_DATA_DIR>/runtime/logs/` となります。`ALICE_DATA_DIR` の既定値は `{PROJECT_ROOT}/data` で、相対パスは `PROJECT_ROOT` から解決します。
 - `alice.log`: `ALICE_Core` の全体運用ログ（FastAPI アクセス、JobQueue 状況、Worker 全体動作）。
 - `copilot.log`: `ALICE_CoPilot` のサブプロセス出力。
 - 日次ローテーションを実施し、過去ログは `archive/` へ移動。

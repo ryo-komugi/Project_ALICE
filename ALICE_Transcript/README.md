@@ -48,7 +48,11 @@ ALICE_Core Worker ──(Subprocess)──> cli.py --workspace <path>
 
 ---
 
-## 4. ディレクトリ構成
+## 4. Hugging Face 認証
+
+話者分離モデルを取得するには、Hugging Face で `pyannote/speaker-diarization-3.1` と `pyannote/segmentation-3.0` の利用条件に同意し、Read 権限のアクセストークンを用意してください。Core の話者分離サブプロセスは、`HF_TOKEN` 環境変数があればそれを優先し、未設定なら Project_ALICE ルートの `Docs/pyannote_token.txt` を読み込みます。このファイルにはトークンだけを記載し、他のユーザーから読めないアクセス権にしてください。
+
+## 5. ディレクトリ構成
 
 ```text
 ALICE_Transcript/
@@ -73,7 +77,7 @@ ALICE_Transcript/
 
 ---
 
-## 5. 将来構想 (Current Scope 外)
+## 6. 将来構想 (Current Scope 外)
 
 * 音声認識・話者分離エンジンの精度チューニング
 * クラスタリング・並列処理の最適化
