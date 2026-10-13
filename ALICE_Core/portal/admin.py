@@ -200,7 +200,7 @@ async def restart_service_api(service_name: str):
         copilot_main = str(config.PROJECT_ROOT / "ALICE_CoPilot" / "main.py")
         copilot_dir = str(config.PROJECT_ROOT / "ALICE_CoPilot")
         try:
-            log_out = open("/data/runtime/logs/copilot.log", "a", encoding="utf-8")
+            log_out = open(Path(config.DIR_LOGS) / "copilot.log", "a", encoding="utf-8")
         except Exception:
             log_out = subprocess.DEVNULL
         subprocess.Popen(

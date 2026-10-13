@@ -5,7 +5,10 @@ from pathlib import Path
 
 # デフォルトパス
 DEFAULT_DB_PATH = Path(os.environ.get("ALICE_SEARCH_DB_PATH", "/data/runtime/search/alice_index.db"))
-DEFAULT_WORKSPACES_DIR = Path(os.environ.get("ALICE_WORKSPACES_DIR", "/data/runtime/workspaces"))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_WORKSPACES_DIR = Path(
+    os.environ.get("ALICE_WORKSPACES_DIR", str(PROJECT_ROOT / "data" / "runtime" / "workspaces"))
+)
 
 # 全文検索対象アーティファクトの定義
 # 注意:

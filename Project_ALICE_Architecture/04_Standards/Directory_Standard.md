@@ -3,13 +3,27 @@
 > Version: v1.1.0  
 > Status: Standard  
 
-本規約は、Project_ALICE システムにおけるランタイム領域（`/data/runtime`）および各モジュール領域のディレクトリ構造・命名規則を定義します。
+本規約は、Project_ALICE システムにおけるプロジェクト別ランタイム領域（`{PROJECT_ROOT}/data/runtime`）、共有ランタイム領域（`/data/runtime`）、および各モジュール領域のディレクトリ構造・命名規則を定義します。
 
 ---
 
-## 1. ランタイム領域 (`/data/runtime`)
+## 1. プロジェクト別ランタイム領域 (`{PROJECT_ROOT}/data/runtime`)
 
-すべての動的データ（ジョブ、ワークスペース、ログ、公開ファイル、セッションDB、検索インデックス）は `/data/runtime` 配下に集約し、ソースコードリポジトリ内には一時ファイルやログを書き込んではならない。
+Job Workspace と ALICE_Core の運用ログは Project_ALICE ルート配下に保存し、ユーザーごとのプロジェクトフォルダで分離します。
+
+```text
+{PROJECT_ROOT}/data/runtime/
+├── logs/                       # ALICE_Core / CoPilot 運用ログ
+│   ├── alice.log
+│   ├── copilot.log
+│   └── archive/
+└── workspaces/                 # Job Workspace
+    └── {job_id}/
+```
+
+## 2. 共有ランタイム領域 (`/data/runtime`)
+
+次の既存共有データは `/data/runtime` 配下に維持します。
 
 ```text
 /data/runtime/
@@ -18,25 +32,13 @@
 ├── core/                       # [ALICE_Core 専用領域]
 │   ├── inbox/                  # 外部クライアント受信一時ファイル
 │   └── share/                  # 公開配信・静的ファイル領域 (/share)
-├── logs/                       # 【システム全体共通ログ領域】
-│   ├── alice.log               # ALICE_Core 運用ログ
-│   ├── transcript.log          # ALICE_Transcript スタンドアロンログ
-│   └── archive/                # ローテーション過去ログ (*.log.YYYY-MM-DD)
 ├── search/                     # [ALICE_Search 専用領域]
 │   └── alice_index.db          # SQLite + FTS5 trigram 派生検索インデックス
-└── workspaces/                 # 【Job 共通 Workspace 領域】
-    └── {job_id}/               # 1 Job ごとの隔離ディレクトリ
-        ├── job.json            # Job 状態・メタデータ
-        ├── input/              # 入力原本（処理完了後に削除・プレースホルダー化）
-        ├── transcript/         # Transcript 成果物
-        ├── summary/            # Summary 成果物
-        ├── minutes/            # Minutes 成果物
-        └── logs/               # Job 別実行ログ
 ```
 
 ---
 
-## 2. メモリ・ナレッジ領域 (`/data/memory`)
+## 3. メモリ・ナレッジ領域 (`/data/memory`)
 
 `ALICE_CoPilot` が管理するメモリおよび Obsidian バウルト領域。
 
@@ -50,7 +52,7 @@
 
 ---
 
-## 3. 命名規則 (Naming Conventions)
+## 4. 命名規則 (Naming Conventions)
 
 1. **Job ID**: `job_{YYYYMMDD}_{HHMMSS}_{random4}` または日付時刻ベースのユニーク文字列。
 2. **モジュール成果物ディレクトリ**: モジュール名の短縮小文字（`transcript`, `summary`, `minutes`）。

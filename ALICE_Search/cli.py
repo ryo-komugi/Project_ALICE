@@ -36,7 +36,7 @@ def parse_args():
         epilog="""
 使用例:
   1. 単一ジョブのインデックス登録:
-     python cli.py --index-job /data/runtime/workspaces/job_xxx
+     python cli.py --index-job {PROJECT_ROOT}/data/runtime/workspaces/job_xxx
 
   2. 全文検索実行 (--query に統一):
      python cli.py --query "来期予算" --limit 5

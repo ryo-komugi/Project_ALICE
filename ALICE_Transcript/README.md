@@ -35,7 +35,7 @@ ALICE_Core Worker ──(Subprocess)──> cli.py --workspace <path>
 ## 3. CLI 実行契約
 
 ```bash
-/home/takuya/Project_ALICE/myenv/whisper_env/bin/python /home/takuya/Project_ALICE/ALICE_Transcript/cli.py --workspace /data/runtime/workspaces/{job_id}
+/home/takuya/Project_ALICE/myenv/whisper_env/bin/python /home/takuya/Project_ALICE/ALICE_Transcript/cli.py --workspace {PROJECT_ROOT}/data/runtime/workspaces/{job_id}
 ```
 
 | 項目 | 仕様 |

@@ -24,7 +24,7 @@ ALICE v1.0 の正式達成基準（完了の定義）は、以下の要件をす
    - 音声投入（LINE / Admin Web UI）から、文字起こし（`ALICE_Transcript`）→ 要約（`ALICE_Summary`）または議事録（`ALICE_Minutes`）の生成、および結果の LINE 配信までが人の介入なく完全自動で完結すること。
    - 異常発生時もジョブ単位でログが隔離保存され、中間成果物からの安全な再開（Robust Resume）が可能であること。
 2. **源泉データ主義（Source of Truth）と 1 Job = 1 Workspace 原則の確立**:
-   - すべてのジョブデータが `/data/runtime/workspaces/{job_id}/` に自己完結して保持されること。
+   - すべてのジョブデータが `{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/` に自己完結して保持されること。
    - 会話の正本 `transcript/transcript.json` を唯一の根拠として後続処理が行われ、ハルシネーションを排除する多段階パイプライン（3-Stage / 2-Stage）が機能していること。
 3. **検索基盤と派生キャッシュ（Derived Cache）の分離**:
    - `ALICE_Search` による高速全文検索（SQLite + FTS5 trigram）・属性検索・1〜2文字LIKE自動補正が正常稼働すること。

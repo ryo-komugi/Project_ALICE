@@ -1,10 +1,10 @@
 from linebot.v3.messaging import (ApiClient, Configuration, MessagingApi, ReplyMessageRequest, PushMessageRequest, TextMessage, FlexMessage, FlexContainer)
-from config import CHANNEL_ACCESS_TOKEN
+import config
 
 
 class MessageSender:
     def __init__(self):
-        configuration = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
+        configuration = Configuration(access_token=config.CHANNEL_ACCESS_TOKEN, host=config.BASE_URL.removesuffix("/v2/bot"))
         self.api_client = ApiClient(configuration)
         self.messaging_api = MessagingApi(self.api_client)
 

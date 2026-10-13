@@ -33,7 +33,7 @@ Project_ALICE は自立したモジュールの集合体である。各モジュ
 2. モジュール間の連携は、**Workspace Driven CLI 方式**（`python cli.py --workspace <path>` 等）およびファイル契約（Contracts）を通じてのみ行う。
 
 ### 第4条（1 Job = 1 Workspace）
-1. システムが処理する 1 つの要求（Job）に対し、必ず 1 つの独立した Workspace ディレクトリ（`/data/runtime/workspaces/{job_id}/`）を割り当てる。
+1. システムが処理する 1 つの要求（Job）に対し、必ず 1 つの独立した Workspace ディレクトリ（`{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/`）を割り当てる。
 2. 入力データ、中間成果物、最終成果物、実行ログはすべて当該 Workspace 内に隔離して記録され、他の Job に干渉してはならない。
 
 ### 第5条（Source of Truth：源泉データ主義と派生キャッシュの原則）

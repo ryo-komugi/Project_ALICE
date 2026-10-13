@@ -17,7 +17,7 @@ python cli.py --workspace <workspace_directory_path>
 
 | 引数名 | 必須/任意 | 説明 |
 | :--- | :--- | :--- |
-| `--workspace` | **必須** | 対象 Job の Workspace 絶対パス（例: `/data/runtime/workspaces/{job_id}`） |
+| `--workspace` | **必須** | 対象 Job の Workspace 絶対パス（例: `{PROJECT_ROOT}/data/runtime/workspaces/{job_id}`） |
 | `--model` | 任意 | 使用する LLM モデル名の明示指定（Summary, Minutes） |
 | `--log-level` | 任意 | ログ出力レベル（`DEBUG`, `INFO`, `WARNING`, `ERROR`） |
 

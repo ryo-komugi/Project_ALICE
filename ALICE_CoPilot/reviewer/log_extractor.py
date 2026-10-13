@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_DB_PATH = Path("/data/runtime/copilot/database/conversations.db")
-DEFAULT_LOG_PATH = Path("/data/runtime/logs/copilot.log")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_LOG_PATH = PROJECT_ROOT / "data" / "runtime" / "logs" / "copilot.log"
 
 
 def extract_conversations(

@@ -16,7 +16,7 @@
 
 ## 決定
 1. **1 Job = 1 Workspace 原則の確立**:
-   - すべての処理要求ごとに `/data/runtime/workspaces/{job_id}/` を一意に生成し、入力原本・モジュール別成果物・実行ログをそこに隔離する。
+   - すべての処理要求ごとに `{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/` を一意に生成し、入力原本・モジュール別成果物・実行ログをそこに隔離する。
 2. **Workspace Driven CLI 連携方式の採択**:
    - モジュール間は Python import を行わず、CoreWorker から Subprocess として `python cli.py --workspace <path>` を呼び出す。
    - 各モジュールはそれぞれ専用の Python 仮想環境（`whisper_env`, `core_env` 等）で実行する。

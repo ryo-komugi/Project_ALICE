@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
         "--workspace",
         type=str,
         required=True,
-        help="Path to the Job Workspace directory (e.g., /data/runtime/workspaces/job_xxx)",
+        help="Path to the Job Workspace directory (e.g., {PROJECT_ROOT}/data/runtime/workspaces/job_xxx)",
     )
     parser.add_argument(
         "--template",

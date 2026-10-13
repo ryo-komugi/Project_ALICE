@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 class WorkspaceManager:
     """1 Job = 1 Workspace のディレクトリ構造・ライフサイクル・追跡を管理する"""
 
-    def __init__(self, base_dir: str | Path = "/data/runtime/workspaces"):
-        self.base_dir = Path(base_dir)
+    def __init__(self, base_dir: str | Path | None = None):
+        self.base_dir = Path(base_dir if base_dir is not None else config.DIR_WORKSPACES)
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
     def create_workspace(

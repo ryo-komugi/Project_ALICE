@@ -16,7 +16,7 @@ import config
 logger = logging.getLogger("ALICE_CoPilot.Tools.System")
 
 DB_PATH = Path("/data/runtime/search/alice_index.db")
-WORKSPACES_ROOT = Path("/data/runtime/workspaces")
+WORKSPACES_ROOT = Path(config.PROJECT_ROOT) / "data" / "runtime" / "workspaces"
 STATS_PATH = Path("/data/runtime/copilot/system_daily_stats.json")
 
 
