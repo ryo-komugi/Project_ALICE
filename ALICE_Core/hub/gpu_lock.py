@@ -27,7 +27,23 @@ def acquire_gpu_lock(timeout: float = 1800.0, step_name: str = "gpu_step"):
     """
     GPU_LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
     start_time = time.time()
-    lock_fd = os.open(str(GPU_LOCK_FILE), os.O_CREAT | os.O_RDWR, 0o666)
+    try:
+        # O_CREAT on an existing file in /tmp can be denied by
+        # fs.protected_regular when another user owns that file. Create it
+        # exclusively, then open existing lock files without O_CREAT.
+        lock_fd = os.open(
+            str(GPU_LOCK_FILE), os.O_CREAT | os.O_EXCL | os.O_RDWR, 0o666
+        )
+    except FileExistsError:
+        lock_fd = os.open(str(GPU_LOCK_FILE), os.O_RDWR)
+    else:
+        try:
+            # The lock is shared across service users; don't let umask make a
+            # newly created lock inaccessible to other users.
+            os.fchmod(lock_fd, 0o666)
+        except Exception:
+            os.close(lock_fd)
+            raise
     acquired = False
 
     try:

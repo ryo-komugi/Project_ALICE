@@ -3,8 +3,9 @@ import logging
 import shutil
 import os
 from datetime import datetime, timedelta
+import config
 
-LOG_DIR = Path("/data/runtime/logs")
+LOG_DIR = Path(config.DIR_LOGS)
 ARCHIVE_DIR = LOG_DIR / "archive"
 LOG_FILE = LOG_DIR / "alice.log"
 

@@ -17,7 +17,7 @@ logger = logging.getLogger("ALICE_Core.Admin.Logs")
 
 router = APIRouter()
 
-LOG_DIR = Path(config.DIR_RUNTIME) / "logs"
+LOG_DIR = Path(config.DIR_LOGS)
 
 def _get_active_wm():
     adm = sys.modules.get("portal.admin")

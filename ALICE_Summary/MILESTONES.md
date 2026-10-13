@@ -178,7 +178,7 @@
 
 ## 5. 生成成果物仕様
 
-各ジョブのワークスペース配下（`/data/runtime/workspaces/<job_id>/summary/`）に出力される成果物：
+各ジョブのワークスペース配下（`{PROJECT_ROOT}/data/runtime/workspaces/<job_id>/summary/`）に出力される成果物：
 
 | ファイル名 | 種別 | 内容・用途 |
 | :--- | :--- | :--- |

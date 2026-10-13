@@ -16,12 +16,13 @@
 
 Project_ALICE では、以下の 2 系統でログを出力・保持します。
 
-### ① システム全体ログ (`/data/runtime/logs/`)
+### ① プロジェクト運用ログ (`{PROJECT_ROOT}/data/runtime/logs/`)
+保存先は環境変数 `ALICE_DATA_DIR` を基準に `<ALICE_DATA_DIR>/runtime/logs/` となります。`ALICE_DATA_DIR` の既定値は `{PROJECT_ROOT}/data` で、相対パスは `PROJECT_ROOT` から解決します。
 - `alice.log`: `ALICE_Core` の全体運用ログ（FastAPI アクセス、JobQueue 状況、Worker 全体動作）。
-- `transcript.log`: `ALICE_Transcript` のスタンドアロン実行ログ。
+- `copilot.log`: `ALICE_CoPilot` のサブプロセス出力。
 - 日次ローテーションを実施し、過去ログは `archive/` へ移動。
 
-### ② Job 個別ログ (`/data/runtime/workspaces/{job_id}/logs/`)
+### ② Job 個別ログ (`{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/logs/`)
 - `transcript.log`: 当該 Job における Whisper / Pyannote / Alignment の実行詳細。
 - `summary.log`: 当該 Job における LLM 推論・プロンプトトークン数・ステージ推移。
 - `minutes.log`: 当該 Job における議事録抽出・文章化ログ。

@@ -16,7 +16,7 @@ ALICE_Core は、LINE Bot などの外部クライアントからの要求受付
 
 * **疎結合アーキテクチャ**:
   * Core は各モジュール内部の Python クラスを直接 import せず、**Workspace Driven CLI / Subprocess 方式** で連携します。
-  * `1 Job = 1 Workspace`（`/data/runtime/workspaces/{job_id}/`）のライフサイクルを Core が完全に管理します。
+  * `1 Job = 1 Workspace`（`{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/`）のライフサイクルを Core が完全に管理します。
 * **単一責任原則**:
   * Core はオーケストレーション（受付・キュー・プロセス管理・配信）に専念し、音声認識や LLM 推論などの AI 処理ロジックは各独立モジュール（`ALICE_Transcript`, `ALICE_Summary` 等）に委譲します。
 * **Source of Truth（源泉データ）**:
@@ -72,37 +72,42 @@ LINE からの要求に応じて、以下の直列 Workflow が自動的に割�
 
 ---
 
-## 5. `/data/runtime` ディレクトリ構成
+## 5. 実行時ディレクトリ構成
+
+ジョブワークスペースと Core の運用ログは、既定で `{PROJECT_ROOT}/data/runtime/` に作成します。`PROJECT_ROOT` は `ALICE_Core/config.py` が解決する Project_ALICE ルートです。各ユーザーが別々のプロジェクトフォルダを使うことで、Workspace とログを分離します。`.env` の `ALICE_DATA_DIR` でデータディレクトリを変更でき、相対パスは `PROJECT_ROOT` から解決します。Workspace は `<ALICE_DATA_DIR>/runtime/workspaces/`、ログは `<ALICE_DATA_DIR>/runtime/logs/` を使用します。受信一時ファイルや公開配信領域など、その他の共通ランタイム領域は従来どおり `/data/runtime` を使います。
 
 ```text
+{PROJECT_ROOT}/data/runtime/
+├── logs/                       # ALICE_Core と CoPilot の運用ログ
+│   ├── alice.log
+│   ├── copilot.log
+│   └── archive/
+└── workspaces/                 # Project_ALICE 個別 Job Workspace
+    └── {job_id}/
+        └── ...
+
 /data/runtime/
 ├── copilot/                    # [CoPilot 専用]
 │   └── database/               # conversations.db
 ├── core/                       # [Core 専用 (外部IF・配信領域)]
 │   ├── inbox/                  # LINE 受信一時ファイル
 │   └── share/                  # LINE 配信・静的公開領域 (/share)
-├── logs/                       # 【全Module共通システムログ領域】
-│   ├── alice.log               # ALICE_Core ログ
-│   ├── transcript.log          # ALICE_Transcript スタンドアロンログ
-│   └── archive/                # ローテーション過去ログ (alice_*.log, transcript_*.log)
 ├── transcript/                 # [Transcript スタンドアロン専用領域]
 │   ├── staging/
 │   ├── input/
 │   ├── work/
 │   └── output/
-└── workspaces/                 # [Project_ALICE 共通 Job Workspace]
-    └── {job_id}/
-        ├── job.json            # Job の完全なライフサイクル・進捗・成果物参照 (Source of Truth)
-        ├── input/              # 入力音声原本
-        ├── transcript/         # Transcript 成果物 (transcript.json, transcript.txt, metadata.json)
-        ├── summary/            # Summary 成果物 (summary.md, summary.txt, analysis.json, metadata.json)
-        ├── minutes/            # (将来予約領域)
-        └── logs/               # Job 固有の実行ログ (transcript.log, summary.log)
 ```
+
+## 6. 本番起動
+
+Project_ALICE ルートで `./start_alice_core.sh` を実行します。スクリプトは `myenv/core_env` の Python で Core を起動し、`ALICE_Core/.env` を読み込むため `ALICE_Core` を作業ディレクトリにします。起動前に GPU ロックファイルへアクセスできるかを、実際の起動ユーザーで確認します。失敗時は UID/GID と対象パスを表示して起動を中止します。
+
+既定では `127.0.0.1:8000` で待ち受けます。起動時に `./start_alice_core.sh --ip 127.0.0.1 --port 8001` のように指定すると接続先を変更できます。`--ip` と `--port` は任意の順序で指定でき、片方だけの指定も可能です。引数を省略した値は `ALICE_CORE_HOST` と `ALICE_CORE_PORT` 環境変数から取得し、それらも未設定なら既定値を使います。systemd から使う場合は、`ExecStart` にこのスクリプトの絶対パスと必要な引数を指定し、意図したサービスユーザーで実行してください。スクリプトは `sudo` による権限変更を行いません。
 
 ---
 
-## 6. Job Management & 追跡仕様 (ALICE v1.0)
+## 7. Job Management & 追跡仕様 (ALICE v1.0)
 
 ALICE v1.0 では、1件のJobに関する完全なトレーサビリティ（追跡可能性）を保証します。
 
@@ -131,7 +136,7 @@ ALICE v1.0 では、1件のJobに関する完全なトレーサビリティ（�
 
 ---
 
-## 7. ディレクトリ構成
+## 8. ディレクトリ構成
 
 ```text
 ALICE_Core/
@@ -139,7 +144,7 @@ ALICE_Core/
 ├── core/
 │   ├── container.py        # DI コンテナ
 │   ├── job_queue.py        # FIFO JobQueue (メモリキュー)
-│   ├── logger.py           # Core ロガー (/data/runtime/logs/alice.log)
+│   ├── logger.py           # Core ロガー ({PROJECT_ROOT}/data/runtime/logs/alice.log)
 │   ├── session.py          # ユーザー対話セッションモデル
 │   ├── session_manager.py  # セッション状態管理
 │   ├── worker.py           # CoreWorker (MODULE_RUNNERS 定義 & 順次実行)
@@ -156,7 +161,7 @@ ALICE_Core/
 
 ---
 
-## 8. 将来構想 (Current Scope 外)
+## 9. 将来構想 (Current Scope 外)
 
 以下は今後のフェーズで段階的に検討・拡張される項目であり、現行バージョンでは未実装・予約領域として扱われます。
 

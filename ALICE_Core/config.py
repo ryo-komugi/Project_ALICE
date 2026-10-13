@@ -15,8 +15,8 @@ PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(CORE_DIR.parent)))
 # =========================
 CHANNEL_SECRET = os.environ["CHANNEL_SECRET"]
 CHANNEL_ACCESS_TOKEN = os.environ["CHANNEL_ACCESS_TOKEN"]
-BASE_URL = "https://api.line.me/v2/bot"
-BASE_DATA_URL = "https://api-data.line.me/v2/bot"
+BASE_URL = os.getenv("LINE_API_BASE_URL", "https://api.line.me") + "/v2/bot"
+BASE_DATA_URL = os.getenv("LINE_DATA_API_BASE_URL", "https://api-data.line.me") + "/v2/bot"
 
 # =========================
 # Public URL
@@ -33,6 +33,10 @@ LINE_ADMIN_USER = os.environ["LINE_ADMIN_USER"]
 # Directories
 # =========================
 DIR_RUNTIME = "/data/runtime"
+DATA_DIR = Path(os.getenv("ALICE_DATA_DIR", str(PROJECT_ROOT / "data"))).expanduser()
+if not DATA_DIR.is_absolute():
+    DATA_DIR = PROJECT_ROOT / DATA_DIR
+DIR_LOGS = str(DATA_DIR / "runtime" / "logs")
 
 # Core
 DIR_CORE_RUNTIME = f"{DIR_RUNTIME}/core"
@@ -40,8 +44,8 @@ DIR_INBOX = f"{DIR_CORE_RUNTIME}/inbox"
 DIR_SHARE = f"{DIR_CORE_RUNTIME}/share"
 DIR_ARCHIVE = f"{DIR_CORE_RUNTIME}/archive"
 
-# Workspaces (1 Job = 1 Workspace)
-DIR_WORKSPACES = f"{DIR_RUNTIME}/workspaces"
+# Workspaces (1 Job = 1 Workspace), relative to DATA_DIR.
+DIR_WORKSPACES = str(DATA_DIR / "runtime" / "workspaces")
 
 # =========================
 # Discord Alert

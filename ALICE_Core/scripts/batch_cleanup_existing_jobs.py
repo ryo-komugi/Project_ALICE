@@ -1,5 +1,5 @@
 """
-Batch cleanup script for existing jobs in /data/runtime/workspaces
+Batch cleanup script for existing jobs in {PROJECT_ROOT}/data/runtime/workspaces
 """
 import sys
 from pathlib import Path
@@ -11,12 +11,13 @@ if str(CORE_ROOT) not in sys.path:
 from infrastructure.logger import initialize_logger
 from hub.workspace import WorkspaceManager
 from models.job import JobStatus
+import config
 
 initialize_logger()
 
 
 def main():
-    wm = WorkspaceManager(base_dir="/data/runtime/workspaces")
+    wm = WorkspaceManager(base_dir=config.DIR_WORKSPACES)
     jobs = wm.list_jobs(limit=500)
     print(f"[*] Found {len(jobs)} total jobs in workspaces.")
 

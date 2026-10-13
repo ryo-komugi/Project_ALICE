@@ -48,7 +48,7 @@ Project_ALICE は、音声認識・話者分離・LLM要約・議事録作成・
                +-------------------------------------------------+
                                         |
                      Subprocess CLI     |  1 Job = 1 Workspace
-                (--workspace <path>)    |  (/data/runtime/workspaces/{job_id}/)
+                (--workspace <path>)    |  ({PROJECT_ROOT}/data/runtime/workspaces/{job_id}/)
                                         |
        +--------------------------------+--------------------------------+
        |                                |                                |
@@ -104,7 +104,7 @@ Project_ALICE は、音声認識・話者分離・LLM要約・議事録作成・
    - 管理画面へのアクセスは Cloudflare Zero Trust（Cloudflare Access）境界認証により保護され、アプリ側は `CF-Access` 検証を実施。
    - `MessageHandler` がユーザー状態を認証・検証（User Directory による照合および Reject 遮断）し、ワークフロー種別を判定（例: `["transcript"]`、`["transcript", "summary"]`）。
 2. **Workspace 初期化 & ジョブ投入（Hub Layer）**:
-   - `WorkspaceManager` が `/data/runtime/workspaces/{job_id}/` を初期化し、入力音声を `input/` に保存。
+   - `WorkspaceManager` が `{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/` を初期化し、入力音声を `input/` に保存。
    - メタデータ `job.json` を生成し、`JobQueue`（FIFO メモリキュー）へエンキュー。
 3. **順次サブプロセス実行 & SLA 管理（CoreWorker）**:
    - バックグラウンドスレッド `CoreWorker` がキューから Job を取得。

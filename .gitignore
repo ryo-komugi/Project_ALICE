@@ -49,6 +49,9 @@ logs/
 tmp/
 temp/
 
+# Project-local runtime data (workspaces, logs, and generated artifacts)
+/data/
+
 # IDE & Editor Configurations
 .vscode/
 .idea/

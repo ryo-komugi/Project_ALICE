@@ -113,7 +113,7 @@ Core の Job 完了時、Workspace 内のテキスト成果物をインデック
 #### (3) インデックス完全再構築モード (`--reindex`)
 全 Workspace ディレクトリを走査し、インデックス DB をゼロから再構築します。
 - `--reindex`: 派生キャッシュ DB を再生成するフラグ。
-- `--workspaces-dir <dir>` (任意): Workspace 親ディレクトリ（デフォルト: `/data/runtime/workspaces`）。
+- `--workspaces-dir <dir>` (任意): Workspace 親ディレクトリ（デフォルト: `{PROJECT_ROOT}/data/runtime/workspaces`）。
 
 ---
 

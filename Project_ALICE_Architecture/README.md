@@ -29,7 +29,7 @@ Project_ALICE_Architecture/
 │
 ├── 02_Architecture/               # システム設計・概念・モジュール詳細
 │   ├── Overview.md                # システム全体像・Hub/Gateway/Portal 3層・オーケストレーション・成否境界・Zero Trust
-│   ├── Workspace_Structure.md     # 1 Job = 1 Workspace (/data/runtime/workspaces/{job_id}/) 仕様・クリーンアップ規約
+│   ├── Workspace_Structure.md     # 1 Job = 1 Workspace ({PROJECT_ROOT}/data/runtime/workspaces/{job_id}/) 仕様・クリーンアップ規約
 │   ├── Transcript.md              # ALICE_Transcript 内部パイプライン設計 (large-v3-turbo, Defragmented)
 │   ├── Summary.md                 # ALICE_Summary 3段階合成パイプライン設計 (タイムライン分析, 所見生成)
 │   ├── Minutes.md                 # ALICE_Minutes v0.2.0 ハイブリッドパイプライン (LLMスピーカー統合, テンプレート)

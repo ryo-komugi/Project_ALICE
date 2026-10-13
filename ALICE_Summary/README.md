@@ -35,7 +35,7 @@ ALICE_Summary は、前段の `ALICE_Transcript` が生成した会話ログ（`
 ### 実行コマンド
 
 ```bash
-/home/takuya/Project_ALICE/myenv/core_env/bin/python /home/takuya/Project_ALICE/ALICE_Summary/cli.py --workspace /data/runtime/workspaces/{job_id} [--model gemma4:12b] [--stage2-only] [--stage3-only] [--skip-stage3] [--force-all]
+/home/takuya/Project_ALICE/myenv/core_env/bin/python /home/takuya/Project_ALICE/ALICE_Summary/cli.py --workspace {PROJECT_ROOT}/data/runtime/workspaces/{job_id} [--model gemma4:12b] [--stage2-only] [--stage3-only] [--skip-stage3] [--force-all]
 ```
 
 ### 引数仕様

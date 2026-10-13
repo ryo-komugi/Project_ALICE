@@ -24,7 +24,7 @@ Project_ALICE 内で独立して開発・運用・リリースされる機能単
 ユーザーから受け取った 1 つの処理要求の単位。一意な `job_id`（例: `job_YYYYMMDD_HHMMSS`）を持ち、1つの独立した Workspace に紐づく。
 
 ### Workspace (ワークスペース)
-1 つの Job 専用に割り当てられる隔離された作業ディレクトリ（`/data/runtime/workspaces/{job_id}/`）。入力音声、各モジュールの中間・最終成果物、実行ログが集約される。
+1 つの Job 専用に割り当てられる隔離された作業ディレクトリ（`{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/`）。入力音声、各モジュールの中間・最終成果物、実行ログが集約される。
 
 ### Workflow (ワークフロー)
 1 つの Job を完了するために順次実行されるモジュールのパイプライン定義（例: `["transcript"]`、`["transcript", "summary"]`）。

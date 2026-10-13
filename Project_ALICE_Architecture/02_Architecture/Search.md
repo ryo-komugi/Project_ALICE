@@ -5,7 +5,7 @@
 `ALICE_Search` は、Project_ALICE が過去に処理したすべての会話・要約・ジョブ成果物を対象とする、高速全文検索・属性検索・追跡を行う独立モジュールです。
 
 ```text
-Workspace Directory 群 (/data/runtime/workspaces/{job_id}/)
+Workspace Directory 群 ({PROJECT_ROOT}/data/runtime/workspaces/{job_id}/)
   ├── summary/summary.txt, summary.md
   ├── transcript/transcript.txt
   ├── minutes/minutes.txt, minutes.md
@@ -39,7 +39,7 @@ Workspace Directory 群 (/data/runtime/workspaces/{job_id}/)
 ## 2. コア設計原則
 
 1. **Workspace = Source of Truth（源泉データ主義）**:
-   - すべてのジョブメタデータおよび成果物（`summary.txt`, `transcript.txt` 等）の正本は各 Workspace（`/data/runtime/workspaces/{job_id}/`）に存在します。
+   - すべてのジョブメタデータおよび成果物（`summary.txt`, `transcript.txt` 等）の正本は各 Workspace（`{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/`）に存在します。
 2. **SQLite + FTS5 は再構築可能な派生キャッシュ（Derived Cache）**:
    - データベース（`/data/runtime/search/alice_index.db`）が消失・破損しても、いつでも Workspace 群から `--reindex` により 100% 完全に復旧可能です。
 3. **Core と Search の疎結合（Workspace Driven CLI）**:

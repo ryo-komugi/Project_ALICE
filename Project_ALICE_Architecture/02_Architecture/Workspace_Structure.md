@@ -4,16 +4,16 @@
 
 **Workspace** は、Project_ALICE における 1 つの処理要求（Job）に割り当てられる、完全に隔離されたファイルシステム上の作業領域です。
 
-- **配置先**: `/data/runtime/workspaces/{job_id}/`
+- **配置先**: `{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/`
 - **所有者**: `ALICE_Core` の `WorkspaceManager` が作成・破棄・クリーンアップを統括。
-- **アクセス権**: 各モジュールは CLI 起動時に `--workspace /data/runtime/workspaces/{job_id}` を受け取り、自身に割り当てられたサブディレクトリのみを読み書きする。
+- **アクセス権**: 各モジュールは CLI 起動時に `--workspace {PROJECT_ROOT}/data/runtime/workspaces/{job_id}` を受け取り、自身に割り当てられたサブディレクトリのみを読み書きする。
 
 ---
 
 ## 2. ディレクトリ構造
 
 ```text
-/data/runtime/workspaces/{job_id}/
+{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/
 ├── job.json                # Job 共通メタデータ・ステータス管理
 ├── input/                  # 入力原本格納ディレクトリ
 │   ├── meeting.m4a         # （処理中: 一時保存された音声バイナリ）

@@ -7,7 +7,7 @@ ALICE 過去成果物（Summary / Transcript 等）の全文検索・属性検�
 ## 1. 基本方針・設計原則
 
 1. **Workspace = Source of Truth (源泉データ主義)**:
-   * すべてのジョブメタデータ・成果物（`summary.txt`, `transcript.txt`, `transcript.json` 等）の正本は各 Workspace（`/data/runtime/workspaces/{job_id}/`）に存在します。
+   * すべてのジョブメタデータ・成果物（`summary.txt`, `transcript.txt`, `transcript.json` 等）の正本は各 Workspace（`{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/`）に存在します。
 2. **SQLite + FTS5 は再構築可能な派生キャッシュ**:
    * データベース（`/data/runtime/search/alice_index.db`）が消失・破損しても、いつでも Workspace 群から `--reindex` で 100% 復旧可能です。
 3. **Core と Search の疎結合（Workspace Driven CLI）**:
@@ -51,8 +51,8 @@ python cli.py --query "" --user "user_001" --limit 10
       "module": "summary",
       "artifact_name": "summary.txt",
       "artifact_rel_path": "summary/summary.txt",
-      "workspace_dir": "/data/runtime/workspaces/job_20260911_211704_test_line_summary",
-      "artifact_abs_path": "/data/runtime/workspaces/job_20260911_211704_test_line_summary/summary/summary.txt",
+      "workspace_dir": "{PROJECT_ROOT}/data/runtime/workspaces/job_20260911_211704_test_line_summary",
+      "artifact_abs_path": "{PROJECT_ROOT}/data/runtime/workspaces/job_20260911_211704_test_line_summary/summary/summary.txt",
       "snippet": "...目撃した特定の<b>司法判断</b>（贈賄・収賄に関す...",
       "rank_score": -1.413e-6,
       "created_at": "2026-09-11T21:17:04.252723",
@@ -68,7 +68,7 @@ python cli.py --query "" --user "user_001" --limit 10
 
 ### (2) 単一 Workspace のインデックス登録 / 更新
 ```bash
-python cli.py --index-job /data/runtime/workspaces/job_20260911_211704_test_line_summary
+python cli.py --index-job {PROJECT_ROOT}/data/runtime/workspaces/job_20260911_211704_test_line_summary
 ```
 * 終了コード: 成功時 `0`、失敗時 `1`
 
