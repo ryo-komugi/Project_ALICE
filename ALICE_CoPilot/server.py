@@ -35,7 +35,6 @@ async def handle_status(request: web.Request) -> web.Response:
         "size_vram_mb": 0,
     }
 
-    # 1. Check Ollama running models via /api/ps
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=2.0)) as session:
             async with session.get("http://localhost:11434/api/ps") as resp:
@@ -44,19 +43,17 @@ async def handle_status(request: web.Request) -> web.Response:
                     data = await resp.json()
                     models = data.get("models", [])
                     for m in models:
-                        # Check if configured model or prefix matches
                         m_name = m.get("name", "")
                         if config.OLLAMA_MODEL in m_name or m_name.startswith(config.OLLAMA_MODEL.split(":")[0]):
                             ollama_info["vram_loaded"] = True
                             ollama_info["expires_at"] = m.get("expires_at")
                             ollama_info["size_vram_mb"] = round(m.get("size_vram", 0) / (1024 * 1024), 1)
                             break
-    except Exception as e:
+    except Exception:
         ollama_info["online"] = False
 
-    from services.antigravity_manager import load_antigravity_settings, update_selected_model, SUPPORTED_MODELS
+    from services.antigravity_manager import load_antigravity_settings, SUPPORTED_MODELS
 
-    # 2. Antigravity status & quota
     ag_settings = load_antigravity_settings()
     antigravity_info = {
         "active": ANTIGRAVITY_STATE.get("active", False),
@@ -89,7 +86,7 @@ async def handle_get_antigravity_settings(request: web.Request) -> web.Response:
 
 
 async def handle_post_antigravity_settings(request: web.Request) -> web.Response:
-    from services.antigravity_manager import update_selected_model, SUPPORTED_MODELS
+    from services.antigravity_manager import update_selected_model
     try:
         body = await request.json()
         model_id = body.get("model_id")
@@ -124,9 +121,22 @@ async def handle_chat(request: web.Request) -> web.StreamResponse:
     )
     await response.prepare(request)
 
-    async def sse_send(data_dict: dict):
-        msg = f"data: {json.dumps(data_dict, ensure_ascii=False)}\n\n"
-        await response.write(msg.encode("utf-8"))
+    client_disconnected = False
+
+    async def sse_send(data_dict: dict) -> bool:
+        nonlocal client_disconnected
+        if client_disconnected:
+            return False
+        try:
+            msg = f"data: {json.dumps(data_dict, ensure_ascii=False)}\n\n"
+            await response.write(msg.encode("utf-8"))
+            return True
+        except (ConnectionResetError, aiohttp.ClientConnectionResetError, asyncio.CancelledError):
+            client_disconnected = True
+            return False
+        except Exception:
+            client_disconnected = True
+            return False
 
     try:
         if mode == "copilot":
@@ -135,12 +145,18 @@ async def handle_chat(request: web.Request) -> web.StreamResponse:
             generator = stream_assistant(prompt, session_id=session_id)
 
         async for event in generator:
+            if client_disconnected:
+                break
             await sse_send(event)
 
+    except asyncio.CancelledError:
+        client_disconnected = True
     except Exception as e:
-        await sse_send({"type": "error", "message": f"ストリーミング処理例外: {str(e)}"})
+        if not client_disconnected:
+            await sse_send({"type": "error", "message": f"ストリーミング処理例外: {str(e)}"})
     finally:
-        await sse_send({"type": "stream_end"})
+        if not client_disconnected:
+            await sse_send({"type": "stream_end"})
 
     return response
 
@@ -152,7 +168,6 @@ async def handle_history(request: web.Request) -> web.Response:
     limit = int(request.query.get("limit", "30"))
 
     rows = get_recent_messages(channel_id=session_id, limit=limit)
-    # rows is list of (role, content) in chronological order
     history = [{"role": r, "content": c} for r, c in rows]
     return web.json_response({"session_id": session_id, "messages": history})
 
@@ -167,7 +182,6 @@ async def handle_clear(request: web.Request) -> web.Response:
         mode = "assistant"
         session_id = "web_assistant"
 
-    # Save system reset marker
     from memory.short_term import save_message
     save_message(
         timestamp=datetime.now(timezone.utc).isoformat(),
@@ -176,6 +190,12 @@ async def handle_clear(request: web.Request) -> web.Response:
         role="system",
         content="[Session Cleared]",
     )
+    try:
+        from services.dev_copilot_service import clear_session_conversation
+        clear_session_conversation(session_id)
+    except Exception:
+        pass
+
     return web.json_response({"status": "cleared", "session_id": session_id})
 
 
@@ -191,7 +211,45 @@ def create_app() -> web.Application:
     return app
 
 
+async def start_internal_api_server(
+    port: int = PORT,
+    host: str = HOST,
+    max_retries: int = 15,
+    retry_interval_sec: float = 3.0,
+):
+    """
+    内部APIサーバー (ポート 8005: WebUI連携用) を確実に起動する。
+    直前の旧プロセス終了直後の TIME_WAIT やバインディング遅延を考慮し、
+    自動リトライを実施して確実にリッスンを開始する。
+    """
+    try:
+        internal_app = create_app()
+        runner = web.AppRunner(internal_app)
+        await runner.setup()
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                site = web.TCPSite(runner, host, port, reuse_address=True, reuse_port=True)
+                await site.start()
+                print(f"[INTERNAL API] Started WebUI bridge on http://{host}:{port}")
+                return
+            except OSError as e:
+                if attempt < max_retries:
+                    print(
+                        f"[INTERNAL API] Port {port} bind failed ({e}). "
+                        f"Retrying in {retry_interval_sec}s (attempt {attempt}/{max_retries})..."
+                    )
+                    await asyncio.sleep(retry_interval_sec)
+                else:
+                    print(f"[INTERNAL API ERROR] Failed to bind to port {port} after {max_retries} attempts: {e}")
+            except Exception as e:
+                print(f"[INTERNAL API ERROR] Unexpected error while starting server: {e}")
+                break
+    except Exception as e:
+        print(f"[INTERNAL API SETUP ERROR] {e}")
+
+
 if __name__ == "__main__":
     app = create_app()
     print(f"Starting ALICE_CoPilot Internal API on http://{HOST}:{PORT}...")
-    web.run_app(app, host=HOST, port=PORT)
+    web.run_app(app, host=HOST, port=PORT, reuse_address=True, reuse_port=True)
