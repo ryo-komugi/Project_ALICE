@@ -16,10 +16,11 @@ from hub.container import core_worker, job_queue, workspace_manager
 from gateway.handlers.message import MessageHandler
 from repository.user_repository import UserRepository
 from models.job import JobStatus
+import config
 
 initialize_logger()
 SAMPLE_AUDIO = Path("/data/tmp/for_transcript_test/sps-smp.mp3")
-REAL_USER_ID = "U794535d58fb802ac996f4a86ce119ad2"
+REAL_USER_ID = "U_TEST_DUMMY_USER_001"
 
 
 def test_1_line_transcript_flow():
@@ -68,7 +69,7 @@ def test_1_line_transcript_flow():
     target_ws = None
 
     while time.time() - t0 < timeout:
-        workspaces = list(Path("/data/runtime/workspaces").glob(f"*{sample_filename.split('.')[0]}*"))
+        workspaces = list(Path(config.DIR_WORKSPACES).glob(f"*{sample_filename.split('.')[0]}*"))
         if workspaces:
             latest_ws = max(workspaces, key=lambda p: p.stat().st_mtime)
             job_json = latest_ws / "job.json"
@@ -144,7 +145,7 @@ def test_2_line_summary_flow():
     target_ws = None
 
     while time.time() - t0 < timeout:
-        workspaces = list(Path("/data/runtime/workspaces").glob(f"*{sample_filename.split('.')[0]}*"))
+        workspaces = list(Path(config.DIR_WORKSPACES).glob(f"*{sample_filename.split('.')[0]}*"))
         if workspaces:
             latest_ws = max(workspaces, key=lambda p: p.stat().st_mtime)
             job_json = latest_ws / "job.json"

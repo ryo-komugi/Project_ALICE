@@ -14,7 +14,7 @@ from models.job import Job, JobStatus
 from hub.container import job_queue, core_worker
 
 initialize_logger()
-REAL_USER_ID = "U794535d58fb802ac996f4a86ce119ad2"
+REAL_USER_ID = "U_TEST_DUMMY_USER_001"
 
 
 def test_queue_and_ux_features():

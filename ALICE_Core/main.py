@@ -6,16 +6,12 @@ from fastapi.staticfiles import StaticFiles
 
 import config
 from infrastructure.logger import initialize_logger
-from infrastructure.ip_monitor import ip_monitor_loop
 
-# New Layer Imports
-from gateway.webhook import router as webhook_router
 from portal.download import router as download_router
 from portal.viewer import router as viewer_router
 from portal.admin import router as admin_router
 from portal.auth import AdminAuthMiddleware
 from hub.container import job_service
-
 
 initialize_logger()
 
@@ -33,16 +29,7 @@ async def lifespan(app: FastAPI):
     job_service.start()
     print("[Main] Hub JobService / CoreWorker started")
 
-    ip_task = asyncio.create_task(ip_monitor_loop(interval_seconds=1800))
-    print("[Main] GlobalIPMonitor loop started")
-
     yield
-
-    ip_task.cancel()
-    try:
-        await ip_task
-    except asyncio.CancelledError:
-        pass
 
     job_service.stop()
     print("[Main] Hub JobService / CoreWorker shutdown completed")
@@ -51,13 +38,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ALICE Core",
     version="0.2.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Admin認証ミドルウェア (/admin配下をセッション保護)
 app.add_middleware(AdminAuthMiddleware)
 
-app.include_router(webhook_router)
+# LINE Gateway Adapter (将来の脱LINE・別アダプタ移行を考慮したオプショナルマウント)
+if config.LINE_ENABLED:
+    from gateway.webhook import router as webhook_router
+    app.include_router(webhook_router)
+    print("[Main] LINE Gateway Adapter: ENABLED (/webhook)")
+else:
+    print("[Main] LINE Gateway Adapter: DISABLED (missing CHANNEL_SECRET/CHANNEL_ACCESS_TOKEN)")
+
 app.include_router(download_router)
 app.include_router(viewer_router)
 app.include_router(admin_router, prefix="/admin")

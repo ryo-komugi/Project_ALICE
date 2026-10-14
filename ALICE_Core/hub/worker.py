@@ -2,6 +2,7 @@ from hub.runners import MODULE_RUNNERS
 import os
 import sys
 import logging
+from typing import Any
 import subprocess
 import threading
 import shutil
@@ -14,7 +15,6 @@ from hub.gpu_lock import acquire_gpu_lock
 from hub.queue import JobQueue
 from hub.workspace import WorkspaceManager
 from publisher.publisher import Publisher
-from gateway.sender import MessageSender
 import config
 
 logger = logging.getLogger(__name__)
@@ -31,13 +31,13 @@ class CoreWorker:
         workspace_manager: WorkspaceManager,
         publisher: Publisher | None = None,
         module_runners: dict | None = None,
-        sender: MessageSender | None = None,
+        sender: Any | None = None,
     ):
         self.job_queue = job_queue
         self.workspace_manager = workspace_manager
         self.publisher = publisher or Publisher()
         self.module_runners = module_runners or MODULE_RUNNERS
-        self.sender = sender or MessageSender()
+        self.sender = sender
         self.current_job: Job | None = None
         self._running = False
         self._thread: threading.Thread | None = None
@@ -450,10 +450,19 @@ class CoreWorker:
             logger.error(f"[CoreWorker] Failed to publish for {job.job_id}: {e}")
 
     def _notify_failure(self, job: Job, message: str) -> None:
+        # 1. パブリッシャー経由でのユーザー通知（LINEアダプタ等にディスパッチ）
         try:
-            self.sender.push_text(job.user_id, f"【エラー】\n{message}")
+            if self.publisher and hasattr(self.publisher, "notify_failure"):
+                self.publisher.notify_failure(job, message)
         except Exception as e:
-            logger.error(f"[CoreWorker] Failed to send failure notification to {job.user_id}: {e}")
+            logger.error(f"[CoreWorker] Failed to publish failure notification to {job.user_id}: {e}")
+
+        # 2. 後方互換性: 明示的に sender が注入されている場合の呼び出し
+        if self.sender and hasattr(self.sender, "push_text"):
+            try:
+                self.sender.push_text(job.user_id, f"【エラー】\n{message}")
+            except Exception as e:
+                logger.error(f"[CoreWorker] Failed to send failure notification via sender to {job.user_id}: {e}")
 
         # 管理者向け Discord アラート送信 (#alerts)
         try:

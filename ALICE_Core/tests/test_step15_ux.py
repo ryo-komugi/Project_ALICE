@@ -13,7 +13,7 @@ from gateway.handlers.message import MessageHandler
 from repository.user_repository import UserRepository
 
 initialize_logger()
-REAL_USER_ID = "U794535d58fb802ac996f4a86ce119ad2"
+REAL_USER_ID = "U_TEST_DUMMY_USER_001"
 
 
 def test_ux_interactions():

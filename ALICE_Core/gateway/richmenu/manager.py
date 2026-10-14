@@ -13,8 +13,11 @@ class RichMenu:
         self.headers = {"Authorization": f"Bearer {config.CHANNEL_ACCESS_TOKEN}"}
 
     def _do_switch(self, user_id, menu_name):
+        if not config.LINE_ENABLED:
+            logger.debug(f"[RichMenu] LINE is disabled. Skipping switch for {user_id}")
+            return
         try:
-            menu_ids = self.laod_menu_ids()
+            menu_ids = self.load_menu_ids()
             richmenu_id = menu_ids.get(menu_name)
             if not richmenu_id:
                 logger.error(f"[RichMenu] Menu not found: {menu_name}")
@@ -37,6 +40,9 @@ class RichMenu:
             self._do_switch(user_id, menu_name)
 
     def _do_unlink(self, user_id):
+        if not config.LINE_ENABLED:
+            logger.debug(f"[RichMenu] LINE is disabled. Skipping unlink for {user_id}")
+            return
         try:
             response = requests.delete(
                 f"{config.BASE_URL}/user/{user_id}/richmenu",
@@ -55,7 +61,16 @@ class RichMenu:
         else:
             self._do_unlink(user_id)
 
-    def laod_menu_ids(self):
-        ids_file = (Path(__file__).parent / "richmenu_ids.json")
-        with open(ids_file, "r", encoding="utf-8") as f:
-            return json.load(f)
+    def load_menu_ids(self) -> dict:
+        ids_file = Path(__file__).parent / "richmenu_ids.json"
+        if not ids_file.exists():
+            return {}
+        try:
+            with open(ids_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"[RichMenu] Failed to load {ids_file}: {e}")
+            return {}
+
+    # 後方互換エイリアス
+    laod_menu_ids = load_menu_ids
