@@ -72,7 +72,7 @@ def enqueue_patch_task(
 def build_patch_prompt(instruction: str, repo: str) -> str:
     """Builds the comprehensive self-contained prompt for Antigravity CLI."""
     return f"""【Project_ALICE 自律改修タスク】
-浅野さんから承認されたシステム改善提案です。以下の課題・提案を解決してください:
+ユーザーから承認されたシステム改善提案です。以下の課題・提案を解決してください:
 {instruction}
 
 【対象リポジトリ】: {repo}

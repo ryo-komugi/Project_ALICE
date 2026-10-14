@@ -116,7 +116,7 @@ def format_conversations_for_prompt(conversations: list[dict[str, Any]]) -> str:
         except Exception:
             ts_short = ts[:16]
 
-        speaker = "浅野さん (User)" if role == "user" else "ALICE (Assistant)"
+        speaker = "User" if role == "user" else "ALICE (Assistant)"
         formatted_turns.append(f"[{ts_short}] {speaker}:\n{content}")
 
     return "\n\n".join(formatted_turns)

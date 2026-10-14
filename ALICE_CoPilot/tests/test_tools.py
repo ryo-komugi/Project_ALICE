@@ -7,11 +7,6 @@ import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
-import discord
-
-# Mock discord.Client.run before importing main
-discord.Client.run = lambda self, token: None
-
 import main
 from tools import TOOLS_SCHEMA, execute_tool, TOOL_FUNCTIONS
 from tools.search_tools import search_past_meetings

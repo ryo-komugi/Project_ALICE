@@ -24,12 +24,8 @@ from reviewer.tools import (
     REVIEW_STATE,
     add_checklist_rule,
     add_longterm_memory,
-    check_calendar_state,
-    check_task_state,
     get_checklist_status,
     record_review_result,
-    repair_calendar_state,
-    repair_tasks_state,
     audit_codebase_architecture,
     reset_review_state,
     run_copilot_unit_tests,
@@ -41,33 +37,26 @@ from reviewer.tools import (
 
 SYSTEM_INSTRUCTIONS = """
 あなたはProject_ALICEの自律改善エージェント（Nightly Reviewer）です。
-毎晩深夜に、浅野さん（オーナー）とALICE_CoPilotの対話履歴およびシステムログを点検し、知識の欠落やツールの不具合、発言と実態の乖離（ハルシネーション）を自律的に改善・修復します。
+毎晩深夜に、ユーザーとALICE_CoPilotの対話履歴およびシステムログを点検し、知識の欠落やシステムの不具合、発言と実態の乖離を自律的に改善・修復します。
 
 【行動規範】
 1. 会話ログを精査し、以下のいずれかに該当する箇所を特定してください:
-   - 浅野さんの質問に対してAIが「見つかりませんでした」「分かりません」と回答した事象
-   - 会話の中で浅野さんが提示した新しい決定事項（ドメイン変更、インフラ設定、運用ルール、タスク仕様など）
-   - AIが「削除しました」「変更しました」「追加しました」と報告しているにもかかわらず、ユーザーから「消えてない」「残ってる」「本当にやった？」と指摘されている箇所（ハルシネーション・実態乖離の疑い）
+   - ユーザーの質問に対してAIが「見つかりませんでした」「分かりません」と回答した事象
+   - 会話の中でユーザーが提示した新しい決定事項（ドメイン変更、インフラ設定、運用ルール、仕様など）
    - システムログに記録されたエラーや例外
 
-2. 実態乖離・ハルシネーションの検証と自律修復（最重要）:
-   - 予定やタスクの追加・変更・削除の報告がある場合、`check_calendar_state` や `check_task_state` で最新の実データを直接照会して検証する。
-   - AIが「削除した」と述べたにもかかわらずカレンダーやTasksに重複・不要な予定が残存している場合、`repair_calendar_state(action='delete', event_id=...)` を呼び出して夜間のうちに自律削除修復を行う。
-   - 予定の内容に誤りがある場合は `repair_calendar_state(action='update', event_id=..., summary=...)` で自律修正を行う。
-
-3. 【自己進化型チェックリストの自律実行と学習・蓄積（再発防止）】:
+2. 【自己進化型チェックリストの自律実行と学習・蓄積（再発防止）】:
    - レビュー開始時または終了時に必ず `run_self_evolving_checklist()` を実行し、既存のすべての再発防止・不変条件ルールが合格しているか確認してください。
-   - 万が一不合格の項目があれば、該当ツール（`repair_calendar_state` 等）で修復してください。
-   - 会話ログの中で浅野さんからツールの不備・漏れ・実態乖離の指摘（例：「消えてない」「残ってる」「また二重登録された」「違う」等）があった場合、その場での修復にとどまらず、二度と同じ不具合を起こさないための【恒久的な再発防止ルール】を `add_checklist_rule(category=..., title=..., description=..., check_type=..., learned_from=...)` を呼び出してチェックリストに新規登録（自動学習）してください。
+   - 会話ログの中でユーザーからシステムの不備・漏れ・実態乖離の指摘があった場合、その場での修復にとどまらず、二度と同じ不具合を起こさないための【恒久的な再発防止ルール】を `add_checklist_rule(category=..., title=..., description=..., check_type=..., learned_from=...)` を呼び出してチェックリストに新規登録（自動学習）してください。
 
-4. 知識の不足が疑われる場合の自律調査:
+3. 知識の不足が疑われる場合の自律調査:
    a. `search_existing_memories` で、既に類似の長期記憶が登録されていないか確認する。
    b. 未登録の場合、`search_git_history` や `search_codebase` を使って事実や決定理由を調査する。
    c. 有効な決定事項や仕様が判明した場合は、`add_longterm_memory` を呼び出して新規記憶として登録する。
 
-5. 最後に、必ず `record_review_result` ツールを呼び出してください:
+4. 最後に、必ず `record_review_result` ツールを呼び出してください:
    - summary: 点検結果の明確な日本語要約（何を点検し、どんな改善・自律修復・記憶登録・チェックリスト検証を行ったか）
-   - improvements: 翌朝浅野さんに提示するシステム改善の提案や気付きのリスト
+   - improvements: 翌朝ユーザーに提示するシステム改善の提案や気付きのリスト
 """
 
 
@@ -108,7 +97,7 @@ async def run_nightly_review(hours: int = 24) -> int:
         return report_id
 
     review_prompt = f"""
-以下は過去24時間の浅野さんとALICEの対話ログ、およびシステムログです。
+以下は過去24時間のユーザーとALICEの対話ログ、およびシステムログです。
 
 ==================================================
 【対話ログ】
@@ -129,11 +118,7 @@ async def run_nightly_review(hours: int = 24) -> int:
         base_url="http://localhost:11434/v1",
         system_instructions=SYSTEM_INSTRUCTIONS,
         tools=[
-            check_calendar_state,
-            check_task_state,
-            repair_calendar_state,
-            repair_tasks_state,
-    audit_codebase_architecture,
+            audit_codebase_architecture,
             run_self_evolving_checklist,
             add_checklist_rule,
             get_checklist_status,

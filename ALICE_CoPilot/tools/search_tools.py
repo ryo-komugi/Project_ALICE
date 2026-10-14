@@ -27,7 +27,7 @@ async def search_past_meetings(query: str, limit: int = 5, module: str | None = 
 
     try:
         # Strictly enforce owner core user id for memory contamination guard
-        owner_id = getattr(config, "OWNER_CORE_USER_ID", "U794535d58fb802ac996f4a86ce119ad2")
+        owner_id = getattr(config, "OWNER_CORE_USER_ID", "") or None
         result = await execute_search(
             query=query.strip(),
             limit=limit,

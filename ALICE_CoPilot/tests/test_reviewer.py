@@ -85,7 +85,7 @@ def test_format_conversations_for_prompt():
         {"role": "assistant", "content": "テスト回答", "timestamp": "2026-09-15T01:01:00+00:00"},
     ]
     res = format_conversations_for_prompt(sample_msgs)
-    assert "浅野さん (User):" in res
+    assert "User:" in res
     assert "テスト質問" in res
     assert "ALICE (Assistant):" in res
     assert "テスト回答" in res
@@ -111,33 +111,21 @@ def test_git_history_tool():
     assert len(out.splitlines()) >= 1
 
 
-def test_reviewer_repair_tools_and_embed(temp_reports_db, monkeypatch):
-    from unittest.mock import MagicMock
+def test_reviewer_repair_tools_and_embed(temp_reports_db):
     from reviewer.tools import check_calendar_state, repair_calendar_state
 
-    # Mock get_calendar_events
-    monkeypatch.setattr(
-        "tools.calendar_tools.get_calendar_events",
-        lambda **kwargs: {"total": 1, "events": [{"id": "ev_test_1", "calendar": "人員動静", "summary": "【未・休暇】古橋s", "start": "2026-09-17", "end": "2026-09-18"}]}
-    )
+    # Check stub functions
     cal_state = check_calendar_state(query="古橋")
-    assert "ev_test_1" in cal_state
-    assert "【未・休暇】古橋s" in cal_state
+    assert "無効化" in cal_state
 
-    # Mock delete_calendar_event
-    monkeypatch.setattr(
-        "tools.calendar_tools.delete_calendar_event",
-        lambda **kwargs: {"status": "success", "calendar": "人員動静", "event_id": "ev_test_1"}
-    )
     reset_review_state()
-    repair_res = repair_calendar_state(action="delete", event_id="ev_test_1", calendar_name="人員動静")
-    assert "自律修復" in repair_res
-    assert len(REVIEW_STATE["repairs_done"]) == 1
+    repair_res = repair_calendar_state(action="delete", event_id="ev_test_1")
+    assert "無効化" in repair_res
 
-    # Embed with repairs_done
+    # Embed formatting test with custom repairs_done
     rep_id = save_report(
         summary="自律点検・修復完了",
-        raw_details=json.dumps({"raw_text": "ok", "repairs_done": REVIEW_STATE["repairs_done"]}),
+        raw_details=json.dumps({"raw_text": "ok", "repairs_done": ["【自律修復】テスト修復を実行しました。"]}),
         db_path=temp_reports_db,
     )
     pending = get_latest_pending_report(temp_reports_db)

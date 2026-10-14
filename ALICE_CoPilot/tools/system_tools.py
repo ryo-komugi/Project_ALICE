@@ -270,7 +270,7 @@ def get_recent_jobs(limit: int = 5, status_filter: str | None = None) -> list[di
     if not DB_PATH.exists():
         return []
 
-    owner_id = getattr(config, "OWNER_CORE_USER_ID", "U794535d58fb802ac996f4a86ce119ad2")
+    owner_id = getattr(config, "OWNER_CORE_USER_ID", "")
     jobs = []
 
     try:
@@ -279,9 +279,12 @@ def get_recent_jobs(limit: int = 5, status_filter: str | None = None) -> list[di
             sql = """
                 SELECT job_id, user_id, status, workflow, original_filename, created_at
                 FROM jobs_metadata
-                WHERE user_id = ?
+                WHERE 1=1
             """
-            params: list[Any] = [owner_id]
+            params: list[Any] = []
+            if owner_id:
+                sql += " AND user_id = ?"
+                params.append(owner_id)
             if status_filter:
                 sql += " AND status = ?"
                 params.append(status_filter.upper().strip())
