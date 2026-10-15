@@ -560,7 +560,7 @@
           </div>
         </div>
 
-        <!-- Disk Card (Multi-Drive: System / and Workspaces /data) -->
+        <!-- Disk Card (Multi-Drive: System / and configured workspace storage) -->
         <div class="glass-panel p-5 rounded-2xl relative overflow-hidden flex flex-col justify-between min-h-[195px] shadow-lg">
           <div>
             <div class="flex items-center justify-between mb-2.5">
@@ -584,11 +584,11 @@
               </div>
             </div>
 
-            <!-- Drive 2: Workspaces (/data) -->
+            <!-- Drive 2: Workspaces (configured data directory) -->
             <div class="mb-2">
               <div class="flex items-center justify-between text-[11px] font-mono mb-1">
                 <span class="text-emerald-300 flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> Workspaces <span class="text-slate-400">(/data)</span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> Workspaces <span id="disk-data-path" class="text-slate-400">(configured path)</span>
                 </span>
                 <div class="flex items-center gap-2">
                   <span id="disk-data-used-text" class="text-slate-400 text-[10px]">-- / -- GB</span>
@@ -1518,7 +1518,7 @@
           if (data.disk) {
             const drives = data.disk.drives || [];
             const rootDrive = drives.find(d => d.mount === '/') || { percent: 0, used_gb: 0, total_gb: 0 };
-            const dataDrive = drives.find(d => d.mount === '/data') || {
+            const dataDrive = drives.find(d => d.mount === data.disk.workspace_path) || {
               percent: data.disk.percent || 0,
               used_gb: data.disk.used_gb || 0,
               total_gb: data.disk.total_gb || 0
@@ -1533,6 +1533,8 @@
             if (drt) drt.innerText = rootDrive.used_gb + ' / ' + rootDrive.total_gb + ' GB';
 
             // 2. Workspaces /data
+            const dpath = document.getElementById('disk-data-path');
+            if (dpath) dpath.innerText = '(' + (data.disk.workspace_path || dataDrive.mount || '') + ')';
             const ddp = document.getElementById('disk-data-percent');
             if (ddp) ddp.innerText = dataDrive.percent + '%';
             const ddb = document.getElementById('disk-data-bar');
