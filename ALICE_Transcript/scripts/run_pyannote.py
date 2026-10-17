@@ -1,41 +1,24 @@
 from pyannote.audio import Pipeline
 import json
-import os
 import sys
 import torch
 import soundfile as sf
 import numpy as np
-from pathlib import Path
-
-
-def load_huggingface_token() -> str | None:
-    """Load the Hub token from the environment or the project-local secret file."""
-    token = os.getenv("HF_TOKEN", "").strip()
-    if token:
-        return token
-
-    token_file = Path(__file__).resolve().parents[2] / "Docs" / "pyannote_token.txt"
-    try:
-        token = token_file.read_text(encoding="utf-8").strip()
-    except FileNotFoundError:
-        return None
-    except OSError as exc:
-        raise RuntimeError(f"Cannot read Hugging Face token file: {token_file}") from exc
-
-    if token and not token.startswith("hf_"):
-        raise ValueError(f"Hugging Face token file has an unexpected format: {token_file}")
-    return token or None
 
 if len(sys.argv) < 3:
-    print("Usage: python run_pyannote.py <input_wav> <output_json>", file=sys.stderr)
+    print("Usage: python run_pyannote.py <input_wav> <output_json> [max_speakers]", file=sys.stderr)
     sys.exit(1)
 
 audio_path = sys.argv[1]
 transcript_json = sys.argv[2]
+max_speakers = int(sys.argv[3]) if len(sys.argv) >= 4 and sys.argv[3].isdigit() else None
+
+if torch.cuda.is_available():
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
 pipeline = Pipeline.from_pretrained(
-    "pyannote/speaker-diarization-3.1",
-    token=load_huggingface_token(),
+    "pyannote/speaker-diarization-3.1"
 )
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -54,7 +37,10 @@ file = {
     "sample_rate": 16000   # ←16kHz固定推奨
 }
 
-diarization = pipeline(file)
+if max_speakers is not None and max_speakers > 0:
+    diarization = pipeline(file, max_speakers=max_speakers)
+else:
+    diarization = pipeline(file)
 
 segments = []
 for turn, _, speaker in diarization.speaker_diarization.itertracks(yield_label=True):

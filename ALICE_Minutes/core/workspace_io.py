@@ -35,7 +35,7 @@ class WorkspaceIO:
         if not path.exists():
             raise FileNotFoundError(f"Transcript file not found: {path}")
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
 
         if isinstance(data, dict) and "segments" in data:
@@ -54,7 +54,7 @@ class WorkspaceIO:
             return None
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding="utf-8-sig") as f:
                 data = json.load(f)
             logger.info(f"[WorkspaceIO] Loaded summary analysis from {path}")
             return data
@@ -63,8 +63,27 @@ class WorkspaceIO:
             return None
 
     @staticmethod
-    def format_transcript_for_prompt(segments: List[Dict[str, Any]]) -> str:
-        """セグメント一覧をLLM入力用の時系列発言フォーマットに変換"""
+    def format_time(seconds: float) -> str:
+        """秒数を [MM:SS] 形式（累積分:秒、ALICE_Summary と完全統一）に変換する"""
+        total_sec = max(0, int(seconds))
+        minutes, secs = divmod(total_sec, 60)
+        return f"{minutes:02d}:{secs:02d}"
+
+    @staticmethod
+    def normalize_timestamp_str(ts: Optional[str]) -> str:
+        """'01:10:01' のような HH:MM:SS 表記があれば累積 '70:01' (MM:SS) に統一する"""
+        if not ts:
+            return ""
+        s = str(ts).strip()
+        m = re.match(r"^(\d+):(\d{2}):(\d{2})$", s)
+        if m:
+            total_min = int(m.group(1)) * 60 + int(m.group(2))
+            return f"{total_min:02d}:{m.group(3)}"
+        return s
+
+    @classmethod
+    def format_transcript_for_prompt(cls, segments: List[Dict[str, Any]]) -> str:
+        """セグメント一覧をLLM入力用の時系列発言フォーマットに変換（累積 MM:SS に統一）"""
         lines = []
         for seg in segments:
             start_sec = seg.get("start", 0.0)
@@ -73,15 +92,26 @@ class WorkspaceIO:
             if not text:
                 continue
 
-            total_sec = int(start_sec)
-            h = total_sec // 3600
-            m = (total_sec % 3600) // 60
-            s = total_sec % 60
-            time_str = f"{h:02d}:{m:02d}:{s:02d}" if h > 0 else f"{m:02d}:{s:02d}"
-
+            time_str = cls.format_time(start_sec)
             lines.append(f"[{time_str}] {speaker}: {text}")
 
         return "\n".join(lines)
+
+    @staticmethod
+    def summarize_speakers(segments: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+        """Transcript 内の全話者ラベルと発話回数・発話秒数・最初の発話例を集計する"""
+        stats: Dict[str, Dict[str, Any]] = {}
+        for s in segments:
+            text = s.get("text", "").strip()
+            if not text:
+                continue
+            sp = s.get("speaker", "UNKNOWN")
+            dur = max(0.0, float(s.get("end", 0.0)) - float(s.get("start", 0.0)))
+            if sp not in stats:
+                stats[sp] = {"count": 0, "duration": 0.0, "sample": text[:40]}
+            stats[sp]["count"] += 1
+            stats[sp]["duration"] += dur
+        return stats
 
     @staticmethod
     def load_template(template_name: str) -> str:
@@ -100,7 +130,7 @@ class WorkspaceIO:
             else:
                 raise FileNotFoundError(f"Template not found: {tpl_path}")
 
-        with open(tpl_path, "r", encoding="utf-8") as f:
+        with open(tpl_path, "r", encoding="utf-8-sig") as f:
             return f.read().strip()
 
     @staticmethod
@@ -122,7 +152,7 @@ class WorkspaceIO:
         if not in_path.exists():
             raise FileNotFoundError(f"Analysis file not found: {in_path}")
 
-        with open(in_path, "r", encoding="utf-8") as f:
+        with open(in_path, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
 
         return (
@@ -145,15 +175,15 @@ class WorkspaceIO:
         # 水平線
         text = re.sub(r"^---+", r"────────────────────", text, flags=re.MULTILINE)
 
-        # 太字・装飾
-        text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
-        text = re.sub(r"__(.+?)__", r"\1", text)
-        text = re.sub(r"`(.+?)`", r"\1", text)
+        # チェックボックスとリスト記号（インデント保持、インライン装飾除去より先に実行）
+        text = re.sub(r"^(\s*)- \[ \] (.+)$", r"\1□ \2", text, flags=re.MULTILINE)
+        text = re.sub(r"^(\s*)- \[[xX]\] (.+)$", r"\1■ \2", text, flags=re.MULTILINE)
+        text = re.sub(r"^(\s*)[-*•] (.+)$", r"\1・\2", text, flags=re.MULTILINE)
 
-        # チェックボックスとリスト記号
-        text = re.sub(r"^- \[ \] (.+)$", r"□ \1", text, flags=re.MULTILINE)
-        text = re.sub(r"^- \[x\] (.+)$", r"■ \1", text, flags=re.MULTILINE)
-        text = re.sub(r"^[-*] (.+)$", r"・\1", text, flags=re.MULTILINE)
+        # 太字・装飾
+        text = re.sub(r"\*\*([^\n*]+?)\*\*", r"\1", text)
+        text = re.sub(r"__([^\n_]+?)__", r"\1", text)
+        text = re.sub(r"`([^\n`]+?)`", r"\1", text)
 
         # 余分な改行の連続を整理
         text = re.sub(r"\n{3,}", "\n\n", text)

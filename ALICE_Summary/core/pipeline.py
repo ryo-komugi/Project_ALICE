@@ -92,6 +92,11 @@ class SummaryPipeline:
 
             if stage3_only:
                 logger.info("Stage 3 only mode requested. Skipping Stage 1.")
+                if analysis_path.exists() and not analysis_data:
+                    try:
+                        analysis_data = WorkspaceIO.load_analysis_json(workspace_path)
+                    except Exception:
+                        pass
             elif stage2_only:
                 logger.info(f"Stage 2 only mode requested. Loading existing {analysis_path}...")
                 analysis_data = WorkspaceIO.load_analysis_json(workspace_path)
@@ -101,7 +106,10 @@ class SummaryPipeline:
                 logger.info("Executing Stage 1 (Analyzer: Conversation Understanding & Structuring)...")
                 t_stage1_start = time.time()
                 analysis_data, stage1_resp = self.analyzer.analyze(
-                    formatted_transcript, model_name=target_model, num_ctx=dynamic_num_ctx
+                    formatted_transcript,
+                    model_name=target_model,
+                    num_ctx=dynamic_num_ctx,
+                    segments=segments,
                 )
                 stage1_time = time.time() - t_stage1_start
                 logger.info(f"Stage 1 completed in {stage1_time:.2f}s. Saving analysis.json...")
@@ -120,18 +128,28 @@ class SummaryPipeline:
                 except Exception as e:
                     logger.warning(f"Existing {draft_path} is corrupted or empty ({e}). Will re-generate.")
 
-            applied_type = "interview"
+            if conv_type and conv_type != "auto" and conv_type in Composer.VALID_TYPES:
+                applied_type = conv_type
+            elif analysis_data:
+                applied_type = Composer.detect_conversation_type(analysis_data)
+            else:
+                applied_type = "general"
+
             if stage3_only:
                 logger.info("Stage 3 only mode requested. Loading existing draft summary...")
                 draft_summary_md = WorkspaceIO.load_draft_summary(workspace_path)
             elif valid_existing_draft:
                 logger.info(f"Found valid existing {draft_path}. Loading draft summary...")
                 draft_summary_md = WorkspaceIO.load_draft_summary(workspace_path)
-                applied_type = Composer.detect_conversation_type(analysis_data) if analysis_data else "interview"
             else:
                 logger.info("Executing Stage 2 (Composer: Draft Summary Generation)...")
                 t_stage2_start = time.time()
-                s2_keep_alive = self.config.final_keep_alive if skip_stage3 else self.config.keep_alive
+                # 後続の Stage 3 または Commentary がある場合は keep_alive を維持
+                s2_keep_alive = (
+                    self.config.final_keep_alive
+                    if (skip_stage3 and not analysis_data)
+                    else self.config.keep_alive
+                )
                 draft_summary_md, stage2_resp, applied_type = self.composer.compose(
                     analysis_data,
                     model_name=target_model,
@@ -147,19 +165,23 @@ class SummaryPipeline:
             # ==========================================
             # Stage 3: 原文照合・整合性チェック & 精密修正
             # ==========================================
+            will_run_commentary = bool(analysis_data)
             if skip_stage3:
                 logger.info("Skip Stage 3 requested. Adopting Stage 2 draft as final summary...")
                 final_summary_md = draft_summary_md
-                self.client.unload_model(target_model)
+                if not will_run_commentary:
+                    self.client.unload_model(target_model)
             else:
                 logger.info("Executing Stage 3 (ConsistencyChecker: Audit & Refine against Transcript)...")
                 t_stage3_start = time.time()
+                s3_keep_alive = self.config.keep_alive if will_run_commentary else self.config.final_keep_alive
                 final_summary_md, consistency_report_md, stage3_resp = self.checker.check_and_refine(
                     formatted_transcript=formatted_transcript,
                     draft_summary=draft_summary_md,
                     model_name=target_model,
                     num_ctx=dynamic_num_ctx,
                     conv_type=applied_type,
+                    keep_alive=s3_keep_alive,
                 )
                 stage3_time = time.time() - t_stage3_start
                 logger.info(f"Stage 3 completed in {stage3_time:.2f}s. Saving consistency_report.md...")

@@ -33,6 +33,24 @@ def test_convert_to_wav_with_preprocessing(monkeypatch):
         assert "-ac" in cmd and "1" in cmd
 
 
+def test_convert_to_wav_default_dynaudnorm(monkeypatch):
+    monkeypatch.setattr(config, "AUDIO_PREPROCESSING_ENABLED", True)
+    monkeypatch.setattr(config, "AUDIO_FILTER_HIGHPASS", 100)
+    monkeypatch.setattr(config, "AUDIO_FILTER_LOWPASS", 7600)
+    monkeypatch.setattr(config, "AUDIO_FILTER_DENOISE_NF", None)
+    monkeypatch.setattr(config, "AUDIO_LOUDNORM_I", None)
+
+    with patch("subprocess.run") as mock_run:
+        res = convert_to_wav("/path/to/input.m4a", "/path/to/output.wav")
+        assert res == "/path/to/output.wav"
+        cmd = mock_run.call_args[0][0]
+        af_val = cmd[cmd.index("-af") + 1]
+        assert "highpass=f=100" in af_val
+        assert "lowpass=f=7600" in af_val
+        assert "afftdn" not in af_val
+        assert "dynaudnorm=" in af_val
+
+
 def test_convert_to_wav_disabled_preprocessing(monkeypatch):
     monkeypatch.setattr(config, "AUDIO_PREPROCESSING_ENABLED", False)
     monkeypatch.setattr(config, "AUDIO_NORMALIZE", True)

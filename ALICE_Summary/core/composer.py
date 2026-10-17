@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Tuple
 from core.ollama_client import OllamaClient, OllamaResponse
+from core.workspace_io import WorkspaceIO
 from config import SummaryConfig
 
 logger = logging.getLogger(__name__)
@@ -20,14 +21,37 @@ class Composer:
         self.prompts_dir = Path(__file__).resolve().parent.parent / "prompts"
         self.templates_dir = self.prompts_dir / "templates"
 
-    @staticmethod
-    def detect_conversation_type(analysis_data: Dict[str, Any]) -> str:
+    @classmethod
+    def detect_conversation_type(cls, analysis_data: Dict[str, Any]) -> str:
         """analysis_data から最適な会話タイプ（interview / meeting / consultation / general）を自動判定する"""
-        text_corpus = []
+        if not isinstance(analysis_data, dict):
+            return "general"
 
         meta = analysis_data.get("metadata", {})
-        if isinstance(meta, dict) and meta.get("conversation_type"):
-            text_corpus.append(str(meta.get("conversation_type")))
+        if not isinstance(meta, dict):
+            meta = {}
+
+        # 1. is_target_present が明示的に False の場合（対象者不在の管理者間会議・方針協議など）は meeting 扱い
+        is_target_present = meta.get("is_target_present")
+        if is_target_present is False:
+            return "meeting"
+
+        # 2. metadata.conversation_category が有効なカテゴリを指している場合
+        category = str(meta.get("conversation_category", "")).strip().lower()
+        conv_type_str = str(meta.get("conversation_type", "")).strip()
+
+        # 会議キーワードが conversation_type に明示されている場合（例: 「定例会議」「対策会議」「進捗会議」）
+        if any(k in conv_type_str for k in ["会議", "定例", "ミーティング", "打ち合わせ", "委員会", "報告会"]):
+            if "面談" not in conv_type_str and "1on1" not in conv_type_str.lower():
+                return "meeting"
+
+        if category in cls.VALID_TYPES and category != "general":
+            return category
+
+        # 3. テキストコーパスからのスコアリング（timeline_sections と topics の両方を参照）
+        text_corpus = []
+        if conv_type_str:
+            text_corpus.append(conv_type_str)
 
         overview = analysis_data.get("conversation_overview", {})
         if isinstance(overview, dict):
@@ -40,6 +64,13 @@ class Composer:
                 if isinstance(sp, dict):
                     text_corpus.append(str(sp.get("estimated_role", "")))
 
+        sections = analysis_data.get("timeline_sections", [])
+        if isinstance(sections, list):
+            for sec in sections:
+                if isinstance(sec, dict):
+                    text_corpus.append(str(sec.get("section_title", "")))
+                    text_corpus.append(str(sec.get("interviewer_inquiry", "")))
+
         topics = analysis_data.get("topics", [])
         if isinstance(topics, list):
             for tp in topics:
@@ -49,17 +80,26 @@ class Composer:
 
         full_text = " ".join(text_corpus)
 
-        interview_keywords = ["面談", "指導", "評価", "1on1", "ヒアリング", "証言", "人事", "改善", "遅刻", "勤怠", "処分", "警告", "内省"]
-        meeting_keywords = ["会議", "定例", "ミーティング", "打ち合わせ", "進捗", "プロジェクト", "レビュー", "アジェンダ", "議事"]
+        # 汎用ビジネス語（「人事」「評価」「改善」「勤怠」）は会議でも頻出するため除外し、面談固有の語に絞る
+        interview_keywords = ["面談", "1on1", "ヒアリング", "指導面談", "評価面談", "キャリア面談", "被評価者", "面談対象者", "弁明", "聴取"]
+        meeting_keywords = ["会議", "定例", "ミーティング", "打ち合わせ", "進捗", "プロジェクト", "レビュー", "アジェンダ", "議事", "委員会", "共有会"]
         consultation_keywords = ["相談", "壁打ち", "ブレスト", "アドバイス", "悩み", "検討", "アイデア", "提案"]
 
         interview_score = sum(full_text.count(k) for k in interview_keywords)
         meeting_score = sum(full_text.count(k) for k in meeting_keywords)
         consultation_score = sum(full_text.count(k) for k in consultation_keywords)
 
+        # conversation_type 自体にキーワードが含まれる場合は重みを加算
+        if any(k in conv_type_str for k in ["面談", "1on1", "ヒアリング"]):
+            interview_score += 3
+        if any(k in conv_type_str for k in ["会議", "定例", "ミーティング", "打ち合わせ"]):
+            meeting_score += 3
+        if any(k in conv_type_str for k in ["相談", "壁打ち", "ブレスト"]):
+            consultation_score += 3
+
         scores = [
-            ("interview", interview_score),
             ("meeting", meeting_score),
+            ("interview", interview_score),
             ("consultation", consultation_score),
         ]
         scores.sort(key=lambda x: x[1], reverse=True)
@@ -67,11 +107,11 @@ class Composer:
         best_type, best_score = scores[0]
         if best_score > 0:
             return best_type
+        if category in cls.VALID_TYPES:
+            return category
         return "general"
 
     def _load_prompt_template(self, conv_type: str = "interview") -> str:
-        from core.workspace_io import WorkspaceIO
-
         if conv_type not in self.VALID_TYPES:
             conv_type = "general"
 
@@ -107,13 +147,16 @@ class Composer:
         analysis_json_str = json.dumps(analysis_data, ensure_ascii=False, indent=2)
         prompt = template.replace("{analysis_json}", analysis_json_str)
 
-        effective_num_ctx = num_ctx or min(self.config.num_ctx, 32768)
+        required_ctx = WorkspaceIO.calculate_dynamic_num_ctx(
+            prompt, base_margin=self.config.num_predict_stage2 + 1024
+        )
+        effective_num_ctx = max(num_ctx or min(self.config.num_ctx, 32768), required_ctx)
         effective_keep_alive = keep_alive if keep_alive is not None else self.config.keep_alive
 
         messages = [
             {
                 "role": "system",
-                "content": "あなたは高品質なビジネス文書および会話分析レポートを作成するAIです。提供された分析データのみに基づき、事実・認識・指摘の区別や着地点が明確に伝わる自然な日本語の文章を作成してください。",
+                "content": "あなたは高品質なビジネス文書および会話分析レポートを作成するAIです。提供された分析データのみに基づき、事実・認識・指摘の区別や着地点が明確に伝わる自然な日本語の文章を作成してください。前置きや挨拶は出力せず、直ちに指定のMarkdown本文から開始してください。",
             },
             {
                 "role": "user",
@@ -142,12 +185,5 @@ class Composer:
         elapsed = time.time() - t0
         logger.info(f"[Composer] Stage 2 Ollama response received in {elapsed:.2f}s")
 
-        summary_md = resp.content.strip()
-
-        # もしMarkdownコードブロックで全体が囲まれている場合は剥がす
-        if summary_md.startswith("```markdown") and summary_md.endswith("```"):
-            summary_md = summary_md[len("```markdown") : -3].strip()
-        elif summary_md.startswith("```md") and summary_md.endswith("```"):
-            summary_md = summary_md[len("```md") : -3].strip()
-
+        summary_md = WorkspaceIO.clean_markdown_output(resp.content)
         return summary_md, resp, applied_type

@@ -202,7 +202,7 @@ def _collect_and_publish_artifacts(job, module_name: str, ws_dir: Path, share_di
             if f.is_file() and not f.name.startswith("."):
                 rel_p = f"{module_name}/{f.name}"
                 if not any(a.get("path") == rel_p for a in (job.artifacts or [])):
-                    is_pri = (f.name == f"{module_name}.md" or f.name == f"{module_name}.txt")
+                    is_pri = (f.name == f"{module_name}.md")
                     art_entry = {
                         "name": f.name,
                         "path": rel_p,
@@ -326,33 +326,6 @@ def _execute_step_generation(job_id: str, step: str, template: str = "auto") -> 
             cwd = config.PROJECT_ROOT / "ALICE_Minutes"
 
             resolved_template = template or "auto"
-            if resolved_template == "auto":
-                resolved_template = "standard"
-                summary_analysis_path = ws_dir / "summary" / "analysis.json"
-                summary_meta_path = ws_dir / "summary" / "metadata.json"
-                conv_type = None
-                if summary_meta_path.exists():
-                    try:
-                        with open(summary_meta_path, "r", encoding="utf-8") as f:
-                            conv_type = json.load(f).get("conversation_type")
-                    except Exception:
-                        pass
-                if not conv_type and summary_analysis_path.exists():
-                    try:
-                        with open(summary_analysis_path, "r", encoding="utf-8") as f:
-                            conv_type = json.load(f).get("metadata", {}).get("conversation_type")
-                    except Exception:
-                        pass
-
-                if conv_type:
-                    conv_type_lower = str(conv_type).lower()
-                    if "interview" in conv_type_lower or "面談" in conv_type_lower or "1on1" in conv_type_lower:
-                        resolved_template = "interview"
-                    elif "consultation" in conv_type_lower or "相談" in conv_type_lower:
-                        resolved_template = "consultation"
-                    elif "executive" in conv_type_lower or "役員" in conv_type_lower:
-                        resolved_template = "executive"
-
             cmd = [str(python_bin), str(cli_path), "--workspace", str(ws_dir), "--template", resolved_template]
         elif step == "summary":
             cli_path = config.PROJECT_ROOT / "ALICE_Summary" / "cli.py"

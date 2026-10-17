@@ -29,23 +29,27 @@ def convert_to_wav(input_path, output_path):
     if getattr(config, "AUDIO_PREPROCESSING_ENABLED", False):
         filters = []
         # 1. 帯域フィルタ (低周波・超高域ノイズカット)
-        hp = getattr(config, "AUDIO_FILTER_HIGHPASS", 80)
-        lp = getattr(config, "AUDIO_FILTER_LOWPASS", 7500)
+        hp = getattr(config, "AUDIO_FILTER_HIGHPASS", 100)
+        lp = getattr(config, "AUDIO_FILTER_LOWPASS", 7600)
         if hp:
             filters.append(f"highpass=f={hp}")
         if lp:
             filters.append(f"lowpass=f={lp}")
 
-        # 2. FFTスペクトルノイズ抑制 (定常ノイズ・反響フロア低減)
-        nf = getattr(config, "AUDIO_FILTER_DENOISE_NF", -25)
+        # 2. FFTスペクトルノイズ抑制 (明示設定時のみ)
+        nf = getattr(config, "AUDIO_FILTER_DENOISE_NF", None)
         if nf is not None:
             filters.append(f"afftdn=nf={nf}")
 
-        # 3. EBU R128準拠ラウドネス正規化 (音量均一化・小声持ち上げ)
-        norm_i = getattr(config, "AUDIO_LOUDNORM_I", -16.0)
-        norm_tp = getattr(config, "AUDIO_LOUDNORM_TP", -1.5)
-        norm_lra = getattr(config, "AUDIO_LOUDNORM_LRA", 11.0)
-        filters.append(f"loudnorm=I={norm_i}:TP={norm_tp}:LRA={norm_lra}")
+        # 3. 音量正規化 (loudnorm明示設定時はloudnorm、デフォルトは小声救済に優れたdynaudnorm)
+        norm_i = getattr(config, "AUDIO_LOUDNORM_I", None)
+        dynaudnorm = getattr(config, "AUDIO_DYNAUDNORM", "f=250:g=15:p=0.90:m=6.0:s=12.0")
+        if norm_i is not None:
+            norm_tp = getattr(config, "AUDIO_LOUDNORM_TP", -1.5)
+            norm_lra = getattr(config, "AUDIO_LOUDNORM_LRA", 11.0)
+            filters.append(f"loudnorm=I={norm_i}:TP={norm_tp}:LRA={norm_lra}")
+        elif dynaudnorm:
+            filters.append(f"dynaudnorm={dynaudnorm}")
 
         if filters:
             cmd.extend(["-af", ",".join(filters)])

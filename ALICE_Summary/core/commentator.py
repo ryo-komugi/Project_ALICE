@@ -1,4 +1,4 @@
-﻿import json
+import json
 import time
 import logging
 from pathlib import Path
@@ -18,9 +18,15 @@ class Commentator:
         self.client = client
         self.prompts_dir = Path(__file__).resolve().parent.parent / "prompts"
 
-    def _load_prompt_template(self, conv_type: str = "interview") -> str:
-        # interview なら commentary_interview、それ以外なら commentary_general
-        target_name = f"commentary_{conv_type}" if conv_type == "interview" else "commentary_general"
+    def _load_prompt_template(self, conv_type: str = "interview", analysis_data: Dict[str, Any] | None = None) -> str:
+        # 対象者不在の会議（is_target_present == False）や meeting/consultation/general の場合は commentary_general を使用
+        use_interview = (conv_type == "interview")
+        if use_interview and isinstance(analysis_data, dict):
+            meta = analysis_data.get("metadata", {})
+            if isinstance(meta, dict) and meta.get("is_target_present") is False:
+                use_interview = False
+
+        target_name = "commentary_interview" if use_interview else "commentary_general"
         prompt_base = self.prompts_dir / target_name
         try:
             return WorkspaceIO.read_prompt_file(prompt_base)
@@ -38,20 +44,23 @@ class Commentator:
         conv_type: str = "interview",
     ) -> Tuple[str, OllamaResponse]:
         """分析データと要約ドラフトから解説・講評レポート（commentary_md）を生成する"""
-        template = self._load_prompt_template(conv_type=conv_type)
+        template = self._load_prompt_template(conv_type=conv_type, analysis_data=analysis_data)
 
         analysis_json_str = json.dumps(analysis_data, ensure_ascii=False, indent=2)
         prompt = template.replace("{analysis_json}", analysis_json_str).replace(
             "{draft_summary}", draft_summary.strip()
         )
 
-        effective_num_ctx = num_ctx or min(self.config.num_ctx, 32768)
+        required_ctx = WorkspaceIO.calculate_dynamic_num_ctx(
+            prompt, base_margin=self.config.num_predict_stage2 + 1024
+        )
+        effective_num_ctx = max(num_ctx or min(self.config.num_ctx, 32768), required_ctx)
         effective_keep_alive = keep_alive if keep_alive is not None else self.config.keep_alive
 
         messages = [
             {
                 "role": "system",
-                "content": "あなたは組織マネジメント、人事指導および会話力学分析のエキスパートAIです。提供された客観的分析データと要約ドラフトに基づき、深い洞察を備えた実務的な分析・講評レポートを作成してください。",
+                "content": "あなたは組織マネジメント、業務推進およびコミュニケーション力学分析のエキスパートAIです。提供された客観的分析データと要約に基づき、深い洞察を備えた実務的な分析・講評レポートを作成してください。前置きや挨拶は出力せず、直ちに指定のMarkdown見出しから開始してください。",
             },
             {
                 "role": "user",
@@ -80,12 +89,5 @@ class Commentator:
         elapsed = time.time() - t0
         logger.info(f"[Commentator] Commentary Ollama response received in {elapsed:.2f}s")
 
-        commentary_md = resp.content.strip()
-
-        # Markdown コードブロックで囲まれている場合の剥離
-        if commentary_md.startswith("```markdown") and commentary_md.endswith("```"):
-            commentary_md = commentary_md[len("```markdown") : -3].strip()
-        elif commentary_md.startswith("```md") and commentary_md.endswith("```"):
-            commentary_md = commentary_md[len("```md") : -3].strip()
-
+        commentary_md = WorkspaceIO.clean_markdown_output(resp.content)
         return commentary_md, resp

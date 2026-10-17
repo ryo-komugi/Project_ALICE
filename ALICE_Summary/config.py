@@ -27,7 +27,7 @@ class SummaryConfig:
     num_predict_stage1: int = int(os.getenv("SUMMARY_NUM_PREDICT_STAGE1", "4096"))
     num_predict_stage2: int = int(os.getenv("SUMMARY_NUM_PREDICT_STAGE2", "4096"))
     num_predict_stage3: int = int(os.getenv("SUMMARY_NUM_PREDICT_STAGE3", "6144"))
-    repeat_penalty: float = float(os.getenv("SUMMARY_REPEAT_PENALTY", "1.1"))
+    repeat_penalty: float = float(os.getenv("SUMMARY_REPEAT_PENALTY", "1.0"))
 
     # Resilience: Retries and Fallbacks
     max_retries: int = int(os.getenv("SUMMARY_MAX_RETRIES", "3"))
@@ -37,4 +37,3 @@ class SummaryConfig:
 
 
 DEFAULT_CONFIG = SummaryConfig()
-
