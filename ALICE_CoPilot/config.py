@@ -24,7 +24,7 @@ DB_PATH = RUNTIME_DIR / "copilot" / "database" / "conversations.db"
 OBSIDIAN_ROOT = MEMORY_DIR / "obsidian"
 
 # Owner Identification (Core & Workspaces)
-OWNER_CORE_USER_ID = os.getenv("ALICE_OWNER_CORE_USER_ID", "U794535d58fb802ac996f4a86ce119ad2")
+OWNER_CORE_USER_ID = os.getenv("ALICE_OWNER_CORE_USER_ID", "")
 OWNER_CORE_USER_IDS = {
     uid.strip()
     for uid in os.getenv("ALICE_OWNER_CORE_USER_IDS", OWNER_CORE_USER_ID).split(",")
@@ -36,10 +36,7 @@ def is_owner_core_user(user_id: str | None) -> bool:
     """Check if the given Core user_id belongs to the authorized owner."""
     if not user_id:
         return False
+    if not OWNER_CORE_USER_IDS:
+        # If no owner IDs are configured, allow access
+        return True
     return str(user_id) in OWNER_CORE_USER_IDS
-
-
-# Google Calendar Settings
-GOOGLE_CALENDAR_ID = os.getenv("GOOGLE_CALENDAR_ID", "t.a5128128@gmail.com")
-GOOGLE_CALENDAR_CREDENTIALS_PATH = RUNTIME_DIR / "calendar" / "credentials.json"
-

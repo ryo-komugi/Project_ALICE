@@ -150,8 +150,6 @@ def run_copilot_unit_tests() -> str:
         str(PYTHON_BIN),
         "-m", "pytest",
         "tests/test_tools.py",
-        "tests/test_tasks_tools.py",
-        "tests/test_calendar_tools.py",
         "-q",
     ]
     try:
@@ -165,87 +163,18 @@ def run_copilot_unit_tests() -> str:
 
 
 def check_calendar_state(query: str = "", time_min: str = "", time_max: str = "", calendar_name: str = "") -> str:
-    """Checks the real state of Google Calendar to verify if events were actually registered, updated, or deleted.
-
-    Args:
-        query: Search keyword (e.g. '古橋', '休暇', '工数').
-        time_min: Start time (e.g. '2026-09-15').
-        time_max: End time (e.g. '2026-09-22').
-        calendar_name: Target calendar ('個人予定', '仕事', '人員動静').
-    """
-    try:
-        from tools.calendar_tools import get_calendar_events
-        res = get_calendar_events(
-            calendar_name=calendar_name or None,
-            query=query or None,
-            time_min=time_min or None,
-            time_max=time_max or None,
-        )
-        events = res.get("events", [])
-        if not events:
-            return "カレンダー実データ: 条件に一致する予定はありません。"
-        lines = [f"カレンダー実データ（全 {len(events)} 件）:"]
-        for ev in events:
-            lines.append(f"- [{ev.get('calendar')}] id={ev.get('id')} | {ev.get('summary')} ({ev.get('start')} ~ {ev.get('end')})")
-        return "\n".join(lines)
-    except Exception as e:
-        return f"カレンダー照会エラー: {e}"
+    """Stub function for calendar checking (calendar feature pruned in dev)."""
+    return "カレンダー機能は無効化されています。"
 
 
 def check_task_state(query: str = "", list_name: str = "", status: str = "all") -> str:
-    """Checks the real state of Google Tasks to verify if tasks were actually added, completed, or deleted.
-
-    Args:
-        query: Task keyword to search for.
-        list_name: Task list ('業務タスク' or 'マイタスク').
-        status: 'all', 'needsAction', or 'completed'.
-    """
-    try:
-        from tools.tasks_tools import get_todo_tasks
-        res = get_todo_tasks(query=query or None, list_name=list_name or None, status=status)
-        total = res.get("total", 0)
-        lists = res.get("lists", {})
-        lines = [f"Google Tasks実データ（全 {total} 件）:"]
-        for lname, tasks in lists.items():
-            lines.append(f"【{lname}】({len(tasks)}件):")
-            for t in tasks:
-                st = "完了" if t.get("status") == "completed" else "未完了"
-                lines.append(f"  - [{st}] {t.get('title')} (期日: {t.get('due') or 'なし'}, ID: {t.get('id')})")
-        return "\n".join(lines)
-    except Exception as e:
-        return f"Tasks照会エラー: {e}"
+    """Stub function for tasks checking (tasks feature pruned in dev)."""
+    return "タスク機能は無効化されています。"
 
 
 def repair_calendar_state(action: str, event_id: str, calendar_name: str | None = None, summary: str | None = None) -> str:
-    """Autonomously repairs discrepancies in Google Calendar (e.g. deleting hallucinated/duplicate events).
-
-    Args:
-        action: 'delete' to remove duplicate/unwanted event, or 'update' to fix title/details.
-        event_id: The event ID to delete or modify.
-        calendar_name: Target calendar name ('個人予定', '仕事', '人員動静').
-        summary: If action is 'update', the corrected summary title.
-    """
-    try:
-        if action == "delete":
-            from tools.calendar_tools import delete_calendar_event
-            res = delete_calendar_event(event_id=event_id, calendar_name=calendar_name)
-            if res.get("status") == "success":
-                msg = f"【自律修復】カレンダー「{res.get('calendar')}」から予定（ID: {event_id}）を削除修復しました。"
-                REVIEW_STATE["repairs_done"].append(msg)
-                return msg
-            return f"削除修復失敗: {res.get('error')}"
-        elif action == "update":
-            from tools.calendar_tools import update_calendar_event
-            res = update_calendar_event(event_id=event_id, summary=summary, calendar_name=calendar_name)
-            if res.get("status") == "success":
-                msg = f"【自律修復】カレンダー「{res.get('calendar')}」の予定（ID: {event_id}）を「{summary}」に更新修復しました。"
-                REVIEW_STATE["repairs_done"].append(msg)
-                return msg
-            return f"更新修復失敗: {res.get('error')}"
-        else:
-            return f"未知の修復アクション: {action}"
-    except Exception as e:
-        return f"自律修復例外: {e}"
+    """Stub function for calendar repair (calendar feature pruned in dev)."""
+    return "カレンダー修復機能は無効化されています。"
 
 
 def repair_tasks_state(
@@ -256,68 +185,8 @@ def repair_tasks_state(
     task_id: str = "",
     notes: str = "",
 ) -> str:
-    """Autonomously repairs discrepancies in Google Tasks (e.g. creating missing tasks that were falsely reported as added, or completing finished tasks).
-
-    Args:
-        action: 'create' to add a missing task, 'complete' to mark a task done, or 'update' to modify details.
-        title: Title of the task to create or update.
-        due_date: Due date in 'YYYY-MM-DD' format (optional).
-        list_name: Target task list ('業務タスク' or 'マイタスク'). Defaults to '業務タスク'.
-        task_id: Task ID to complete or update.
-        notes: Optional notes/description for the task.
-    """
-    try:
-        if action == "create":
-            if not title:
-                return "タスク作成修復エラー: タイトルが指定されていません。"
-            from tools.tasks_tools import create_todo_task
-            res = create_todo_task(
-                title=title,
-                due_date=due_date or None,
-                list_name=list_name or "業務タスク",
-                notes=notes or None,
-            )
-            if res.get("status") == "success":
-                msg = f"【自律修復】Google Tasks「{list_name}」に未登録だったタスク『{title}』（期限: {due_date or 'なし'}）を自律登録しました。"
-                REVIEW_STATE["repairs_done"].append(msg)
-                return msg
-            return f"タスク作成修復失敗: {res.get('error') or res.get('message')}"
-
-        elif action == "complete":
-            if not task_id and not title:
-                return "タスク完了修復エラー: タスクIDまたはタイトルが指定されていません。"
-            from tools.tasks_tools import complete_todo_task
-            res = complete_todo_task(
-                task_title_or_id=task_id or title,
-                list_name=list_name or None,
-            )
-            if res.get("status") == "success":
-                msg = f"【自律修復】Google Tasks「{list_name}」のタスク『{title or task_id}』を完了済みに修復しました。"
-                REVIEW_STATE["repairs_done"].append(msg)
-                return msg
-            return f"タスク完了修復失敗: {res.get('error') or res.get('message')}"
-
-        elif action == "update":
-            if not task_id and not title:
-                return "タスク更新修復エラー: タスクIDまたはタイトルが指定されていません。"
-            from tools.tasks_tools import update_todo_task
-            res = update_todo_task(
-                task_title_or_id=task_id or title,
-                new_title=title or None,
-                due_date=due_date or None,
-                notes=notes or None,
-                list_name=list_name or None,
-            )
-            if res.get("status") == "success":
-                msg = f"【自律修復】Google Tasks「{list_name}」のタスク『{title or task_id}』の情報を更新修復しました。"
-                REVIEW_STATE["repairs_done"].append(msg)
-                return msg
-            return f"タスク更新修復失敗: {res.get('error') or res.get('message')}"
-
-        else:
-            return f"未知のタスク修復アクション: {action}"
-    except Exception as e:
-        return f"タスク自律修復例外: {e}"
+    """Stub function for tasks repair (tasks feature pruned in dev)."""
+    return "タスク修復機能は無効化されています。"
 
 
 # =========================================================================

@@ -85,9 +85,24 @@ class LinePublisher:
                     download_url=download_url,
                     view_url=view_url
                 )
+            if not config.LINE_ENABLED:
+                logger.info("[LinePublisher] LINE is not enabled. Skipping push_flex.")
+                return
+
             self.sender.push_flex(user_id, flex)
         except Exception:
             logger.exception("[LinePublisher] Copy failed")
             raise
 
         logger.info("[LinePublisher] Copy complete")
+
+    def notify_failure(self, user_id: str, message: str) -> bool:
+        """ユーザーへ障害・エラー通知メッセージを送信"""
+        if not config.LINE_ENABLED:
+            logger.debug("[LinePublisher] LINE is not enabled. Skipping error notification.")
+            return False
+        try:
+            return self.sender.push_text(user_id, f"【エラー】\n{message}")
+        except Exception as e:
+            logger.warning(f"[LinePublisher] Failed to push failure notification to {user_id}: {e}")
+            return False

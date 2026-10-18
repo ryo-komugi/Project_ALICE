@@ -1,27 +1,76 @@
 from core.utils import overlap
 import config
+import re
 
 
 class AlignmentEngine:
     """WhisperのWord TimestampとPyannoteのDiarization Segmentsを高精度に統合するエンジン"""
 
-    def extract_words(self, whisper_segments) -> list:
-        """Whisperセグメントから有効な単語（Word）リストを抽出する"""
+    STANDALONE_BACKCHANNELS = {"はい", "うん", "ええ", "そう", "いや", "えっ", "ああ", "あー", "うーん"}
+    SENTENCE_FINAL_TOKENS = {"ね", "よ", "な", "わ", "ぞ", "ぜ", "か", "さ", "ます", "です", "た", "だ", "る", "い", "ない", "ん", "けど", "から", "ので", "はい", "うん"}
+    HALLUCINATION_TEXT_RE = re.compile(
+        r"^(?:BGM|ＢＧＭ|音楽|拍手|字幕|ご視聴ありがとうございました[。！!]?|チャンネル登録.*|この動画の内容は.*|私は、?私の人生を変えることを知っています.*)$",
+        re.IGNORECASE,
+    )
+
+    def extract_words(self, whisper_segments, pyannote_segments: list | None = None) -> list:
+        """Whisperセグメントから有効な単語（Word）リストを抽出する。
+        - 低対数確率や無音区間のハルシネーションセグメントを除外
+        - 同一セグメント内の不自然な時間ジャンプ（語頭サブワード取り残し）を補正
+        """
         all_words = []
         for seg in whisper_segments or []:
             if seg.words is None:
                 continue
+            seg_text = (getattr(seg, "text", "") or "").strip()
+            no_sp = getattr(seg, "no_speech_prob", 0.0) or 0.0
+            avg_lp = getattr(seg, "avg_logprob", 0.0) or 0.0
+
+            # 明らかな低確信度ハルシネーションの除外
+            if avg_lp < -1.05:
+                continue
+            if self.HALLUCINATION_TEXT_RE.match(seg_text) and (no_sp > 0.35 or avg_lp < -0.80):
+                continue
+
+            # Pyannote話者区間が提供されている場合、誰の発話とも全く重ならず確信度が低い無音幻覚を除外
+            if pyannote_segments and no_sp > 0.60 and avg_lp < -0.80:
+                s_start = float(getattr(seg, "start", 0.0) or 0.0)
+                s_end = float(getattr(seg, "end", 0.0) or 0.0)
+                py_ov = sum(overlap(s_start, s_end, p["start"], p["end"]) for p in pyannote_segments)
+                if py_ov < 0.1:
+                    continue
+
+            seg_words = []
             for w in seg.words:
                 if w.start is None or w.end is None:
                     continue
                 text = w.word.strip()
                 if not text:
                     continue
-                all_words.append({
+                seg_words.append({
                     "start": float(w.start),
                     "end": float(w.end),
                     "text": text
                 })
+
+            # 同一Whisperセグメント内で語頭サブワードが長距離ギャップの前に取り残されている場合、後続単語の直前へ引き寄せる
+            for k in range(len(seg_words) - 1):
+                cur_w = seg_words[k]
+                nxt_w = seg_words[k + 1]
+                gap = nxt_w["start"] - cur_w["end"]
+                cur_txt = cur_w["text"].rstrip()
+                has_punct = cur_txt.endswith(("。", "、", "？", "！", "?", "!", ","))
+                if (
+                    gap > 2.0
+                    and len(cur_txt) <= 2
+                    and not has_punct
+                    and cur_txt not in self.SENTENCE_FINAL_TOKENS
+                ):
+                    dur = min(0.4, max(0.1, cur_w["end"] - cur_w["start"]))
+                    cur_w["end"] = nxt_w["start"]
+                    cur_w["start"] = max(0.0, cur_w["end"] - dur)
+
+            all_words.extend(seg_words)
         return all_words
 
     def assign_speakers(self, words: list, pyannote_segments: list, tolerance_margin: float | None = None) -> list:
@@ -45,7 +94,6 @@ class AlignmentEngine:
                 for w in words
             ]
 
-        # 開始時間で整序
         sorted_segs = sorted(pyannote_segments, key=lambda s: s["start"])
         word_results = []
 
@@ -133,25 +181,25 @@ class AlignmentEngine:
                 # 先頭のUNKNOWN（直後の話者に近接していれば補間）
                 elif not left_spk and right_spk and right_spk != "UNKNOWN":
                     gap = results[end_idx + 1]["start"] - results[end_idx]["end"]
-                    if gap <= 0.5:
+                    if gap <= 0.8:
                         for k in range(start_idx, end_idx + 1):
                             results[k]["speaker"] = right_spk
 
                 # 末尾のUNKNOWN（直前の話者に近接していれば補間）
                 elif left_spk and left_spk != "UNKNOWN" and not right_spk:
                     gap = results[start_idx]["start"] - results[start_idx - 1]["end"]
-                    if gap <= 0.5:
+                    if gap <= 0.8:
                         for k in range(start_idx, end_idx + 1):
                             results[k]["speaker"] = left_spk
 
-                # 異なる話者に挟まれている場合（近接距離に応じて割り当て）
+                # 異なる話者に挟まれている場合（近接距離に応じて割り当て、0.8秒まで許容）
                 elif left_spk and right_spk and left_spk != "UNKNOWN" and right_spk != "UNKNOWN":
                     for k in range(start_idx, end_idx + 1):
                         dist_left = results[k]["start"] - results[start_idx - 1]["end"]
                         dist_right = results[end_idx + 1]["start"] - results[k]["end"]
-                        if dist_left < dist_right and dist_left <= 0.4:
+                        if dist_left < dist_right and dist_left <= 0.8:
                             results[k]["speaker"] = left_spk
-                        elif dist_right <= dist_left and dist_right <= 0.4:
+                        elif dist_right <= dist_left and dist_right <= 0.8:
                             results[k]["speaker"] = right_spk
             else:
                 i += 1
@@ -169,13 +217,11 @@ class AlignmentEngine:
                     results[k]["speaker"] = prev_spk
 
         # Phase 3: マイクロフリップ平滑化（同一話者に挟まれた0.8秒以下の単発・短時間異話者トークンを除去）
-        # 例: A A A [B(0.3s)] A A A -> すべて A に統合
         m = 1
         while m < n - 1:
             prev_spk = results[m - 1]["speaker"]
             cur_spk = results[m]["speaker"]
             if prev_spk != "UNKNOWN" and cur_spk != prev_spk:
-                # cur_spk の連続区間を測る
                 j = m
                 while j < n and results[j]["speaker"] == cur_spk:
                     j += 1
@@ -185,7 +231,6 @@ class AlignmentEngine:
                         dur = results[j - 1]["end"] - results[m]["start"]
                         gap_before = results[m]["start"] - results[m - 1]["end"]
                         gap_after = results[j]["start"] - results[j - 1]["end"]
-                        # micro_flip_max_dur以下で、前後の間隔が小さい場合は同一話者の連続発話と判定
                         if dur <= micro_flip_max_dur and gap_before <= 0.6 and gap_after <= 0.6:
                             for k in range(m, j):
                                 results[k]["speaker"] = prev_spk
@@ -217,7 +262,7 @@ class AlignmentEngine:
         - 話者が変わった地点で分割
         - 同一話者でもポーズ閾値や文末記号＋無音で自然に分割
         - 最大継続時間で長大化をガード
-        - 助詞・文末未完結の極小セグメントの保護マージ
+        - 助詞・語尾途中や語頭サブワードの極小セグメント保護マージ（後方＆前方）
         """
         if not assigned_words:
             return []
@@ -238,7 +283,6 @@ class AlignmentEngine:
             gap = max(0.0, w["start"] - current_end)
             duration = w["end"] - current_start
 
-            # 文末記号かつ一定のポーズがある場合は文境界と判定
             has_terminal_punct = current_text.rstrip().endswith(("。", "？", "！", "?", "!"))
             split_on_punct = has_terminal_punct and (gap >= 0.4 or duration >= 15.0)
 
@@ -273,12 +317,12 @@ class AlignmentEngine:
                 "text": current_text.strip()
             })
 
-        # ==========================================
-        # Post-Processing: 発話細片化の解消と平滑化マージ
-        # ==========================================
         if len(utterances) < 2:
             return utterances
 
+        # ==========================================
+        # Post-Processing 1: 後方マージ（直前発話への吸収）
+        # ==========================================
         merge_same_gap = getattr(config, "MERGE_SAME_SPEAKER_GAP", 1.2)
         merged = []
         i = 0
@@ -297,19 +341,31 @@ class AlignmentEngine:
                     i += 1
                     continue
 
-            # 2. 助詞・語尾途中の切断救済マージ
-            # 直前が文末記号で終わっておらず、かつ現在の発話が極短（4文字以下または0.5秒以下）で近接（0.4秒以下）している場合
+            # 2. 助詞・語尾途中の切断救済マージ（または直前が未完結のままUNKNOWNに落ちた継続節の吸収）
             if merged:
                 prev_u = merged[-1]
                 prev_text = prev_u["text"].rstrip()
                 cur_text = u["text"].strip()
                 inter_gap = u["start"] - prev_u["end"]
+                merged_dur = u["end"] - prev_u["start"]
 
                 has_prev_terminal = prev_text.endswith(("。", "？", "！", "?", "!"))
                 cur_is_tiny = len(cur_text) <= 4 or (u["end"] - u["start"] <= 0.5)
 
-                if not has_prev_terminal and cur_is_tiny and inter_gap <= 0.4:
-                    # 語尾パーツ（「てるの?」「てくれた」「理由?」など）と判断し直前発話へ吸収
+                if not has_prev_terminal and cur_is_tiny and inter_gap <= 0.4 and merged_dur <= max_duration:
+                    prev_u["end"] = max(prev_u["end"], u["end"])
+                    prev_u["text"] = self._join_words(prev_u["text"], u["text"])
+                    i += 1
+                    continue
+
+                # 直前が単語途中（句読点なし）で直後がUNKNOWNかつ0.6秒以内の場合も継続発話として吸収
+                if (
+                    not has_prev_terminal
+                    and not prev_text.endswith("、")
+                    and u["speaker"] == "UNKNOWN"
+                    and inter_gap <= 0.6
+                    and merged_dur <= max_duration
+                ):
                     prev_u["end"] = max(prev_u["end"], u["end"])
                     prev_u["text"] = self._join_words(prev_u["text"], u["text"])
                     i += 1
@@ -318,11 +374,99 @@ class AlignmentEngine:
             merged.append(dict(u))
             i += 1
 
-        return merged
+        # ==========================================
+        # Post-Processing 2: 前方マージ（孤立した語頭サブワード・UNKNOWNを直後の発話へ結合）
+        # ==========================================
+        final_utterances = []
+        idx = 0
+        while idx < len(merged):
+            u = merged[idx]
+            cur_text = u["text"].strip()
+            has_terminal = cur_text.endswith(("。", "？", "！", "?", "!"))
+            is_backchannel = cur_text.rstrip("。、！？!?") in self.STANDALONE_BACKCHANNELS
+
+            if (
+                idx + 1 < len(merged)
+                and not has_terminal
+                and (
+                    (u["speaker"] == "UNKNOWN" and len(cur_text) <= 4)
+                    or (len(cur_text) == 1 and not is_backchannel)
+                )
+            ):
+                nxt_u = merged[idx + 1]
+                gap_to_next = nxt_u["start"] - u["end"]
+                combined_dur = nxt_u["end"] - u["start"]
+                if gap_to_next <= 1.0 and combined_dur <= max_duration:
+                    nxt_u = dict(nxt_u)
+                    nxt_u["start"] = min(u["start"], nxt_u["start"])
+                    nxt_u["text"] = self._join_words(cur_text, nxt_u["text"])
+                    merged[idx + 1] = nxt_u
+                    idx += 1
+                    continue
+
+            final_utterances.append(u)
+            idx += 1
+
+        return self.consolidate_minor_speakers(final_utterances)
+
+    def consolidate_minor_speakers(self, utterances: list) -> list:
+        """過剰クラスタリング（5話者以上）時に、総発話時間が極小（3秒未満かつ2発話以下）の
+        ゴースト話者を時間的に最も近い主要話者へ統合する。
+        """
+        if not utterances:
+            return utterances
+
+        spk_durations = {}
+        spk_counts = {}
+        total_dur = 0.0
+        for u in utterances:
+            spk = u["speaker"]
+            if spk == "UNKNOWN":
+                continue
+            dur = max(0.0, u["end"] - u["start"])
+            spk_durations[spk] = spk_durations.get(spk, 0.0) + dur
+            spk_counts[spk] = spk_counts.get(spk, 0) + 1
+            total_dur += dur
+
+        if len(spk_durations) <= 4 or total_dur <= 0:
+            return utterances
+
+        minor_speakers = {
+            spk for spk, dur in spk_durations.items()
+            if spk_counts.get(spk, 0) <= 2 and dur < 3.0 and (dur / total_dur) < 0.01
+        }
+        if not minor_speakers or len(spk_durations) - len(minor_speakers) < 2:
+            return utterances
+
+        major_indices = [
+            i for i, u in enumerate(utterances)
+            if u["speaker"] != "UNKNOWN" and u["speaker"] not in minor_speakers
+        ]
+        if not major_indices:
+            return utterances
+
+        for i, u in enumerate(utterances):
+            if u["speaker"] in minor_speakers:
+                best_spk = u["speaker"]
+                best_dist = float("inf")
+                for m_idx in major_indices:
+                    m_u = utterances[m_idx]
+                    if m_u["end"] <= u["start"]:
+                        dist = u["start"] - m_u["end"]
+                    elif m_u["start"] >= u["end"]:
+                        dist = m_u["start"] - u["end"]
+                    else:
+                        dist = 0.0
+                    if dist < best_dist:
+                        best_dist = dist
+                        best_spk = m_u["speaker"]
+                u["speaker"] = best_spk
+
+        return utterances
 
     def align(self, whisper_segments, pyannote_segments):
         """WhisperセグメントとPyannoteセグメントからアライメントを実行する"""
-        words = self.extract_words(whisper_segments)
+        words = self.extract_words(whisper_segments, pyannote_segments=pyannote_segments)
         assigned = self.assign_speakers(words, pyannote_segments)
         assigned = self.interpolate_unknown(assigned)
         results = self.build_utterances(assigned, whisper_segments=whisper_segments)

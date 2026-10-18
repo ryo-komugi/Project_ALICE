@@ -160,5 +160,52 @@ class TestAlignmentEngine(unittest.TestCase):
         self.assertEqual(utterances[0]["text"], "Project ALICEの開発")
 
 
+
+    def test_extract_words_intra_segment_gap_prefix_pull(self):
+        class DummyWord:
+            def __init__(self, start, end, word):
+                self.start = start
+                self.end = end
+                self.word = word
+
+        class DummySeg:
+            def __init__(self, words, text=""):
+                self.words = words
+                self.text = text
+
+        seg = DummySeg([
+            DummyWord(625.88, 626.20, "記"),
+            DummyWord(709.48, 710.66, "録したやつ持ってきたの?")
+        ], text="記録したやつ持ってきたの?")
+
+        words = self.engine.extract_words([seg])
+        self.assertEqual(len(words), 2)
+        self.assertAlmostEqual(words[0]["end"], 709.48, places=2)
+        self.assertGreater(words[0]["start"], 709.0)
+
+    def test_build_utterances_forward_merge_unknown_prefix(self):
+        assigned = [
+            {"start": 250.0, "end": 254.0, "speaker": "SPEAKER_01", "text": "パソコン起動時に立ち上がります。"},
+            {"start": 258.01, "end": 258.33, "speaker": "UNKNOWN", "text": "ス"},
+            {"start": 258.33, "end": 258.99, "speaker": "SPEAKER_00", "text": "タートアップで。"}
+        ]
+        utterances = self.engine.build_utterances(assigned)
+        self.assertEqual(len(utterances), 2)
+        self.assertEqual(utterances[1]["speaker"], "SPEAKER_00")
+        self.assertEqual(utterances[1]["text"], "スタートアップで。")
+
+    def test_consolidate_minor_speakers(self):
+        utterances = [
+            {"start": 0.0, "end": 20.0, "speaker": "SPEAKER_00", "text": "Aの発話"},
+            {"start": 21.0, "end": 40.0, "speaker": "SPEAKER_01", "text": "Bの発話"},
+            {"start": 41.0, "end": 60.0, "speaker": "SPEAKER_02", "text": "Cの発話"},
+            {"start": 61.0, "end": 80.0, "speaker": "SPEAKER_03", "text": "Dの発話"},
+            {"start": 80.2, "end": 80.6, "speaker": "SPEAKER_04", "text": "ゴースト"},
+            {"start": 81.0, "end": 100.0, "speaker": "SPEAKER_03", "text": "Dの続き"},
+        ]
+        consolidated = self.engine.consolidate_minor_speakers(utterances)
+        self.assertEqual(consolidated[4]["speaker"], "SPEAKER_03")
+
+
 if __name__ == "__main__":
     unittest.main()

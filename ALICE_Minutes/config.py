@@ -34,8 +34,8 @@ class MinuteConfig:
     keep_alive: str = os.getenv("ALICE_MINUTE_KEEP_ALIVE", "5m")
     final_keep_alive: int = 0
 
-    # Default template
-    default_template: str = os.getenv("ALICE_MINUTE_DEFAULT_TEMPLATE", "standard")
+    # Default template ("auto" resolves dynamically from conversation analysis)
+    default_template: str = os.getenv("ALICE_MINUTE_DEFAULT_TEMPLATE", "auto")
 
     # Project directories
     module_root: Path = Path(__file__).resolve().parent
