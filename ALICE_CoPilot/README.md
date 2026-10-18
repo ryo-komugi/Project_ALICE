@@ -29,15 +29,13 @@ ALICE_CoPilot は、Project ALICE 用のオフロードメモリ構築・管理�
 | 変数 | 必須 | デフォルト値 | 説明 |
 |------|------|--------------|------|
 | `DISCORD_BOT_TOKEN` | Yes | - | Discordボット認証トークン |
-| `ALICE_COPILOT_MEMORY_ROOT` | No | `/data/memory/copilot` | メモリファイルのルートディレクトリ |
-| `OBSIDIAN_ROOT` | No | `/data/memory/obsidian` | Obsidianのバウルトルート |
+| `ALICE_DATA_DIR` | No | `<PROJECT_ROOT>/data` | ALICE のデータ保存先ルート（Core / Search と共通） |
 
 ### .env の例
 
 ```env
 DISCORD_BOT_TOKEN=your_discord_bot_token_here
-ALICE_COPILOT_MEMORY_ROOT=/data/memory/copilot
-OBSIDIAN_ROOT=/data/memory/obsidian
+ALICE_DATA_DIR=/path/to/alice-data
 ```
 
 ### Ollamaの実行確認
@@ -107,19 +105,18 @@ curl http://localhost:11434/api/generate -X POST -H "Content-Type: application/j
 
 ## Configuration
 
-設定は `config.py` で定義されています。環境変数で上書き可能です。
+各種設定は `config.py` で定義されています。永続データの保存先は `ALICE_DATA_DIR` を基準にします。
 
 | 定数 | デフォルト値 | 説明 |
 |------|--------------|------|
 | `OLLAMA_URL` | `http://localhost:11434/api/chat` | LLM サーバ URL |
 | `OLLAMA_MODEL` | `gemma4:12b` | 使用モデル名 |
 | `OLLAMA_CONTEXT` | `32768` | コンテキストウィンドウサイズ |
-| `ALICE_COPILOT_MEMORY_ROOT` | `/data/memory/copilot` | 記憶ルートディレクトリ |
-| `MEMORY_ROOT` | `ALICE_COPILOT_MEMORY_ROOT` | 記憶ルートディレクトリ (alias) |
+| `ALICE_DATA_DIR` | `<PROJECT_ROOT>/data` | ALICE 全体のデータルート |
+| `MEMORY_ROOT` | `<ALICE_DATA_DIR>/memory/copilot` | 記憶ルートディレクトリ |
 | `ARCHIVE_ROOT` | `MEMORY_ROOT / "Archive"` | アーカイブディレクトリ |
 | `RELATIONS_ROOT` | `MEMORY_ROOT / "Relations"` | リレーションファイルディレクトリ |
-| `DB_PATH` | `/data/runtime/copilot/database/conversations.db` | 会話データベースパス |
-| `OBSIDIAN_ROOT` | `/data/memory/obsidian` | Obsidian バウルトのルート |
+| `DB_PATH` | `<ALICE_DATA_DIR>/runtime/copilot/database/conversations.db` | 会話データベースパス |
 
 ## Entrypoint
 

@@ -18,7 +18,7 @@ from infrastructure.alert_notifier import send_system_alert
 
 logger = logging.getLogger("ALICE_Core.IPMonitor")
 
-DEFAULT_IP_CACHE_PATH = Path(getattr(config, "DIR_CORE_RUNTIME", "/data/runtime/core")) / "last_global_ip.txt"
+DEFAULT_IP_CACHE_PATH = Path(config.DIR_CORE_RUNTIME) / "last_global_ip.txt"
 
 # Reliable plain-text IP resolution providers
 IP_PROVIDERS = [

@@ -17,7 +17,10 @@ logger = logging.getLogger(__name__)
 
 COPILOT_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(COPILOT_DIR.parent)))
-QUEUE_DIR = Path("/data/runtime/patch_queue")
+DATA_DIR = Path(os.getenv("ALICE_DATA_DIR", str(PROJECT_ROOT / "data"))).expanduser()
+if not DATA_DIR.is_absolute():
+    DATA_DIR = PROJECT_ROOT / DATA_DIR
+QUEUE_DIR = DATA_DIR / "runtime" / "patch_queue"
 INBOX_DIR = QUEUE_DIR / "inbox"
 RUNNING_DIR = QUEUE_DIR / "running"
 COMPLETED_DIR = QUEUE_DIR / "completed"
@@ -26,7 +29,7 @@ LOGS_DIR = QUEUE_DIR / "logs"
 
 AGY_BIN = Path(os.getenv("AGY_BIN", str(Path.home() / ".gemini" / "bin" / "agy")))
 HANDOFF_PATH = PROJECT_ROOT / "HANDOFF.md"
-SHARED_MEMORY_HANDOFF = Path("/data/memory/HANDOFF.md")
+SHARED_MEMORY_HANDOFF = DATA_DIR / "memory" / "HANDOFF.md"
 
 
 def init_queue_dirs() -> None:
@@ -87,11 +90,11 @@ def build_patch_prompt(instruction: str, repo: str) -> str:
 
 
 def sync_handoff_files() -> bool:
-    """Syncs HANDOFF.md from Project_ALICE to /data/memory for Syncthing distribution."""
+    """Syncs HANDOFF.md from Project_ALICE to the configured ALICE data root."""
     try:
         if HANDOFF_PATH.exists():
             shutil.copy2(HANDOFF_PATH, SHARED_MEMORY_HANDOFF)
-            logger.info("[PATCH WORKER] Synced HANDOFF.md to /data/memory/HANDOFF.md")
+            logger.info(f"[PATCH WORKER] Synced HANDOFF.md to {SHARED_MEMORY_HANDOFF}")
             return True
     except Exception as e:
         logger.error(f"[PATCH WORKER] Failed to sync HANDOFF.md: {e}")

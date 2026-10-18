@@ -14,8 +14,9 @@ import sys
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+import config
 
-DEFAULT_DB_PATH = Path("/data/runtime/copilot/database/nightly_reports.db")
+DEFAULT_DB_PATH = config.DATA_DIR / "runtime" / "copilot" / "database" / "nightly_reports.db"
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS checklist_rules (

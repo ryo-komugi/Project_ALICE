@@ -1,5 +1,5 @@
 """
-Batch cleanup script for existing jobs in {PROJECT_ROOT}/data/runtime/workspaces
+Batch cleanup script for existing jobs in <ALICE_DATA_DIR>/runtime/workspaces
 """
 import sys
 from pathlib import Path

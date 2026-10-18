@@ -2,13 +2,14 @@ import json
 import logging
 import os
 from pathlib import Path
+import config
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# 保存先: /data/runtime/core/system_settings.json
+# 保存先: <ALICE_DATA_DIR>/runtime/core/system_settings.json
 # フォールバック: database/system_settings.json
-PRIMARY_PATH = Path("/data/runtime/core/system_settings.json")
+PRIMARY_PATH = Path(config.DIR_CORE_RUNTIME) / "system_settings.json"
 FALLBACK_PATH = Path(__file__).resolve().parent.parent / "database" / "system_settings.json"
 
 DEFAULT_SETTINGS: dict[str, Any] = {

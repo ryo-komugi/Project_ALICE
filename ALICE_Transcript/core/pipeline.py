@@ -1,4 +1,6 @@
 import gc
+import json
+import os
 import time
 from pathlib import Path
 import config
@@ -68,12 +70,30 @@ class TranscriptPipeline:
         job.transcript_json = transcript_dir / "transcript.json"
         job.output_txt = transcript_dir / "transcript.txt"
 
+        progress_path = transcript_dir / "progress.json"
+        live_transcript_path = transcript_dir / "live_transcript.txt"
+        progress_percent = 0
+
+        def write_progress(stage: str, percent: int) -> None:
+            nonlocal progress_percent
+            progress_percent = max(progress_percent, min(100, max(0, int(percent))))
+            temporary_path = progress_path.with_suffix(".json.tmp")
+            try:
+                temporary_path.write_text(
+                    json.dumps({"stage": stage, "percent": progress_percent}, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                os.replace(temporary_path, progress_path)
+            except OSError as exc:
+                self.logger.warning(f"[TranscriptPipeline] Could not write progress: {exc}")
+
         job.status = JobStatus.RUNNING
         job.t0 = time.time()
         self.logger.info(f"[TranscriptPipeline] Starting Pipeline for {input_audio.name} (model={self.model_name})")
 
         try:
             # 1. pyannote (話者分離)
+            write_progress("音声の準備・話者解析中", 3)
             job.t_py_start = time.time()
             self.logger.info(f"[{job.basename}] pyannote開始")
             job.wav_audio = convert_to_wav(job.input_audio, job.wav_audio)
@@ -81,24 +101,61 @@ class TranscriptPipeline:
             job.t_py_end = time.time()
 
             # 2. Whisper (音声認識)
+            write_progress("Whisperで文字起こし中", 20)
             job.t_wh_start = time.time()
             self.logger.info(f"[{job.basename}] Whisper開始")
-            self.whisper.run(job)
+            setter = getattr(self.whisper, "set_progress_callback", None)
+            if callable(setter):
+                try:
+                    live_file = live_transcript_path.open("w", encoding="utf-8")
+                except OSError as exc:
+                    self.logger.warning(f"[TranscriptPipeline] Could not open live transcript: {exc}")
+                    self.whisper.run(job)
+                else:
+
+                    def on_segment(segment, info):
+                        try:
+                            text = str(getattr(segment, "text", "")).strip()
+                            if text:
+                                live_file.write(text + "\n")
+                                live_file.flush()
+                            duration = float(
+                                getattr(info, "duration_after_vad", None)
+                                or getattr(info, "duration", 0)
+                                or 0
+                            )
+                            end = float(getattr(segment, "end", 0) or 0)
+                            estimate = 20 + int(60 * min(1.0, end / duration)) if duration > 0 else 20
+                            write_progress("Whisperで文字起こし中", estimate)
+                        except Exception as exc:
+                            self.logger.warning(f"[TranscriptPipeline] Could not write live transcript: {exc}")
+
+                    setter(on_segment)
+                    try:
+                        self.whisper.run(job)
+                    finally:
+                        setter(None)
+                        live_file.close()
+            else:
+                self.whisper.run(job)
             job.t_wh_end = time.time()
 
             # 3. Alignment (話者とテキストの照合)
+            write_progress("話者と文字起こしを照合中", 84)
             job.t_aln_start = time.time()
             self.logger.info(f"[{job.basename}] アライメント開始")
             self.alignment.run(job)
             job.t_aln_end = time.time()
 
             # 4. Normalization (テキスト正規化)
+            write_progress("文字起こしを整えています", 91)
             job.t_norm_start = time.time()
             self.logger.info(f"[{job.basename}] Normalization開始")
             self.normalizer.run(job)
             job.t_norm_end = time.time()
 
             # 5. Export (成果物書き出し)
+            write_progress("結果を保存しています", 97)
             self.logger.info(f"[{job.basename}] 成果物出力中")
             job.status = JobStatus.COMPLETED
             job.calc_times()
@@ -108,6 +165,7 @@ class TranscriptPipeline:
             )
 
             self.logger.info(f"[TranscriptPipeline] Pipeline COMPLETED for {job.basename}")
+            write_progress("完了", 100)
             return job
 
         except Exception as e:
@@ -115,6 +173,7 @@ class TranscriptPipeline:
             job.error_message = str(e)
             job.calc_times()
             self.logger.error(f"[TranscriptPipeline] Pipeline FAILED: {e}")
+            write_progress("処理に失敗しました", progress_percent)
             self.exporter.export_failure_metadata(job, self.model_name, str(e))
             raise
 

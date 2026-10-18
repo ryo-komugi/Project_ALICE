@@ -32,20 +32,20 @@ LINE_ADMIN_USER = os.environ["LINE_ADMIN_USER"]
 # =========================
 # Directories
 # =========================
-DIR_RUNTIME = "/data/runtime"
 DATA_DIR = Path(os.getenv("ALICE_DATA_DIR", str(PROJECT_ROOT / "data"))).expanduser()
 if not DATA_DIR.is_absolute():
     DATA_DIR = PROJECT_ROOT / DATA_DIR
-DIR_LOGS = str(DATA_DIR / "runtime" / "logs")
+DIR_RUNTIME = str(DATA_DIR / "runtime")
+DIR_LOGS = str(Path(DIR_RUNTIME) / "logs")
 
 # Core
-DIR_CORE_RUNTIME = f"{DIR_RUNTIME}/core"
-DIR_INBOX = f"{DIR_CORE_RUNTIME}/inbox"
-DIR_SHARE = f"{DIR_CORE_RUNTIME}/share"
-DIR_ARCHIVE = f"{DIR_CORE_RUNTIME}/archive"
+DIR_CORE_RUNTIME = str(Path(DIR_RUNTIME) / "core")
+DIR_INBOX = str(Path(DIR_CORE_RUNTIME) / "inbox")
+DIR_SHARE = str(Path(DIR_CORE_RUNTIME) / "share")
+DIR_ARCHIVE = str(Path(DIR_CORE_RUNTIME) / "archive")
 
 # Workspaces (1 Job = 1 Workspace), relative to DATA_DIR.
-DIR_WORKSPACES = str(DATA_DIR / "runtime" / "workspaces")
+DIR_WORKSPACES = str(Path(DIR_RUNTIME) / "workspaces")
 
 # =========================
 # Discord Alert

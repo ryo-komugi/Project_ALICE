@@ -372,6 +372,13 @@ class CoreWorker:
         return artifacts
 
     def _publish_result(self, job: Job, filepath: Path, module_name: str) -> None:
+        if job.user_id.startswith("browser_"):
+            logger.info(
+                f"[CoreWorker] Browser job result is available in its workspace; "
+                f"skipping LINE publication for {job.job_id}"
+            )
+            return
+
         try:
             publish_filename = f"{job.job_id}_{module_name}_{filepath.name}"
             publish_filepath = filepath.parent / publish_filename
@@ -450,10 +457,11 @@ class CoreWorker:
             logger.error(f"[CoreWorker] Failed to publish for {job.job_id}: {e}")
 
     def _notify_failure(self, job: Job, message: str) -> None:
-        try:
-            self.sender.push_text(job.user_id, f"【エラー】\n{message}")
-        except Exception as e:
-            logger.error(f"[CoreWorker] Failed to send failure notification to {job.user_id}: {e}")
+        if not job.user_id.startswith("browser_"):
+            try:
+                self.sender.push_text(job.user_id, f"【エラー】\n{message}")
+            except Exception as e:
+                logger.error(f"[CoreWorker] Failed to send failure notification to {job.user_id}: {e}")
 
         # 管理者向け Discord アラート送信 (#alerts)
         try:

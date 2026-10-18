@@ -1,30 +1,33 @@
 # Project_ALICE マルチPWA共通認証・アクセス設計仕様書
 
 > **【目的】**  
-> `project-alice.net` 配下で運用するすべてのPWAサービス（ALICEコックピット、Wake on LAN操作画面、その他Webツール）に対し、**アプリ側の自前認証実装をゼロ**にしつつ、**「日常0秒スルー ＆ 外部鉄壁防御」** を共通適用するための標準設計書。
+> Project ALICE の Web サービスにおけるドメインとアクセス設計を定める。Noel は一般利用向けのため `https://rabbit-hole.project-alice.net/noel` で公開し、現行 ALICE の稼働系統と分離する。
 
 ---
 
 ## 1. 全体アーキテクチャ & ドメイン設計
 
-すべてのPWAは **「サブドメイン分離方式」** で運用する。
+管理PWA等は **サブドメイン分離方式** で運用する。Noel は既存 `project-alice.net` のサブドメイン `rabbit-hole.project-alice.net/noel` で提供する。
 
-| サブドメイン | サービス名 | 稼働場所 / ポート | 認証方式 (Cloudflare Access) | PWAアイコン |
+| URL / hostname | サービス名 | 稼働場所 / ポート | 認証方式 (Cloudflare Access) | PWAアイコン |
 | :--- | :--- | :--- | :--- | :--- |
 | **`admin.project-alice.net`** | **ALICE コックピット** | alice-server (`:8000`) | 自宅IP/WARP: Bypass, 外部: PIN 15分 | 🤖 ALICE |
+| **`rabbit-hole.project-alice.net/noel`** | **Noel 文字起こし画面** | alice-server (`:8001`) | **匿名利用（アプリ内の低いジョブ上限）** | 🐇 Noel |
 | **`wol.project-alice.net`** | **Wake on LAN (WoL)** | タブレット / 別マシン (`:port`) | **同上（共通ポリシー適用）** | ⚡ PC電源 |
 | **`[app].project-alice.net`** | **将来の別PWA** | 任意のマシン | **同上（共通ポリシー適用）** | 📱 各アプリ |
 | **`project-alice.net`** | **LINE Webhook / 共有** | alice-server (`:8000`) | **認証なし（完全オープン）** | （PWAなし） |
 
-### サブドメイン分離にする理由
+### 管理PWAをサブドメイン分離にする理由
 1. **PWAの完全独立性**: PWAはオリジン（ドメイン）単位で別アプリとして端末に保存される。サブドメインを分けることで、アプリアイコン・キャッシュ・Service Workerが競合せず、複数アプリを並べて快適に利用できる。
 2. **ルーティングの柔軟性**: Cloudflare Tunnel を介して、同じ自宅LAN内にある別端末（タブレットやラズパイ）へサブドメイン単位で直接パケットを流せる。
+
+Noel は現行 ALICE と並行稼働する Rabbit Hole 版 Core 上で動作させる。既存 `project-alice.net` は現行 Core (`:8000`) に維持し、`rabbit-hole.project-alice.net` の公開アプリルートを Rabbit Hole 版 Core (`:8001`) に接続する。ルートの Path は `/noel` とその配下に限定し、他の Core 管理画面や共有領域を公開しない。Cloudflare Access のログインを要求せず、アプリ側で HTTPS、ブラウザーセッション単位の分離、アップロード検証、ジョブ数制限を行う。Noel は Whisper 文字起こし結果を表示し、議事録生成 API は別 Navigator 用として Core に維持する。
 
 ---
 
 ## 2. デバイス別アクセス制御マトリクス（共通ルール）
 
-どのPWAサービスであっても、以下の統一されたアクセス体験を提供する。
+管理PWAには、以下の統一されたアクセス体験を提供する。Noel は一般公開のため、この Access 認証ルールの対象外とする。
 
 ```text
                                   ┌─► [自宅Wi-Fi IP] ──────► ⚡ 0秒スルー (Bypass)

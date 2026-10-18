@@ -12,7 +12,7 @@ LINE_DATA_API_BASE_URL=http://127.0.0.1:8010
 PUBLIC_URL=http://127.0.0.1:8000
 ```
 
-Core の `CHANNEL_ACCESS_TOKEN` はモックでは検証しません。`ALICE_DATA_DIR` を指定しない場合、Workspace は Project_ALICE ルートの `data/runtime/workspaces/`、Core ログは `data/runtime/logs/` に作成されます。
+Core の `CHANNEL_ACCESS_TOKEN` はモックでは検証しません。`ALICE_DATA_DIR` を指定しない場合、各種データは Project_ALICE ルートの `data/` 配下に作成されます。
 
 保存先の基準を変更する場合は、`.env` に `ALICE_DATA_DIR=/保存先/パス` を設定します。相対パスは `PROJECT_ROOT` から解決します。Workspace は `<ALICE_DATA_DIR>/runtime/workspaces/`、Core / CoPilot の運用ログは `<ALICE_DATA_DIR>/runtime/logs/` に出力されます。Core、Search、CoPilot で同じ設定を使用してください。
 
