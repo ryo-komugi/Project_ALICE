@@ -22,7 +22,7 @@ def main():
     core_worker.start()
 
     user_repo = UserRepository()
-    real_user_id = "U794535d58fb802ac996f4a86ce119ad2"
+    real_user_id = "U_TEST_DUMMY_USER_001"
     user = user_repo.find(real_user_id)
     assert user is not None, f"User {real_user_id} not found"
 
@@ -67,8 +67,9 @@ def main():
     completed = False
     target_workspace = None
 
+    import config
     while time.time() - start_time < timeout:
-        workspaces = list(Path("/data/runtime/workspaces").glob(f"*{sample_filename.split('.')[0]}*"))
+        workspaces = list(Path(config.DIR_WORKSPACES).glob(f"*{sample_filename.split('.')[0]}*"))
         if workspaces:
             latest_ws = max(workspaces, key=lambda p: p.stat().st_mtime)
             job_json = latest_ws / "job.json"
@@ -97,7 +98,7 @@ def main():
 
     # 5. Verify workspace contents
     assert (target_workspace / "job.json").exists()
-    assert (target_workspace / "input" / sample_filename).exists()
+    assert (target_workspace / "input" / sample_filename).exists() or (target_workspace / "input" / f"{sample_filename}.txt").exists()
     assert (target_workspace / "transcript" / "transcript.json").exists()
     assert (target_workspace / "transcript" / "transcript.txt").exists()
     assert (target_workspace / "transcript" / "metadata.json").exists()

@@ -80,6 +80,18 @@ class TestTextNormalizer(unittest.TestCase):
         self.assertTrue(all(r["text"].strip() for r in normalized))
 
 
+
+    def test_filter_standalone_hallucinations(self):
+        results = [
+            {"start": 1.0, "end": 2.0, "speaker": "SPEAKER_00", "text": "通常の会議発話です。"},
+            {"start": 10.0, "end": 11.0, "speaker": "UNKNOWN", "text": "BGM"},
+            {"start": 12.0, "end": 13.0, "speaker": "UNKNOWN", "text": "ご視聴ありがとうございました。"},
+        ]
+        normalized = self.normalizer.normalize(results)
+        self.assertEqual(len(normalized), 1)
+        self.assertEqual(normalized[0]["text"], "通常の会議発話です。")
+
+
 if __name__ == "__main__":
     unittest.main()
 

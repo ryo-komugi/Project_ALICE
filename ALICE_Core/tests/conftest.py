@@ -13,6 +13,25 @@ for p in [str(CORE_ROOT), str(PROJECT_ROOT)]:
 
 
 @pytest.fixture(scope="session", autouse=True)
+def setup_test_users():
+    """テスト用ダミーユーザー (U_TEST_DUMMY_USER_001) を自動登録・初期化"""
+    try:
+        from repository.user_repository import UserRepository
+        from auth.user import User
+        from auth.user_status import UserStatus
+
+        repo = UserRepository()
+        dummy_id = "U_TEST_DUMMY_USER_001"
+        existing = repo.find(dummy_id)
+        if not existing:
+            repo.create(User(user_id=dummy_id, display_name="Test User", status=UserStatus.READY))
+        elif existing.status != UserStatus.READY:
+            repo.update_status(dummy_id, UserStatus.READY)
+    except Exception as e:
+        print(f"[conftest] Warning: failed to ensure test user: {e}")
+
+
+@pytest.fixture(scope="session", autouse=True)
 def auto_cleanup_test_workspaces():
     """
     テスト実行前後のワークスペース自動クリーンアップ。
@@ -20,7 +39,8 @@ def auto_cleanup_test_workspaces():
     2. テストセッション開始時点のワークスペース一覧を記録
     3. テスト終了後、テスト中に新規作成されたワークスペースディレクトリを自動削除
     """
-    ws_dir = Path("/data/runtime/workspaces")
+    import config
+    ws_dir = Path(config.DIR_WORKSPACES)
     if not ws_dir.exists():
         yield
         return

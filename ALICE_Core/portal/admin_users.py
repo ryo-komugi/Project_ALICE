@@ -40,7 +40,7 @@ async def update_user(user_id: str, data: dict):
 
     from auth.user_status import UserStatus
     from repository.user_repository import UserRepository
-    from gateway.richmenu.richmane import RichMenu
+    from gateway.richmenu.manager import RichMenu
 
     try:
         status_enum = UserStatus(status_str)
@@ -68,7 +68,7 @@ async def update_user(user_id: str, data: dict):
 async def delete_user(user_id: str):
     """Delete user from users.db and unlink rich menu."""
     from repository.user_repository import UserRepository
-    from gateway.richmenu.richmane import RichMenu
+    from gateway.richmenu.manager import RichMenu
 
     try:
         rm = RichMenu()

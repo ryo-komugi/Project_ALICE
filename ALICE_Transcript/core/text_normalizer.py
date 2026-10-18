@@ -11,6 +11,12 @@ class TextNormalizer:
     # 3回以上連続する同一文字（「あああああ」「、、、、」等）を2回に短縮する正規表現
     CHAR_REPEAT_PATTERN = re.compile(r"(.)\1{2,}")
 
+    # 無音区間でWhisperが出力しやすい典型的な単独ハルシネーション
+    HALLUCINATION_STANDALONE_PATTERN = re.compile(
+        r"^(?:BGM|ＢＧＭ|音楽|拍手|字幕|ご視聴ありがとうございました[。！!]?|チャンネル登録.*)$",
+        re.IGNORECASE,
+    )
+
     # 代表的なフィラー重複パターン
     FILLER_REPEAT_PATTERNS = [
         (re.compile(r"(あの[、\s]?){2,}"), "あの、"),
@@ -70,24 +76,17 @@ class TextNormalizer:
     def normalize_whitespace(self, results: list) -> list:
         for r in results:
             text = r.get("text", "")
-            # タブ・改行→空白
             text = re.sub(r"[\t\r\n]+", " ", text)
-            # 全角空白→半角空白
             text = text.replace("\u3000", " ")
-            # 連続空白→1つ
             text = re.sub(r" +", " ", text)
-            # 前後空白除去
             r["text"] = text.strip()
         return results
 
     def normalize_symbols(self, results: list) -> list:
         for r in results:
             text = r.get("text", "")
-            # 全角チルダ→波ダッシュ
             text = text.replace("～", "〜")
-            # 句読点前後の不要空白
             text = re.sub(r"\s+([,.!?])", r"\1", text)
-            # 連続句点の整理
             text = re.sub(r"([。、！？!?]){2,}", r"\1", text)
             r["text"] = text.strip()
         return results
@@ -97,10 +96,16 @@ class TextNormalizer:
         results = self.normalize_segment_overlap(results)
         results = self.normalize_whitespace(results)
         results = self.normalize_symbols(results)
-        # 空発話セグメントの除外
-        results = [r for r in results if r.get("text", "").strip()]
-        return results
+        # 空発話および無音ハルシネーション単独セグメントの除外
+        filtered = []
+        for r in results:
+            txt = r.get("text", "").strip()
+            if not txt:
+                continue
+            if self.HALLUCINATION_STANDALONE_PATTERN.match(txt):
+                continue
+            filtered.append(r)
+        return filtered
 
     def run(self, job):
         job.results = self.normalize(job.results)
-

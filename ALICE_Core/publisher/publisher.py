@@ -1,16 +1,80 @@
+"""
+ALICE_Core Publisher
+成果物の外部通知・配信を管理するプラグイン対応パブリッシャーハブ。
+LINE や将来の Discord / Webhook / メールなど、複数の通知アダプタを外付け可能。
+"""
 import logging
+from typing import Any, Protocol
+from pathlib import Path
 from publisher.line_publisher import LinePublisher
+import config
 
 logger = logging.getLogger(__name__)
 
 
+class PublisherAdapter(Protocol):
+    def publish(
+        self,
+        filepath: str,
+        user_id: str,
+        module_name: str = "transcript",
+        extra_files: dict[str, str] | None = None,
+    ) -> None:
+        ...
+
+    def notify_failure(self, user_id: str, message: str) -> bool:
+        ...
+
+
 class Publisher:
-    def __init__(self):
-        self.line_publisher = LinePublisher()
+    """成果物およびエラーの外部通知を束ねるパブリッシャーファサード"""
 
-    def publish(self, filepath, user_id, module_name: str = "transcript", extra_files: dict[str, str] | None = None) -> None:
-        print("publisher")
-        logger.info(f"[Publisher] Publish request : {filepath} (module={module_name}, extra_files={list((extra_files or {}).keys())})")
+    def __init__(self, adapters: list[Any] | None = None):
+        self._line_publisher = LinePublisher()
+        self.adapters: list[Any] = adapters if adapters is not None else [self._line_publisher]
 
-        # Phase1ではLINEのみ
-        self.line_publisher.publish(filepath, user_id, module_name=module_name, extra_files=extra_files)
+    @property
+    def line_publisher(self) -> LinePublisher:
+        """下位互換性および既存テストのためのプロパティ"""
+        return self._line_publisher
+
+    @line_publisher.setter
+    def line_publisher(self, val: Any) -> None:
+        self._line_publisher = val
+        # アダプタリスト内の LinePublisher も置き換える
+        self.adapters = [val if isinstance(a, LinePublisher) or a == self._line_publisher else a for a in self.adapters]
+        if val not in self.adapters:
+            self.adapters.append(val)
+
+    def register_adapter(self, adapter: Any) -> None:
+        """新しい通知アダプタ（Discord, Webhook等）を登録"""
+        if adapter not in self.adapters:
+            self.adapters.append(adapter)
+
+    def publish(
+        self,
+        filepath: str,
+        user_id: str,
+        module_name: str = "transcript",
+        extra_files: dict[str, str] | None = None,
+    ) -> None:
+        """登録された全アダプタへ成果物通知を配信"""
+        logger.info(
+            f"[Publisher] Publish request : {filepath} "
+            f"(module={module_name}, user={user_id}, extra_files={list((extra_files or {}).keys())})"
+        )
+        for adapter in self.adapters:
+            try:
+                adapter.publish(filepath, user_id, module_name=module_name, extra_files=extra_files)
+            except Exception as e:
+                logger.error(f"[Publisher] Error publishing via adapter {adapter.__class__.__name__}: {e}")
+
+    def notify_failure(self, job_or_user_id: Any, message: str) -> None:
+        """ユーザーへの処理失敗・エラー通知を登録された全アダプタへ配信"""
+        user_id = getattr(job_or_user_id, "user_id", str(job_or_user_id))
+        for adapter in self.adapters:
+            try:
+                if hasattr(adapter, "notify_failure"):
+                    adapter.notify_failure(user_id, message)
+            except Exception as e:
+                logger.warning(f"[Publisher] Error notifying failure via adapter {adapter.__class__.__name__}: {e}")

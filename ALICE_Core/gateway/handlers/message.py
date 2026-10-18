@@ -8,7 +8,7 @@ from gateway.sender import MessageSender
 from auth.user_status import UserStatus
 from gateway.session import SessionManager
 from gateway.downloader import ContentDownloader
-from gateway.richmenu.richmane import RichMenu
+from gateway.richmenu.manager import RichMenu
 from hub.container import job_service, job_queue, workspace_manager, core_worker
 from infrastructure.system_settings import is_maintenance_active, get_maintenance_message, is_admin_bypass_allowed
 

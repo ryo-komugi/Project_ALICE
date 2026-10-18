@@ -38,24 +38,6 @@ CREATE TABLE IF NOT EXISTS checklist_rules (
 # Baseline rules seeded on first startup
 BASELINE_RULES = [
     {
-        "rule_id": "CHK-CAL-001",
-        "category": "calendar",
-        "title": "Googleカレンダー重複イベント検知",
-        "description": "直近14日間のGoogleカレンダーに同一タイトル・同一日時の重複イベントが存在しないこと",
-        "check_type": "calendar_integrity",
-        "rule_spec": {"days_ahead": 14},
-        "learned_from": "予定登録時における重複・実態乖離防止の不変条件 (2026-09-19)",
-    },
-    {
-        "rule_id": "CHK-TSK-001",
-        "category": "tasks",
-        "title": "Google Tasks未完了タスク重複検知",
-        "description": "未完了のGoogle Tasksに同一タイトルの重複タスクが存在しないこと",
-        "check_type": "tasks_integrity",
-        "rule_spec": {},
-        "learned_from": "タスク管理における二重登録・完了漏れ防止の不変条件 (2026-09-19)",
-    },
-    {
         "rule_id": "CHK-MEM-001",
         "category": "memory",
         "title": "長期記憶リレーション健全性検知",
@@ -70,7 +52,7 @@ BASELINE_RULES = [
         "title": "コアモジュール単体テスト健全性",
         "description": "ALICE_CoPilotの主要ツール単体テストが正常に通過すること",
         "check_type": "unit_tests",
-        "rule_spec": {"test_target": "tests/test_tools.py tests/test_tasks_tools.py tests/test_calendar_tools.py"},
+        "rule_spec": {"test_target": "tests/test_tools.py"},
         "learned_from": "毎晩の自律改善におけるリグレッションゼロ担保 (2026-09-15)",
     },
 ]
@@ -196,64 +178,13 @@ def get_checklist_status(db_path: Path | str = DEFAULT_DB_PATH) -> List[Dict[str
 # =========================================================================
 
 def _eval_calendar_integrity(spec: Dict[str, Any]) -> Tuple[bool, str]:
-    """Check that Google Calendar has no duplicate events."""
-    try:
-        from tools.calendar_tools import get_calendar_events
-        days_ahead = spec.get("days_ahead", 14)
-        res = get_calendar_events(days_ahead=days_ahead)
-        events = res.get("events", []) if isinstance(res, dict) else []
-
-        seen: Dict[Tuple[str, str], str] = {}
-        duplicates = []
-        for ev in events:
-            if not isinstance(ev, dict):
-                continue
-            summary = (ev.get("summary") or "").strip()
-            start = ev.get("start") or ev.get("start_time") or ""
-            key = (summary, start)
-            if key in seen and summary:
-                duplicates.append(f"「{summary}」({start})")
-            else:
-                seen[key] = ev.get("id", "")
-
-        if duplicates:
-            return False, f"重複イベント検出 ({len(duplicates)}件): {', '.join(duplicates[:3])}"
-        return True, f"重複イベントなし (検査対象: {len(events)}件)"
-    except Exception as e:
-        logger.warning(f"[Checklist] calendar_integrity eval error: {e}")
-        return True, f"カレンダー照会スキップ ({e})"
+    """Stub evaluator for calendar integrity (calendar feature pruned in dev)."""
+    return True, "カレンダー機能は無効化されています"
 
 
 def _eval_tasks_integrity(spec: Dict[str, Any]) -> Tuple[bool, str]:
-    """Check that Google Tasks has no duplicate uncompleted tasks."""
-    try:
-        from tools.tasks_tools import get_todo_tasks
-        res = get_todo_tasks(status="needsAction")
-        tasks = []
-        if isinstance(res, dict):
-            for lname, t_list in res.get("lists", {}).items():
-                if isinstance(t_list, list):
-                    tasks.extend(t_list)
-
-        seen: Dict[str, str] = {}
-        duplicates = []
-        for t in tasks:
-            if not isinstance(t, dict):
-                continue
-            title = (t.get("title") or "").strip()
-            if not title:
-                continue
-            if title in seen:
-                duplicates.append(title)
-            else:
-                seen[title] = t.get("id", "")
-
-        if duplicates:
-            return False, f"重複タスク検出 ({len(duplicates)}件): {', '.join(duplicates[:3])}"
-        return True, f"重複タスクなし (未完了タスク: {len(tasks)}件)"
-    except Exception as e:
-        logger.warning(f"[Checklist] tasks_integrity eval error: {e}")
-        return True, f"Tasks照会スキップ ({e})"
+    """Stub evaluator for tasks integrity (tasks feature pruned in dev)."""
+    return True, "タスク機能は無効化されています"
 
 
 def _eval_memory_conflicts(spec: Dict[str, Any]) -> Tuple[bool, str]:

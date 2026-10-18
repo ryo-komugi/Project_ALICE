@@ -241,17 +241,6 @@ async def restart_service_api(service_name: str):
             return {"status": "warning", "service": "ollama", "message": f"Ollamaメモリリフレッシュ: {e}"}
 
 
-@router.get("/api/system/check-ip")
-async def check_system_ip_api(force_alert: bool = Query(False)):
-    """Check current external global IP, compare with cached baseline, and optionally force Discord alert."""
-    try:
-        from infrastructure.ip_monitor import check_and_notify_ip_change
-        result = check_and_notify_ip_change(force_alert=force_alert)
-        return result
-    except Exception as e:
-        logger.error(f"[Admin] Failed to check system IP: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 
 # Authentication Endpoints (Logout)

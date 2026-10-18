@@ -37,11 +37,9 @@ class TestSelfEvolvingChecklist(unittest.TestCase):
         """データベース初期化とベースラインルールの自動シード検証"""
         init_checklist_db(self.db_path)
         rules = get_checklist_status(self.db_path)
-        self.assertEqual(len(rules), 4)
+        self.assertEqual(len(rules), 2)
 
         rule_ids = [r["rule_id"] for r in rules]
-        self.assertIn("CHK-CAL-001", rule_ids)
-        self.assertIn("CHK-TSK-001", rule_ids)
         self.assertIn("CHK-MEM-001", rule_ids)
         self.assertIn("CHK-SYS-001", rule_ids)
 
@@ -53,39 +51,37 @@ class TestSelfEvolvingChecklist(unittest.TestCase):
         init_checklist_db(self.db_path)
 
         rule = add_checklist_rule(
-            category="calendar",
-            title="削除指示済み予定の残存防止",
-            description="削除指示のあった予定IDがカレンダー内に残存していないこと",
-            check_type="calendar_integrity",
-            learned_from="2026-09-22 ユーザー指摘: '消えてない'の再発防止",
+            category="memory",
+            title="決定事項の上書き整合性チェック",
+            description="supersedesリレーションで旧決定が正しくアーカイブされていること",
+            check_type="memory_conflicts",
+            learned_from="ユーザー指摘: '方針更新の反映漏れ'の再発防止",
             db_path=self.db_path,
         )
 
-        self.assertEqual(rule["rule_id"], "CHK-CAL-002")
-        self.assertEqual(rule["category"], "calendar")
+        self.assertEqual(rule["rule_id"], "CHK-MEM-002")
+        self.assertEqual(rule["category"], "memory")
 
         rules = get_checklist_status(self.db_path)
-        self.assertEqual(len(rules), 5)
-        new_rule = next(r for r in rules if r["rule_id"] == "CHK-CAL-002")
-        self.assertEqual(new_rule["title"], "削除指示済み予定の残存防止")
-        self.assertIn("消えてない", new_rule["learned_from"])
+        self.assertEqual(len(rules), 3)
+        new_rule = next(r for r in rules if r["rule_id"] == "CHK-MEM-002")
+        self.assertEqual(new_rule["title"], "決定事項の上書き整合性チェック")
+        self.assertIn("方針更新", new_rule["learned_from"])
 
     def test_run_checklist(self):
         """チェックリストの一括実行と合否記録の検証"""
         init_checklist_db(self.db_path)
 
         # Mock out the evaluators to test run_checklist cleanly
-        with patch("reviewer.checklist._eval_calendar_integrity", return_value=(True, "重複なし")), \
-             patch("reviewer.checklist._eval_tasks_integrity", return_value=(True, "タスク正常")), \
-             patch("reviewer.checklist._eval_memory_conflicts", return_value=(True, "コンフリクトなし")), \
+        with patch("reviewer.checklist._eval_memory_conflicts", return_value=(True, "コンフリクトなし")), \
              patch("reviewer.checklist._eval_unit_tests", return_value=(True, "全件PASS")):
 
             res = run_checklist(db_path=self.db_path)
 
-            self.assertEqual(res["total"], 4)
-            self.assertEqual(res["passed"], 4)
+            self.assertEqual(res["total"], 2)
+            self.assertEqual(res["passed"], 2)
             self.assertEqual(res["failed"], 0)
-            self.assertEqual(res["summary_text"], "全 4 項目合格")
+            self.assertEqual(res["summary_text"], "全 2 項目合格")
 
         # Verify persisted status in DB
         rules = get_checklist_status(self.db_path)
@@ -96,17 +92,15 @@ class TestSelfEvolvingChecklist(unittest.TestCase):
         """不合格項目の検知と集計の検証"""
         init_checklist_db(self.db_path)
 
-        with patch("reviewer.checklist._eval_calendar_integrity", return_value=(False, "重複イベント検出: 会議A")), \
-             patch("reviewer.checklist._eval_tasks_integrity", return_value=(True, "OK")), \
-             patch("reviewer.checklist._eval_memory_conflicts", return_value=(True, "OK")), \
+        with patch("reviewer.checklist._eval_memory_conflicts", return_value=(False, "循環リンク検出")), \
              patch("reviewer.checklist._eval_unit_tests", return_value=(True, "OK")):
 
             res = run_checklist(db_path=self.db_path)
 
-            self.assertEqual(res["total"], 4)
-            self.assertEqual(res["passed"], 3)
+            self.assertEqual(res["total"], 2)
+            self.assertEqual(res["passed"], 1)
             self.assertEqual(res["failed"], 1)
-            self.assertIn("3/4 項目合格", res["summary_text"])
+            self.assertIn("1/2 項目合格", res["summary_text"])
             self.assertIn("1 件不合格", res["summary_text"])
 
     def test_morning_briefing_embed_with_checklist(self):

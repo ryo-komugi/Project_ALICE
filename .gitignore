@@ -9,7 +9,9 @@ __pycache__/
 *.so
 
 # Environments & Virtual Envs
+myenv
 myenv/
+.myenv
 .myenv/
 venv/
 .venv/

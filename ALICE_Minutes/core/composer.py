@@ -27,16 +27,38 @@ class MinuteComposer:
 
     @staticmethod
     def _clean_markdown_output(raw_text: str) -> str:
-        """思考タグ残骸や不適切なマークダウン装飾をクリーンアップ"""
+        """思考タグ残骸、プロンプト注釈の写し取り、タイポ、二重括弧等をクリーンアップ"""
         text = raw_text.strip()
 
-        # 思考タグの除去 (<thought>...</thought> または <think>...</think>)
+        # 1. 思考タグの除去 (<thought>...</thought> または <think>...</think>)
         text = re.sub(r"<(?:thought|think)>.*?</(?:thought|think)>", "", text, flags=re.DOTALL).strip()
 
-        # 外側の ```markdown ... ``` のみで全体が囲まれている場合は中身を展開
-        match = re.match(r"^```(?:markdown)?\s*\n?(.*?)\n?```$", text, re.DOTALL)
+        # 2. 外側の ```markdown ... ``` のみで全体が囲まれている場合は中身を展開
+        match = re.match(r"^```(?:markdown|md)?\s*\n?(.*?)\n?```$", text, re.DOTALL)
         if match:
             text = match.group(1).strip()
+
+        # 3. 冒頭の会話的な前置き除去
+        lines = text.splitlines()
+        while lines:
+            first = lines[0].strip()
+            if not first or first == "---":
+                lines.pop(0)
+                continue
+            if re.match(r"^(承知|かしこまり|了解|はい、|以下に|提供された|ご提示|分析データに基づき)", first):
+                lines.pop(0)
+                continue
+            break
+        text = "\n".join(lines).strip()
+
+        # 4. テンプレート内の注釈行 `（※ ...）` がそのまま出力されてしまった場合に除去
+        text = re.sub(r"^\s*[（(]※[^）)\n]*[）)]\s*\n?", "", text, flags=re.MULTILINE)
+
+        # 5. よくあるLLMの誤字・見出し番号欠落・二重括弧の補正
+        text = text.replace("言語タイムスタンプ", "言及タイムスタンプ")
+        text = re.sub(r"^##\s*\.\s*(アクションアイテム|改善アクション|執行アクション)", r"## 3. \1", text, flags=re.MULTILINE)
+        text = re.sub(r"（([^（）]+)）（\1）", r"（\1）", text)
+        text = re.sub(r"\(([^()]+)\)\(\1\)", r"(\1)", text)
 
         return text.strip()
 
@@ -65,6 +87,15 @@ class MinuteComposer:
             f"{analysis_json_str}"
         )
 
+        # 入力プロンプト + 出力上限から必要な num_ctx を算出
+        estimated_tokens = int(len(user_content) * 1.5) + config.stage2_num_predict
+        if estimated_tokens <= config.ctx_threshold_standard:
+            effective_num_ctx = config.num_ctx
+        elif estimated_tokens <= config.ctx_threshold_extended:
+            effective_num_ctx = 49152
+        else:
+            effective_num_ctx = config.max_num_ctx
+
         messages = [
             {
                 "role": "user",
@@ -74,21 +105,17 @@ class MinuteComposer:
 
         logger.info(
             f"[Composer] Calling Ollama for Stage 2 with model '{self.client.model}' "
-            f"(template='{template_name}', content_len={len(user_content)} chars)..."
+            f"(template='{template_name}', num_ctx={effective_num_ctx}, content_len={len(user_content)} chars)..."
         )
-        try:
-            content, thinking = self.client.chat(
-                messages=messages,
-                temperature=config.stage2_temperature,
-                num_ctx=config.num_ctx,
-                format_json=False,
-                keep_alive="0",  # Stage 2 完了後は VRAM を即時解放
-                think=config.stage2_think,
-                num_predict=config.stage2_num_predict,
-            )
-        finally:
-            # 確実に VRAM をアンロード
-            self.client.unload_model()
+        content, thinking = self.client.chat(
+            messages=messages,
+            temperature=config.stage2_temperature,
+            num_ctx=effective_num_ctx,
+            format_json=False,
+            keep_alive="0",  # Stage 2 完了と同時に Ollama 側で VRAM を即時解放
+            think=config.stage2_think,
+            num_predict=config.stage2_num_predict,
+        )
 
         cleaned_content = self._clean_markdown_output(content)
 

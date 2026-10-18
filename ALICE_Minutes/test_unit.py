@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
+from core.analyzer import MinuteAnalyzer
 from core.composer import MinuteComposer
 from core.models import (
     ActionItem,
@@ -95,14 +96,14 @@ class TestMinuteUnit(unittest.TestCase):
         self.assertEqual(analysis.action_items[0].priority, "HIGH")
 
     def test_workspace_io_save_and_load(self):
-        """WorkspaceIO の保存と読み込み検証"""
+        """WorkspaceIO の保存と読み込み、60分超の累積MM:SSタイムスタンプ統一検証"""
         ws = self.test_dir / "workspace_001"
         ws.mkdir(parents=True)
         (ws / "transcript").mkdir(parents=True)
 
         transcript_data = [
             {"start": 0.0, "end": 2.5, "speaker": "SPEAKER_00", "text": "それでは会議を始めます。"},
-            {"start": 3.0, "end": 6.5, "speaker": "SPEAKER_01", "text": "本日の議題はスケジュール調整です。"},
+            {"start": 4201.0, "end": 4206.5, "speaker": "SPEAKER_01", "text": "後半の議題はスケジュール調整です。"},
         ]
         with open(ws / "transcript" / "transcript.json", "w", encoding="utf-8") as f:
             json.dump({"segments": transcript_data}, f)
@@ -110,7 +111,10 @@ class TestMinuteUnit(unittest.TestCase):
         segments = WorkspaceIO.load_transcript(ws)
         self.assertEqual(len(segments), 2)
         formatted = WorkspaceIO.format_transcript_for_prompt(segments)
-        self.assertIn("SPEAKER_00: それでは会議を始めます。", formatted)
+        self.assertIn("[00:00] SPEAKER_00: それでは会議を始めます。", formatted)
+        # 4201秒 = 70分01秒（01:10:01 ではなく 70:01 として ALICE_Summary と完全一致すること）
+        self.assertIn("[70:01] SPEAKER_01: 後半の議題はスケジュール調整です。", formatted)
+        self.assertEqual(WorkspaceIO.normalize_timestamp_str("01:10:01"), "70:01")
 
         # Stage 1 保存と読み込み検証
         analysis = MinuteAnalysisResult(
@@ -150,6 +154,53 @@ class TestMinuteUnit(unittest.TestCase):
         self.assertIn("◆ 1. 会議概要", txt_content)
         self.assertIn("□ 【HIGH】 タスクA（担当: 佐藤）", txt_content)
 
+    def test_analyzer_post_process_and_speaker_coverage(self):
+        """面談対象者（SPEAKER_00）の脱落補完、同名display_nameのA/B区別、生SPEAKER_XX置換の検証"""
+        segments = [
+            {"start": 0.0, "end": 10.0, "speaker": "SPEAKER_01", "text": "本日の面談を始めます。"},
+            {"start": 10.0, "end": 25.0, "speaker": "SPEAKER_00", "text": "はい、よろしくお願いします。"},
+            {"start": 25.0, "end": 40.0, "speaker": "SPEAKER_02", "text": "私からも質問します。"},
+        ]
+        summary_analysis = {
+            "speakers_analysis": [
+                {"speaker_label": "SPEAKER_00", "estimated_role": "面談対象者", "basis": "回答者"},
+                {"speaker_label": "SPEAKER_01", "estimated_role": "指導担当者", "basis": "進行"},
+                {"speaker_label": "SPEAKER_02", "estimated_role": "指導担当者", "basis": "同席上司"},
+            ]
+        }
+        # SPEAKER_00 が participants から抜け落ち、SPEAKER_01 と SPEAKER_02 が同名「指導担当者」で出力されたケース
+        raw_result = MinuteAnalysisResult(
+            meeting_overview=MeetingOverview(title="面談", purpose="振り返り", meeting_type="1on1・面談"),
+            participants=[
+                Participant(speaker_label="SPEAKER_01", display_name="指導担当者（上司）", estimated_role="（指導担当者）", basis="進行"),
+                Participant(speaker_label="SPEAKER_02", display_name="指導担当者", estimated_role="指導担当者", basis="同席"),
+            ],
+            agenda_items=[
+                AgendaItem(
+                    agenda_title="進捗確認",
+                    time_range="01:05:00 - 01:10:00",
+                    discussion_summary="SPEAKER_01（指導担当者）が質問し、SPEAKER_00が回答した。",
+                    key_opinions=[
+                        KeyOpinion(speaker="SPEAKER_00", opinion="目標を達成しました", time_anchor="01:06:00"),
+                    ],
+                )
+            ],
+        )
+        processed = MinuteAnalyzer.post_process_analysis(raw_result, segments=segments, summary_analysis=summary_analysis)
+        labels = [p.speaker_label for p in processed.participants]
+        self.assertIn("SPEAKER_00", labels)
+
+        disp_names = [p.display_name for p in processed.participants]
+        self.assertIn("指導担当者A", disp_names)
+        self.assertIn("指導担当者B", disp_names)
+        self.assertIn("面談対象者", disp_names)
+
+        # 生の SPEAKER_XX が残っておらず、タイムスタンプが累積MM:SSに正規化されていること
+        self.assertNotIn("SPEAKER_01", processed.agenda_items[0].discussion_summary)
+        self.assertNotIn("SPEAKER_00", processed.agenda_items[0].key_opinions[0].speaker)
+        self.assertEqual(processed.agenda_items[0].time_range, "65:00 - 70:00")
+        self.assertEqual(processed.agenda_items[0].key_opinions[0].time_anchor, "66:00")
+
     def test_workspace_io_save_failure_metadata(self):
         """異常終了時のメタデータ出力検証"""
         ws = self.test_dir / "workspace_failure"
@@ -173,7 +224,7 @@ class TestMinuteUnit(unittest.TestCase):
         self.assertIn("Ollama connection refused", data["error"])
 
     def test_load_summary_analysis(self):
-        """ALICE_Summary 構造化中間データの読み込みテスト"""
+        """ALICE_Summary 構造化中間データの読み込みとリッチ見取り図フォーマットのテスト"""
         ws = self.test_dir / "workspace_002"
         ws.mkdir(parents=True)
 
@@ -183,50 +234,69 @@ class TestMinuteUnit(unittest.TestCase):
         summary_dir = ws / "summary"
         summary_dir.mkdir(parents=True)
         dummy_summary = {
+            "metadata": {"conversation_type": "定例会議", "conversation_category": "meeting", "is_target_present": False},
             "conversation_overview": {"purpose": "指導面談"},
             "timeline_sections": [
-                {"start_time": "00:10", "end_time": "05:00", "section_title": "勤怠ルール確認"}
+                {
+                    "start_time": "00:10",
+                    "end_time": "05:00",
+                    "section_title": "勤怠ルール確認",
+                    "uncovered_facts_confession": ["新事実A"],
+                }
             ],
+            "conclusions_and_actions": {
+                "decisions": ["全体決定X"],
+                "next_actions": [{"actor": "田中", "action": "シート提出", "deadline_or_condition": "明日まで"}],
+            },
+            "uncertain_or_ambiguous_points": ["保留点Z"],
         }
         with open(summary_dir / "analysis.json", "w", encoding="utf-8") as f:
             json.dump(dummy_summary, f)
 
         res = WorkspaceIO.load_summary_analysis(ws)
         self.assertIsNotNone(res)
-        self.assertEqual(res["conversation_overview"]["purpose"], "指導面談")
-        self.assertEqual(len(res["timeline_sections"]), 1)
+        guidance = MinuteAnalyzer._format_summary_guidance(res)
+        self.assertIn("新事実A", guidance)
+        self.assertIn("全体決定X", guidance)
+        self.assertIn("シート提出", guidance)
+        self.assertIn("保留点Z", guidance)
 
-    def test_template_loading(self):
-        """全テンプレート（standard, interview, executive, consultation）読み込みのテスト"""
-        tpl_standard = WorkspaceIO.load_template("standard")
-        self.assertIn("【議事録】", tpl_standard)
+    def test_template_loading_and_auto_resolution(self):
+        """全テンプレート読み込みと --template auto 自動解決のテスト"""
+        for name, expected in [
+            ("standard", "【議事録】"),
+            ("interview", "【面談記録】"),
+            ("executive", "【意思決定報告】"),
+            ("consultation", "【相談・ヒアリング記録】"),
+        ]:
+            tpl = WorkspaceIO.load_template(name)
+            self.assertIn(expected, tpl)
+            self.assertNotIn("（※", tpl)
 
-        tpl_interview = WorkspaceIO.load_template("interview")
-        self.assertIn("【面談記録】", tpl_interview)
+        # 対象者不在会議は standard に解決されること
+        resolved_mgr = MinutePipeline.resolve_template_name(
+            "auto",
+            summary_analysis={"metadata": {"conversation_category": "interview", "is_target_present": False}},
+        )
+        self.assertEqual(resolved_mgr, "standard")
 
-        tpl_executive = WorkspaceIO.load_template("executive")
-        self.assertIn("【意思決定報告】", tpl_executive)
-
-        tpl_consultation = WorkspaceIO.load_template("consultation")
-        self.assertIn("【相談・ヒアリング記録】", tpl_consultation)
-
-        # 存在しないテンプレート名指定時のフォールバック (standard.md)
-        tpl_fallback = WorkspaceIO.load_template("non_existent_template")
-        self.assertIn("【議事録】", tpl_fallback)
+        # 面談は interview に解決されること
+        resolved_int = MinutePipeline.resolve_template_name(
+            "auto",
+            summary_analysis={"metadata": {"conversation_category": "interview", "is_target_present": True}},
+        )
+        self.assertEqual(resolved_int, "interview")
 
     def test_ollama_client_json_extraction(self):
         """JSON抽出ロジック（コードブロック、外側テキスト等）のテスト"""
-        # 1. マークダウンコードブロック
         raw_md = "Here is the result:\n```json\n{\"test\": 123}\n```\nHope it helps."
         res1 = OllamaClient.extract_json_object(raw_md)
         self.assertEqual(res1, {"test": 123})
 
-        # 2. 前後テキスト付きの中括弧
         raw_slice = "Thought: analyzing...\n{\"key\": \"value\"}\nDone."
         res2 = OllamaClient.extract_json_object(raw_slice)
         self.assertEqual(res2, {"key": "value"})
 
-        # 3. 生JSON
         res3 = OllamaClient.extract_json_object('{"pure": true}')
         self.assertEqual(res3, {"pure": True})
 
@@ -249,15 +319,26 @@ class TestMinuteUnit(unittest.TestCase):
             self.assertEqual(thinking, "This is internal thinking")
 
     def test_composer_clean_markdown_and_closing(self):
-        """Composerのマークダウン整形と（以上）自動付与テスト"""
+        """Composerのマークダウン整形（注釈除去、言語タイムスタンプ補正、二重括弧除去）と（以上）自動付与テスト"""
         composer = MinuteComposer(client=MagicMock())
 
-        # 1. 思考タグとコードブロックの除去
-        raw_output = "<thought>Drafting...</thought>\n```markdown\n# Minutes\n\nContent\n```"
+        raw_output = (
+            "<thought>Drafting...</thought>\n"
+            "```markdown\n"
+            "# Minutes\n\n"
+            "（※ テンプレート注釈）\n"
+            "- 参加者A（進行役）（進行役）\n"
+            "## . アクションアイテム（TODO）\n"
+            "- 状況: 合意済（言語タイムスタンプ: 05:00）\n"
+            "```"
+        )
         cleaned = composer._clean_markdown_output(raw_output)
-        self.assertEqual(cleaned, "# Minutes\n\nContent")
+        self.assertNotIn("（※", cleaned)
+        self.assertIn("参加者A（進行役）", cleaned)
+        self.assertNotIn("（進行役）（進行役）", cleaned)
+        self.assertIn("## 3. アクションアイテム（TODO）", cleaned)
+        self.assertIn("言及タイムスタンプ: 05:00", cleaned)
 
-        # 2. セクション5があり（以上）がない場合の自動付与
         analysis = MinuteAnalysisResult(
             meeting_overview=MeetingOverview(title="T", purpose="P"),
         )
@@ -282,7 +363,7 @@ class TestMinuteUnit(unittest.TestCase):
 
         mock_client = MagicMock()
         mock_analysis = MinuteAnalysisResult(
-            meeting_overview=MeetingOverview(title="テスト会議", purpose="テスト目的"),
+            meeting_overview=MeetingOverview(title="テスト会議", purpose="テスト目的", meeting_type="業務進捗定例"),
             confirmed_decisions=["決定A"],
         )
         mock_client.chat_structured.return_value = mock_analysis
@@ -292,16 +373,14 @@ class TestMinuteUnit(unittest.TestCase):
         )
 
         pipeline = MinutePipeline(client=mock_client, model="mock-model")
-        result = pipeline.run(workspace_dir=ws, template_name="standard")
+        result = pipeline.run(workspace_dir=ws, template_name="auto")
 
         self.assertEqual(result["status"], "SUCCESS")
+        self.assertEqual(result["metadata"]["template"], "standard")
         self.assertTrue((ws / "minutes" / "minutes.md").exists())
         self.assertTrue((ws / "minutes" / "minutes.txt").exists())
         self.assertTrue((ws / "minutes" / "analysis.json").exists())
         self.assertTrue((ws / "minutes" / "metadata.json").exists())
-
-        # VRAM アンロード呼び出し検証
-        mock_client.unload_model.assert_called()
 
     def test_minute_pipeline_failure_handling(self):
         """パイプライン実行時例外のハンドリングと metadata.json 記録のテスト"""

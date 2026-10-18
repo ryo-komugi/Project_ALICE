@@ -32,14 +32,14 @@ def parse_args() -> argparse.Namespace:
         "--workspace",
         type=str,
         required=True,
-        help="Path to the Job Workspace directory (e.g., {PROJECT_ROOT}/data/runtime/workspaces/job_xxx)",
+        help="Path to the Job Workspace directory (e.g., /data/runtime/workspaces/job_xxx)",
     )
     parser.add_argument(
         "--template",
         type=str,
         default=config.default_template,
-        choices=["standard", "interview", "executive", "consultation"],
-        help=f"Minutes template to use (choices: standard, interview, executive, consultation. default: {config.default_template})",
+        choices=["auto", "standard", "interview", "executive", "consultation"],
+        help=f"Minutes template to use (choices: auto, standard, interview, executive, consultation. default: {config.default_template})",
     )
     parser.add_argument(
         "--stage2-only",
@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
 
 def run_pipeline(
     workspace_dir: Path | str,
-    template_name: str = "standard",
+    template_name: str = "auto",
     stage2_only: bool = False,
     force_stage1: bool = False,
     model_override: str | None = None,

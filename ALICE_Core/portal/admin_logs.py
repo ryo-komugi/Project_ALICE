@@ -17,7 +17,7 @@ logger = logging.getLogger("ALICE_Core.Admin.Logs")
 
 router = APIRouter()
 
-LOG_DIR = Path(config.DIR_LOGS)
+LOG_DIR = Path(config.DIR_RUNTIME) / "logs"
 
 def _get_active_wm():
     adm = sys.modules.get("portal.admin")
@@ -82,25 +82,29 @@ async def get_logs_catalog():
                     "type": "job",
                 })
 
-            # summary
-            s_log = ws / "logs" / "summary.log"
-            if s_log.exists() and s_log.is_file():
-                summary_logs.append({
-                    "id": f"job:{ws.name}:summary.log",
-                    "name": f"{friendly_name} (summary.log)",
-                    "size": s_log.stat().st_size,
-                    "type": "job",
-                })
+            # summary (summary.log または オンデマンド生成時の summary_add.log)
+            for s_name in ["summary.log", "summary_add.log"]:
+                s_log = ws / "logs" / s_name
+                if s_log.exists() and s_log.is_file():
+                    summary_logs.append({
+                        "id": f"job:{ws.name}:{s_name}",
+                        "name": f"{friendly_name} ({s_name})",
+                        "size": s_log.stat().st_size,
+                        "type": "job",
+                    })
+                    break
 
-            # minutes
-            m_log = ws / "logs" / "minutes.log"
-            if m_log.exists() and m_log.is_file():
-                minutes_logs.append({
-                    "id": f"job:{ws.name}:minutes.log",
-                    "name": f"{friendly_name} (minutes.log)",
-                    "size": m_log.stat().st_size,
-                    "type": "job",
-                })
+            # minutes (minutes.log または オンデマンド生成時の minutes_add.log)
+            for m_name in ["minutes.log", "minutes_add.log"]:
+                m_log = ws / "logs" / m_name
+                if m_log.exists() and m_log.is_file():
+                    minutes_logs.append({
+                        "id": f"job:{ws.name}:{m_name}",
+                        "name": f"{friendly_name} ({m_name})",
+                        "size": m_log.stat().st_size,
+                        "type": "job",
+                    })
+                    break
 
     # アーカイブ内の過去の transcript ログも追加
     if archive_dir.exists():

@@ -8,10 +8,22 @@ from services.dev_copilot_service import ANTIGRAVITY_STATE, stream_copilot
 
 
 @pytest.mark.anyio
-async def test_assistant_stream_yields_events():
+async def test_assistant_stream_yields_events(monkeypatch):
     """Verify assistant service yields SSE events."""
+    from services import assistant_service
+
+    def fake_call_ollama(messages, tools=None):
+        return {
+            "message": {
+                "role": "assistant",
+                "content": "こんにちは！何かお手伝いできることはありますか？",
+                "tool_calls": None,
+            }
+        }
+
+    monkeypatch.setattr(assistant_service, "call_ollama", fake_call_ollama)
+
     events = []
-    # Test with simple message
     async for ev in stream_assistant("テストこんにちは", session_id="test_assistant"):
         events.append(ev)
 
@@ -22,8 +34,24 @@ async def test_assistant_stream_yields_events():
 
 
 @pytest.mark.anyio
-async def test_dev_copilot_stream_lightweight():
+async def test_dev_copilot_stream_lightweight(monkeypatch):
     """Verify dev copilot yields immediate response for general question."""
+    from services import dev_copilot_service
+
+    class FakeSession:
+        async def send_message(self, prompt):
+            class FakeResp:
+                text = "Pythonでlistの長さを取得するには len() 関数を使用します。"
+            return FakeResp()
+
+    class FakeAgent:
+        def __init__(self, *args, **kwargs):
+            pass
+        def create_session(self):
+            return FakeSession()
+
+    monkeypatch.setattr(dev_copilot_service, "Agent", FakeAgent)
+
     events = []
     async for ev in stream_copilot("Pythonのlistの長さを取得する関数は？", session_id="test_copilot"):
         events.append(ev)

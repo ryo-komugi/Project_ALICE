@@ -1,14 +1,15 @@
 """
 ALICE_CoPilot Main Entrypoint.
-Orchestrates Discord Bot client, background worker loops, and WebUI internal API server.
+Orchestrates internal API server (port 8005 for WebUI/Core Portal),
+background memory sync/workers, and optional Discord Bot client.
 """
-import os
-import sys
 import asyncio
 import json
-import requests
+import logging
+import os
+import sys
 from pathlib import Path
-import discord
+import requests
 from dotenv import load_dotenv
 
 # Ensure project root is in sys.path
@@ -19,10 +20,8 @@ if str(PROJECT_DIR) not in sys.path:
 load_dotenv()
 
 import config
-from attachment_handler import extract_attachments_text
-from search_handler import handle_search_message
 from tools import TOOLS_SCHEMA, execute_tool
-from services.action_guard import detect_intent, build_system_hint, is_hallucinating_action
+from services.action_guard import detect_intent, build_system_hint
 from memory.short_term import initialize_database, save_message, get_recent_messages
 from memory.memory_manager import process_memory
 from memory.memory_qa import ask_memory
@@ -38,10 +37,8 @@ from services.background_workers import (
     morning_briefing_monitor_loop,
     start_background_tasks,
 )
-from interfaces.discord_bot import (
-    handle_discord_ready,
-    handle_discord_message,
-)
+
+logger = logging.getLogger("ALICE_CoPilot")
 
 TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "")
 OLLAMA_URL = config.OLLAMA_URL
@@ -88,8 +85,8 @@ def get_base_system_prompt() -> str:
 
 
 async def ask_ollama_with_tools(messages: list[dict], max_turns: int = 4) -> str:
-    """Multi-turn tool-calling loop using Ollama OpenAI-compatible /chat/completions API.
-    Equipped with rigorous Action Tool Guard and Verification Guard to eradicate hallucinations.
+    """Multi-turn tool-calling loop using Ollama API.
+    Equipped with intent hints and factual system verification.
     """
     import inspect
     current_ask_ollama = globals().get("ask_ollama", ask_ollama)
@@ -119,16 +116,6 @@ async def ask_ollama_with_tools(messages: list[dict], max_turns: int = 4) -> str
     if initial_hint and current_messages and current_messages[-1].get("role") == "user":
         current_messages[-1]["content"] += f"\n\n{initial_hint}"
 
-    action_tool_names = {
-        "create_calendar_event", "update_calendar_event", "delete_calendar_event",
-        "create_todo_task", "complete_todo_task", "update_todo_task"
-    }
-    query_tool_names = {"get_todo_tasks", "get_calendar_events"}
-
-    guard_triggered = False
-    executed_action_tools: list[str] = []
-    executed_query_tools: list[str] = []
-
     active_orig_ask = globals().get("original_ask_ollama", original_ask_ollama)
 
     for turn in range(max_turns):
@@ -137,115 +124,41 @@ async def ask_ollama_with_tools(messages: list[dict], max_turns: int = 4) -> str
         tool_calls = assistant_msg.get("tool_calls")
 
         if not tool_calls:
-            # 1. Verification Guard
-            if turn == 0 and not guard_triggered and intent.is_verification_query:
-                guard_triggered = True
-                forced_data = []
-                tasks_res = await execute_tool("get_todo_tasks", {"status": "all"})
-                cal_res = await execute_tool("get_calendar_events", {})
-                forced_data.append(f"【Google Tasks最新実データ】\n{json.dumps(tasks_res, ensure_ascii=False, indent=2)}")
-                forced_data.append(f"【Google カレンダー最新実データ】\n{json.dumps(cal_res, ensure_ascii=False, indent=2)}")
-                executed_query_tools.extend(["get_todo_tasks", "get_calendar_events"])
-                verify_block = "\n\n".join(forced_data)
-                current_messages.append({
-                    "role": "user",
-                    "content": (
-                        f"【システム自動照会ガード（必須実データ）】\n"
-                        f"推測や嘘の確認報告は厳禁です。以下に最新のAPIから直接取得した実データを提示します。\n"
-                        f"必ず以下の実データに該当するタスク/予定が存在するか確認し、事実のみを回答してください。\n\n"
-                        f"{verify_block}"
-                    ),
-                })
-                continue
-
-            # 2. Action Guard
-            if turn == 0 and not guard_triggered and intent.is_action_query:
-                guard_triggered = True
-                if intent.is_task_query:
-                    tool_hint = "必ず「create_todo_task」「update_todo_task」「complete_todo_task」等のGoogle Tasksツールを直ちに呼び出してください。カレンダーへの登録は禁止です。"
-                elif intent.is_cal_query:
-                    tool_hint = "必ず「create_calendar_event」「update_calendar_event」「delete_calendar_event」ツールを直ちに呼び出してください。"
-                else:
-                    tool_hint = "必ず「create_todo_task」または「create_calendar_event」ツールを直ちに呼び出してください。"
-
-                current_messages.append({
-                    "role": "user",
-                    "content": (
-                        f"【システム・アクション強制ガード】\n"
-                        f"{tool_hint}\n"
-                        f"ツールの呼び出しを実行せずに文章だけで『登録しました』『完了しました』と嘘の報告をすることは固く禁止されています。直ちに該当ツールを自律呼び出ししてください。"
-                    ),
-                })
-                continue
-
-            # 3. Query Guard
-            if turn == 0 and not guard_triggered and (intent.is_task_query or intent.is_cal_query):
-                guard_triggered = True
-                forced_data = []
-                if intent.is_task_query or intent.is_cal_query:
-                    tasks_res = await execute_tool("get_todo_tasks", {"status": "all"})
-                    forced_data.append(f"【Google Tasks実データ】\n{json.dumps(tasks_res, ensure_ascii=False, indent=2)}")
-                    executed_query_tools.append("get_todo_tasks")
-
-                if intent.is_cal_query or intent.is_task_query:
-                    cal_res = await execute_tool("get_calendar_events", {})
-                    forced_data.append(f"【Google カレンダー実データ】\n{json.dumps(cal_res, ensure_ascii=False, indent=2)}")
-                    executed_query_tools.append("get_calendar_events")
-
-                context_block = "\n\n".join(forced_data)
-                current_messages.append({
-                    "role": "user",
-                    "content": (
-                        f"【システム自動照会ガード（必須実データ）】\n"
-                        f"過去の会話履歴や推測による回答は厳禁です。以下に最新のAPIから直接取得した実データを提示します。\n"
-                        f"必ず以下の実データのみを根拠として正確に回答してください。\n\n"
-                        f"{context_block}"
-                    ),
-                })
-                continue
-
             content = assistant_msg.get("content", "")
+            return content.strip()
 
-            # Check if LLM is hallucinating action completion without tool execution
-            if intent.is_action_query and is_hallucinating_action(content, executed_action_tools):
-                if turn < max_turns - 1:
-                    current_messages.append(assistant_msg)
-                    current_messages.append({
-                        "role": "user",
-                        "content": (
-                            "【システム遮断】タスクまたは予定の操作ツールが実行されていません。\n"
-                            "文章だけで『追加しました』『登録しました』と報告することは固く禁止されています。\n"
-                            "必ず該当する操作ツールを自律呼び出しして処理を完了させてください。"
-                        ),
-                    })
-                    continue
-                else:
-                    return "【システム警告】予定またはタスクの操作ツールが実行されなかったため、登録・変更は完了していません。実際の操作を実行するには再度具体的にご指示ください。"
+        # Execute tool calls
+        current_messages.append({
+            "role": "assistant",
+            "content": assistant_msg.get("content", ""),
+            "tool_calls": tool_calls,
+        })
 
-            return content
-
-        current_messages.append(assistant_msg)
         for tc in tool_calls:
-            func = tc.get("function", {})
-            name = func.get("name", "")
-            args = func.get("arguments", {})
-            call_id = tc.get("id", "")
+            call_id = tc.get("id", "call_1")
+            fn_info = tc.get("function", {})
+            fn_name = fn_info.get("name", "")
+            raw_args = fn_info.get("arguments", {})
 
-            if name in action_tool_names:
-                executed_action_tools.append(name)
-            if name in query_tool_names:
-                executed_query_tools.append(name)
+            if isinstance(raw_args, str):
+                try:
+                    args = json.loads(raw_args)
+                except Exception:
+                    args = {}
+            else:
+                args = raw_args or {}
 
-            tool_result = await execute_tool(name, args)
-            tool_msg = {
+            tool_res = await execute_tool(fn_name, args)
+
+            current_messages.append({
                 "role": "tool",
-                "content": json.dumps(tool_result, ensure_ascii=False),
-            }
-            if call_id:
-                tool_msg["tool_call_id"] = call_id
-            current_messages.append(tool_msg)
+                "name": fn_name,
+                "content": json.dumps(tool_res, ensure_ascii=False) if not isinstance(tool_res, str) else tool_res,
+            })
 
-    return current_messages[-1].get("content", "") or "処理が完了しました。"
+    final_data = await asyncio.to_thread(active_orig_ask, current_messages)
+    final_content = final_data.get("message", {}).get("content", "")
+    return final_content.strip()
 
 
 def build_conversation_messages(recent_messages: list[tuple[str, str]], memory_context: str | None = None) -> list[dict]:
@@ -288,30 +201,63 @@ async def run_memory_consolidation():
         print(f"[MEMORY CONSOLIDATION ERROR] {e}")
 
 
-# Discord Client Setup
-intents = discord.Intents.default()
-intents.message_content = True
-client = discord.Client(intents=intents)
+# Optional Discord Bot Forwarding & Compatibility Handlers
+def get_discord_client():
+    try:
+        from interfaces.discord.bot import create_discord_client
+        return create_discord_client()
+    except (ImportError, Exception):
+        return None
 
+client = get_discord_client()
 
-@client.event
 async def on_ready():
-    import sys
-    this_mod = sys.modules[__name__]
-    await handle_discord_ready(client, context=this_mod)
+    from interfaces.discord.bot import handle_discord_ready
+    await handle_discord_ready(client, context=sys.modules[__name__])
+
+async def on_message(message):
+    from interfaces.discord.bot import handle_discord_message
+    active_client = globals().get("client", client)
+    await handle_discord_message(active_client, message, context=sys.modules[__name__])
 
 
-@client.event
-async def on_message(message: discord.Message):
-    import sys
-    this_mod = sys.modules[__name__]
-    await handle_discord_message(client, message, context=this_mod)
+async def start_main(port: int = 8005):
+    """Main async orchestrator."""
+    initialize_database()
+    print("[ALICE_CoPilot] Database initialized.")
+
+    # Obsidian差分自動同期
+    try:
+        sync_res = await asyncio.to_thread(sync_obsidian, clean=True)
+        print(f"[OBSIDIAN STARTUP-SYNC] Completed: {sync_res}")
+    except Exception as e:
+        print(f"[OBSIDIAN STARTUP-SYNC ERROR] {e}")
+
+    tasks = []
+
+    # 1. Start internal API server (FastAPI on port 8005)
+    api_task = asyncio.create_task(start_internal_api_server(port=port))
+    tasks.append(api_task)
+    print(f"[ALICE_CoPilot] Internal API Server running on port {port}.")
+
+    # 2. Optional: Discord Bot
+    bot_token = os.environ.get("DISCORD_BOT_TOKEN")
+    if bot_token:
+        try:
+            from interfaces.discord.bot import run_discord_bot
+            print("[ALICE_CoPilot] DISCORD_BOT_TOKEN detected. Starting Discord Bot...")
+            tasks.append(asyncio.create_task(run_discord_bot(bot_token)))
+        except Exception as e:
+            print(f"[ALICE_CoPilot] Could not start Discord Bot: {e}")
+    else:
+        print("[ALICE_CoPilot] DISCORD_BOT_TOKEN not set. Running in API-only mode.")
+
+    await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
-    if not TOKEN:
-        print("[ERROR] DISCORD_BOT_TOKEN environment variable is not set.")
-        sys.exit(1)
-
-    initialize_database()
-    client.run(TOKEN)
+    port = int(os.getenv("PORT", "8005"))
+    try:
+        asyncio.run(start_main(port=port))
+    except KeyboardInterrupt:
+        print("[ALICE_CoPilot] Shutting down.")
