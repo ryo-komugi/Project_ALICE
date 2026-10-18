@@ -7,8 +7,9 @@ import json
 import os
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+import config
 
-SETTINGS_FILE = Path("/data/runtime/copilot/antigravity_settings.json")
+SETTINGS_FILE = config.DATA_DIR / "runtime" / "copilot" / "antigravity_settings.json"
 JST = timezone(timedelta(hours=9))
 
 SUPPORTED_MODELS = [

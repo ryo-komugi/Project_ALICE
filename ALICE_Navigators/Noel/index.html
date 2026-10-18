@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noel | Project ALICE</title>
+    <style>
+        /* フォント */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            text-align: center;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+            background-color: #060913;
+            background-image:
+                linear-gradient(to bottom, rgba(6, 9, 19, 0.88), rgba(6, 9, 19, 0.82)),
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0, transparent 50%),
+                url("/static/admin/alice_bg.png");
+            background-size: cover;
+            background-position: center bottom;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            position: relative;
+            color: #fff;
+        }
+
+        /* 背景を薄くするためのオーバーレイ */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.06), transparent 55%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* タイトルバー */
+        .header {
+            font-family: 'BIZ UDPGothic', 'BIZ UDPゴシック', 'Poppins', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 82px;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.82);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.32);
+            box-shadow: 0 10px 32px rgba(2, 6, 23, 0.35);
+            font-size: 32px;
+            font-weight: 900; /* 太字に変更 */
+            color: #e0f2fe;
+            position: fixed;
+            top: 0; /*タイトルバー全体の位置*/
+            right: 0; /*タイトルバー全体の位置*/
+            z-index: 100;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.4);
+        }
+
+        .header span {
+            background: linear-gradient(90deg, #7dd3fc, #f0f9ff 55%, #fcd34d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* メインコンテンツ */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1000px;
+            margin: 130px auto 40px auto; /* タイトルバー分の余白を追加 */
+            text-align: center;
+            background: rgba(255, 255, 255, 0.15); /* 半透明のホワイト */
+            backdrop-filter: blur(10px); /* 背景ぼかし */
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .content_title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 0px;
+        }
+
+        .charactet_name {
+            margin-top: 00px;
+            font-weight: bold; /* 太字に変更 */
+            font-size: 48px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        /* ファイルアップロードボタン */
+        input[type="file"] {
+            display: none;
+        }
+
+        .custom-file-upload {
+            display: inline-block;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 198, 255, 0.3);
+        }
+
+        .custom-file-upload:hover {
+            background: linear-gradient(135deg, #0072ff, #00c6ff);
+            box-shadow: 0 6px 15px rgba(0, 198, 255, 0.5);
+        }
+        .upload-button {
+            display: inline-block;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 198, 255, 0.3);
+            border: none;
+            margin-top: 15px; /* 余白を調整 */
+        }
+
+        .upload-button:hover {
+            background: linear-gradient(135deg, #0072ff, #00c6ff);
+            box-shadow: 0 6px 15px rgba(0, 198, 255, 0.5);
+        }
+
+        .upload-button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+        }
+
+        .processing-status {
+            margin: 18px auto 0;
+            max-width: 480px;
+            text-align: left;
+        }
+
+        .processing-label {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 7px;
+            font-size: 14px;
+        }
+
+        .progress-track {
+            height: 12px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #00c6ff, #7b7dff);
+            transition: width 0.4s ease;
+        }
+
+        /* 変換結果 */
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 80px;
+            max-height: 80px; /* ここを設定してスクロール可能に */
+            overflow-y: auto; /* 縦スクロールを許可 */
+            background: rgba(255, 255, 255, 0.3);
+            color: #fff;
+            font-size: 14px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center; /* デフォルトは中央揃え */
+            white-space: pre-wrap; /* 改行を保持 */
+        }
+
+        /* スクロールバーのカスタマイズ（オプション） */
+        #output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #output::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.5); /* スクロールバーの色 */
+            border-radius: 4px;
+        }
+
+        #output::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1); /* スクロールバーの背景 */
+        }
+
+        .table_col {
+            width: 500px;
+        }
+
+        /* Noel の画像とスピナーを重ねるためのコンテナ */
+        .image-container {
+            position: relative; /* 相対位置指定 */
+            display: inline-block; /* 画像のサイズに合わせる */
+        }
+
+        /* ローディングスピナー */
+        .spinner {
+            display: none; /* 初期状態は非表示 */
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top: 5px solid #007bff; /* 青系の色 */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+
+            /* Noel の中央に配置 */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* アニメーション定義 */
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- タイトルバー -->
+    <div class="header">
+        <span>PROJECT ALICE</span>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div class="container">
+        <table>
+            <tr>
+                <td class="table_col">
+                    <!-- Noelの画像を包むdiv -->
+                    <div class="image-container">
+                        <img id="Noel" src="/noel/assets/ai_character_noel.png" width="400" height="400" alt="Noel">
+
+                        <!-- Noel の画像の上に重ねるスピナー -->
+                        <div id="loading-spinner" class="spinner"></div>
+                    </div>
+                </td>
+                <td class="table_col">
+                    <h1 class="content_title">音声自動文字起こしAI</h1>
+                    <h1 class="charactet_name">Noel</h1>
+
+                    <!-- Form を追加 -->
+                    <form id="uploadForm">
+
+                        <!-- ファイルアップロード -->
+                        <label for="audioFile" class="custom-file-upload">音声ファイルを選択</label>
+                        <input type="file" id="audioFile" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav" onchange="fileSelected()">
+                        <p id="file-name">選択されていません</p>
+
+                        <button type="button" class="upload-button" onclick="uploadAudio()">アップロードして文字起こし</button>
+                    </form>
+
+                    <div class="processing-status" aria-live="polite">
+                        <div class="processing-label">
+                            <span id="progress-stage">待機中</span>
+                            <span id="progress-percent">0%</span>
+                        </div>
+                        <div class="progress-track" role="progressbar" aria-label="文字起こしの進捗"
+                             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track">
+                            <div id="progress-bar" class="progress-bar"></div>
+                        </div>
+                    </div>
+
+                    <!-- 変換結果表示 -->
+                    <h2>文字起こし結果</h2>
+                    <div id="output">ここにテキストが表示されます</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        const API_ROOT = "/noel/api";
+        const fileInput = document.getElementById("audioFile");
+        const outputElement = document.getElementById("output");
+        const spinner = document.getElementById("loading-spinner");
+        const uploadButton = document.querySelector(".upload-button");
+        const progressStage = document.getElementById("progress-stage");
+        const progressPercent = document.getElementById("progress-percent");
+        const progressTrack = document.getElementById("progress-track");
+        const progressBar = document.getElementById("progress-bar");
+
+        function fileSelected() {
+            const file = fileInput.files[0];
+            document.getElementById("file-name").innerText = file ? file.name : "選択されていません";
+        }
+
+        function setBusy(busy) {
+            spinner.style.display = busy ? "block" : "none";
+            uploadButton.disabled = busy;
+            uploadButton.setAttribute("aria-busy", String(busy));
+        }
+
+        function showProgress(progress, fallbackStage = "処理中") {
+            const percent = Math.max(0, Math.min(100, Number(progress?.percent) || 0));
+            progressStage.innerText = progress?.stage || fallbackStage;
+            progressPercent.innerText = `${percent}%`;
+            progressBar.style.width = `${percent}%`;
+            progressTrack.setAttribute("aria-valuenow", String(percent));
+        }
+
+        async function pollJob(statusUrl, transcriptUrl) {
+            let hasLiveTranscript = false;
+            while (true) {
+                const response = await fetch(statusUrl, { credentials: "same-origin", cache: "no-store" });
+                const job = await response.json();
+                if (!response.ok) throw new Error(job.detail || "ジョブの状態を取得できませんでした");
+                showProgress(job.progress, job.current_step || "処理待ち");
+                const liveResponse = await fetch(`${statusUrl}/live-transcript`, {
+                    credentials: "same-origin", cache: "no-store"
+                });
+                if (liveResponse.ok && liveResponse.status !== 204) {
+                    const liveText = await liveResponse.text();
+                    if (liveText) {
+                        hasLiveTranscript = true;
+                        outputElement.innerText = liveText;
+                        outputElement.style.textAlign = "left";
+                        outputElement.scrollTop = outputElement.scrollHeight;
+                    }
+                }
+                if (job.status === "COMPLETED") {
+                    const result = await fetch(transcriptUrl, { credentials: "same-origin", cache: "no-store" });
+                    if (!result.ok) throw new Error("文字起こし結果を取得できませんでした");
+                    outputElement.innerText = await result.text();
+                    outputElement.style.textAlign = "left";
+                    showProgress({ stage: "完了", percent: 100 });
+                    return;
+                }
+                if (job.status === "FAILED") throw new Error(job.error_message || "処理に失敗しました");
+                if (!hasLiveTranscript) {
+                    outputElement.innerText = "文字起こし結果を待っています...";
+                    outputElement.style.textAlign = "center";
+                }
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+
+        async function uploadAudio() {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("音声ファイルを選択してください。");
+                return;
+            }
+            if (file.size > 100 * 1024 * 1024) {
+                alert("ファイルは100 MiB以下にしてください。");
+                return;
+            }
+
+            setBusy(true);
+            showProgress({ stage: "音声をアップロード中", percent: 0 });
+            outputElement.innerText = "アップロード中...";
+            outputElement.style.textAlign = "center";
+            try {
+                const sessionResponse = await fetch(`${API_ROOT}/session`, { credentials: "same-origin", cache: "no-store" });
+                if (!sessionResponse.ok) throw new Error("ブラウザーセッションを開始できませんでした");
+                const formData = new FormData();
+                formData.append("audio", file);
+                const response = await fetch(`${API_ROOT}/transcribe`, {
+                    method: "POST",
+                    body: formData,
+                    credentials: "same-origin",
+                    cache: "no-store"
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "アップロードに失敗しました");
+                await pollJob(data.status_url, data.transcript_url);
+            } catch (error) {
+                outputElement.innerText = error.message;
+                outputElement.style.textAlign = "center";
+            } finally {
+                setBusy(false);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -9,11 +9,11 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
-DEFAULT_DB_PATH = Path("/data/runtime/copilot/database/conversations.db")
 PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", str(Path(__file__).resolve().parents[2]))).expanduser()
 DATA_DIR = Path(os.environ.get("ALICE_DATA_DIR", str(PROJECT_ROOT / "data"))).expanduser()
 if not DATA_DIR.is_absolute():
     DATA_DIR = PROJECT_ROOT / DATA_DIR
+DEFAULT_DB_PATH = DATA_DIR / "runtime" / "copilot" / "database" / "conversations.db"
 LOGS_DIR = DATA_DIR / "runtime" / "logs"
 DEFAULT_LOG_PATH = LOGS_DIR / "copilot.log"
 

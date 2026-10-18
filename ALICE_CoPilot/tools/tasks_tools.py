@@ -8,10 +8,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 import requests
+import config
 
 logger = logging.getLogger("ALICE_CoPilot.Tools.Tasks")
 
-TOKEN_PATH = Path("/data/runtime/calendar/token.json")
+TOKEN_PATH = config.DATA_DIR / "runtime" / "calendar" / "token.json"
 JST = timezone(timedelta(hours=9))
 
 

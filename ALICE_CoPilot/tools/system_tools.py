@@ -15,12 +15,10 @@ import config
 
 logger = logging.getLogger("ALICE_CoPilot.Tools.System")
 
-DB_PATH = Path("/data/runtime/search/alice_index.db")
-DATA_DIR = Path(os.environ.get("ALICE_DATA_DIR", str(Path(config.PROJECT_ROOT) / "data"))).expanduser()
-if not DATA_DIR.is_absolute():
-    DATA_DIR = Path(config.PROJECT_ROOT) / DATA_DIR
+DB_PATH = config.DATA_DIR / "runtime" / "search" / "alice_index.db"
+DATA_DIR = config.DATA_DIR
 WORKSPACES_ROOT = DATA_DIR / "runtime" / "workspaces"
-STATS_PATH = Path("/data/runtime/copilot/system_daily_stats.json")
+STATS_PATH = DATA_DIR / "runtime" / "copilot" / "system_daily_stats.json"
 
 
 def get_cpu_temp_c() -> float | None:

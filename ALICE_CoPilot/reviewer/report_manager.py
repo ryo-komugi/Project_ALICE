@@ -8,8 +8,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 import discord
+import config
 
-DEFAULT_DB_PATH = Path("/data/runtime/copilot/database/nightly_reports.db")
+DEFAULT_DB_PATH = config.DATA_DIR / "runtime" / "copilot" / "database" / "nightly_reports.db"
 
 
 def get_db_connection(db_path: Path | str = DEFAULT_DB_PATH) -> sqlite3.Connection:

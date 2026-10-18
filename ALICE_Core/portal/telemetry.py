@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import time
 from typing import Any
+import config
 
 logger = logging.getLogger("ALICE_Core.Telemetry")
 
@@ -154,7 +155,7 @@ def _get_gpu_usage() -> dict[str, Any]:
 
 
 def _get_disk_usage() -> dict[str, Any]:
-    """Get disk usage of /data and root / runtimes."""
+    """Get disk usage of the system root and configured data directory."""
     drives = []
     # 1. System Root (/)
     try:
@@ -172,17 +173,18 @@ def _get_disk_usage() -> dict[str, Any]:
     except Exception:
         pass
 
-    # 2. Workspaces (/data)
+    # 2. Workspaces (filesystem containing the configured data directory)
     data_stat = {"total_gb": 0, "used_gb": 0, "percent": 0.0}
+    data_path = Path(config.DATA_DIR)
     try:
-        u_data = shutil.disk_usage("/data")
+        u_data = shutil.disk_usage(data_path)
         data_tot = round(u_data.total / (1024**3), 2)
         data_used = round(u_data.used / (1024**3), 2)
         data_pct = round((u_data.used / u_data.total) * 100, 1)
         data_stat = {"total_gb": data_tot, "used_gb": data_used, "percent": data_pct}
         drives.append({
-            "mount": "/data",
-            "name": "Workspaces (/data)",
+            "mount": str(data_path),
+            "name": f"Workspaces ({data_path})",
             "total_gb": data_tot,
             "used_gb": data_used,
             "percent": data_pct,
@@ -194,6 +196,7 @@ def _get_disk_usage() -> dict[str, Any]:
         "total_gb": data_stat["total_gb"],
         "used_gb": data_stat["used_gb"],
         "percent": data_stat["percent"],
+        "workspace_path": str(data_path),
         "drives": drives,
     }
 

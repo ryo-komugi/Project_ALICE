@@ -7,9 +7,9 @@ ALICE 過去成果物（Summary / Transcript 等）の全文検索・属性検�
 ## 1. 基本方針・設計原則
 
 1. **Workspace = Source of Truth (源泉データ主義)**:
-   * すべてのジョブメタデータ・成果物（`summary.txt`, `transcript.txt`, `transcript.json` 等）の正本は各 Workspace（`{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/`）に存在します。
+   * すべてのジョブメタデータ・成果物（`summary.txt`, `transcript.txt`, `transcript.json` 等）の正本は各 Workspace（`<ALICE_DATA_DIR>/runtime/workspaces/{job_id}/`）に存在します。
 2. **SQLite + FTS5 は再構築可能な派生キャッシュ**:
-   * データベース（`/data/runtime/search/alice_index.db`）が消失・破損しても、いつでも Workspace 群から `--reindex` で 100% 復旧可能です。
+   * データベース（`<ALICE_DATA_DIR>/runtime/search/alice_index.db`）が消失・破損しても、Workspace 群から `--reindex` で再構築できます。
 3. **Core と Search の疎結合（Workspace Driven CLI）**:
    * `ALICE_Core` と `ALICE_Search` は直接 Python import で依存せず、CLI（Subprocess）を介して連携します。
 4. **Job 成否と Search Index 更新成否の完全分離**:

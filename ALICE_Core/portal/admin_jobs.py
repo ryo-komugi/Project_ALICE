@@ -41,7 +41,7 @@ def _get_active_share_dir():
     adm = sys.modules.get("portal.admin")
     if adm and hasattr(adm, "config") and hasattr(adm.config, "DIR_SHARE"):
         return Path(adm.config.DIR_SHARE)
-    return Path(getattr(config, "DIR_SHARE", "/data/share"))
+    return Path(config.DIR_SHARE)
 
 def _get_user_display_name(user_id: str) -> str:
     """Resolve user_id to display_name from users.db. If not found, return user_id as is."""

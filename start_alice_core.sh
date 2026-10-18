@@ -17,13 +17,15 @@ PYTHON_BIN="${PROJECT_ROOT_FROM_SCRIPT}/myenv/core_env/bin/python"
 ENV_FILE="${CORE_DIR}/.env"
 CORE_HOST="${ALICE_CORE_HOST:-127.0.0.1}"
 CORE_PORT="${ALICE_CORE_PORT:-8000}"
+CORE_SSL_KEYFILE="${ALICE_CORE_SSL_KEYFILE:-}"
+CORE_SSL_CERTFILE="${ALICE_CORE_SSL_CERTFILE:-}"
 
 while (( $# )); do
   case "$1" in
     --ip)
       if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
         echo "Missing value for --ip" >&2
-        echo "Usage: $0 [--ip IP] [--port PORT]" >&2
+        echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]" >&2
         exit 2
       fi
       CORE_HOST="$2"
@@ -32,23 +34,56 @@ while (( $# )); do
     --port)
       if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
         echo "Missing value for --port" >&2
-        echo "Usage: $0 [--ip IP] [--port PORT]" >&2
+        echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]" >&2
         exit 2
       fi
       CORE_PORT="$2"
       shift 2
       ;;
+    --ssl-keyfile)
+      if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
+        echo "Missing value for --ssl-keyfile" >&2
+        echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]" >&2
+        exit 2
+      fi
+      CORE_SSL_KEYFILE="$2"
+      shift 2
+      ;;
+    --ssl-certfile)
+      if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
+        echo "Missing value for --ssl-certfile" >&2
+        echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]" >&2
+        exit 2
+      fi
+      CORE_SSL_CERTFILE="$2"
+      shift 2
+      ;;
     -h|--help)
-      echo "Usage: $0 [--ip IP] [--port PORT]"
+      echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]"
       exit 0
       ;;
     *)
       echo "Unknown argument: $1" >&2
-      echo "Usage: $0 [--ip IP] [--port PORT]" >&2
+      echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]" >&2
       exit 2
       ;;
   esac
 done
+
+if [[ -n "${CORE_SSL_KEYFILE}" || -n "${CORE_SSL_CERTFILE}" ]]; then
+  if [[ -z "${CORE_SSL_KEYFILE}" || -z "${CORE_SSL_CERTFILE}" ]]; then
+    echo "Both --ssl-keyfile and --ssl-certfile are required for direct HTTPS" >&2
+    exit 2
+  fi
+  if [[ "${CORE_SSL_KEYFILE}" != /* || "${CORE_SSL_CERTFILE}" != /* ]]; then
+    echo "TLS key and certificate paths must be absolute" >&2
+    exit 2
+  fi
+  if [[ ! -r "${CORE_SSL_KEYFILE}" || ! -r "${CORE_SSL_CERTFILE}" ]]; then
+    echo "TLS key or certificate is not readable" >&2
+    exit 1
+  fi
+fi
 
 if [[ ! -x "${PYTHON_BIN}" ]]; then
   echo "ALICE Core Python environment not found: ${PYTHON_BIN}" >&2
@@ -120,6 +155,14 @@ PY
 
 echo "Starting ALICE_Core as $(id -un) (uid=$(id -u), gid=$(id -g)) at ${CORE_HOST}:${CORE_PORT}"
 
+UVICORN_SSL_ARGS=()
+if [[ -n "${CORE_SSL_KEYFILE}" ]]; then
+  UVICORN_SSL_ARGS+=(--ssl-keyfile "${CORE_SSL_KEYFILE}" --ssl-certfile "${CORE_SSL_CERTFILE}")
+fi
+
 exec "${PYTHON_BIN}" -m uvicorn main:app \
   --host "${CORE_HOST}" \
-  --port "${CORE_PORT}"
+  --port "${CORE_PORT}" \
+  --proxy-headers \
+  --forwarded-allow-ips "${ALICE_CORE_TRUSTED_PROXY_IPS:-127.0.0.1}" \
+  "${UVICORN_SSL_ARGS[@]}"

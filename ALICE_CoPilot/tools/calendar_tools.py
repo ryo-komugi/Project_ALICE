@@ -33,7 +33,7 @@ def _get_auth_headers() -> dict[str, str]:
     cred_path = getattr(
         config,
         "GOOGLE_CALENDAR_CREDENTIALS_PATH",
-        Path("/data/runtime/calendar/credentials.json"),
+        config.DATA_DIR / "runtime" / "calendar" / "credentials.json",
     )
     if not cred_path.exists():
         raise FileNotFoundError(f"Google Calendar credentials not found at {cred_path}")

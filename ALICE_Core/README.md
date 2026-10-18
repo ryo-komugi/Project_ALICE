@@ -16,7 +16,7 @@ ALICE_Core は、LINE Bot などの外部クライアントからの要求受付
 
 * **疎結合アーキテクチャ**:
   * Core は各モジュール内部の Python クラスを直接 import せず、**Workspace Driven CLI / Subprocess 方式** で連携します。
-  * `1 Job = 1 Workspace`（`{PROJECT_ROOT}/data/runtime/workspaces/{job_id}/`）のライフサイクルを Core が完全に管理します。
+  * `1 Job = 1 Workspace`（`<ALICE_DATA_DIR>/runtime/workspaces/{job_id}/`）のライフサイクルを Core が完全に管理します。
 * **単一責任原則**:
   * Core はオーケストレーション（受付・キュー・プロセス管理・配信）に専念し、音声認識や LLM 推論などの AI 処理ロジックは各独立モジュール（`ALICE_Transcript`, `ALICE_Summary` 等）に委譲します。
 * **Source of Truth（源泉データ）**:
@@ -74,29 +74,24 @@ LINE からの要求に応じて、以下の直列 Workflow が自動的に割�
 
 ## 5. 実行時ディレクトリ構成
 
-ジョブワークスペースと Core の運用ログは、既定で `{PROJECT_ROOT}/data/runtime/` に作成します。`PROJECT_ROOT` は `ALICE_Core/config.py` が解決する Project_ALICE ルートです。各ユーザーが別々のプロジェクトフォルダを使うことで、Workspace とログを分離します。`.env` の `ALICE_DATA_DIR` でデータディレクトリを変更でき、相対パスは `PROJECT_ROOT` から解決します。Workspace は `<ALICE_DATA_DIR>/runtime/workspaces/`、ログは `<ALICE_DATA_DIR>/runtime/logs/` を使用します。受信一時ファイルや公開配信領域など、その他の共通ランタイム領域は従来どおり `/data/runtime` を使います。
+ALICE の永続データは `ALICE_DATA_DIR` を単一のルートとして保存します。省略時は `{PROJECT_ROOT}/data/`、相対パスは `PROJECT_ROOT` から解決します。Core、Search、CoPilot で同じ `ALICE_DATA_DIR` を設定してください。
 
 ```text
-{PROJECT_ROOT}/data/runtime/
-├── logs/                       # ALICE_Core と CoPilot の運用ログ
-│   ├── alice.log
-│   ├── copilot.log
-│   └── archive/
-└── workspaces/                 # Project_ALICE 個別 Job Workspace
-    └── {job_id}/
-        └── ...
-
-/data/runtime/
-├── copilot/                    # [CoPilot 専用]
-│   └── database/               # conversations.db
-├── core/                       # [Core 専用 (外部IF・配信領域)]
-│   ├── inbox/                  # LINE 受信一時ファイル
-│   └── share/                  # LINE 配信・静的公開領域 (/share)
-├── transcript/                 # [Transcript スタンドアロン専用領域]
-│   ├── staging/
-│   ├── input/
-│   ├── work/
-│   └── output/
+<ALICE_DATA_DIR>/
+├── runtime/
+│   ├── workspaces/{job_id}/    # Job Workspace
+│   ├── logs/                   # Core / CoPilot 運用ログ
+│   ├── core/
+│   │   ├── inbox/              # 受信一時ファイル
+│   │   ├── share/              # LINE 配信・静的公開領域 (/share)
+│   │   ├── archive/
+│   │   ├── system_settings.json
+│   │   └── last_global_ip.txt
+│   ├── search/                 # 検索インデックス
+│   ├── copilot/                # CoPilot DB・実行状態
+│   ├── calendar/               # Calendar / Tasks 認証ファイル
+│   └── patch_queue/
+└── memory/                     # CoPilot 長期記憶・Obsidian・HANDOFF
 ```
 
 ## 6. 本番起動
@@ -104,6 +99,35 @@ LINE からの要求に応じて、以下の直列 Workflow が自動的に割�
 Project_ALICE ルートで `./start_alice_core.sh` を実行します。スクリプトは `myenv/core_env` の Python で Core を起動し、`ALICE_Core/.env` を読み込むため `ALICE_Core` を作業ディレクトリにします。起動前に GPU ロックファイルへアクセスできるかを、実際の起動ユーザーで確認します。失敗時は UID/GID と対象パスを表示して起動を中止します。
 
 既定では `127.0.0.1:8000` で待ち受けます。起動時に `./start_alice_core.sh --ip 127.0.0.1 --port 8001` のように指定すると接続先を変更できます。`--ip` と `--port` は任意の順序で指定でき、片方だけの指定も可能です。引数を省略した値は `ALICE_CORE_HOST` と `ALICE_CORE_PORT` 環境変数から取得し、それらも未設定なら既定値を使います。systemd から使う場合は、`ExecStart` にこのスクリプトの絶対パスと必要な引数を指定し、意図したサービスユーザーで実行してください。スクリプトは `sudo` による権限変更を行いません。
+
+### 現行版と Rabbit Hole 版の共存
+
+| インスタンス | 公開 URL | 待受 | データ領域 |
+| :--- | :--- | :--- | :--- |
+| 現行 ALICE | `https://project-alice.net` | `127.0.0.1:8000` | 現行版専用 `ALICE_DATA_DIR` |
+| Rabbit Hole ALICE | `https://rabbit-hole.project-alice.net/noel` | `127.0.0.1:8001` | Rabbit Hole 版専用 `ALICE_DATA_DIR` |
+
+Cloudflare Tunnel は既存のリモート管理 Tunnel を使用します。`rabbit-hole.project-alice.net` は既存の `project-alice.net` Zone に追加するサブドメインです。Cloudflare Zero Trust の **Networks → Tunnels → 既存 Tunnel → Routes → Add a route → Published application** で以下を登録します。
+
+| 項目 | 値 |
+| :--- | :--- |
+| Domain | `project-alice.net` |
+| Subdomain | `rabbit-hole` |
+| Path | `^/(home|noel)(/.*)?$` |
+| Service URL | `http://127.0.0.1:8001` |
+
+Path は `/home`・`/noel` とそれぞれの配下に一致させ、別インスタンスの `/admin` や `/share` 等をこの公開アプリルートから除外します。Cloudflare は Path を除去・書き換えずに転送するため、Rabbit Hole Core は要求パスをそのまま受け取ります。公開アプリルート作成時に DNS レコードも Tunnel 向けに登録されます。Cloudflare Access アプリケーションは作成せず、Noel は匿名利用の方針です。
+
+Rabbit Hole 版は別のコード checkout / systemd service で起動し、たとえば `ALICE_DATA_DIR=/data/alice/rabbit-hole` と `ALICE_GPU_LOCK_FILE=/tmp/alice_gpu.lock` を設定します。GPU ロックだけは現行版と共有し、同時に GPU 処理を走らせないようにします。`ALICE_ENABLE_IP_MONITOR=false` とし、IP 監視・Discord通知の二重起動を防ぎます。ブラウザー Job の成果物は LINE に送らず、Noel API から取得します。手動起動例:
+
+```bash
+ALICE_DATA_DIR=/data/alice/rabbit-hole \
+ALICE_GPU_LOCK_FILE=/tmp/alice_gpu.lock \
+ALICE_ENABLE_IP_MONITOR=false \
+./start_alice_core.sh --ip 127.0.0.1 --port 8001
+```
+
+ポートは loopback に bind し、IP / ポートを直接公開しません。Cloudflare Access はこの一般利用 URL に適用せず、HTTPS とアップロード検証は Noel API 側で強制します。
 
 ---
 
@@ -144,7 +168,7 @@ ALICE_Core/
 ├── core/
 │   ├── container.py        # DI コンテナ
 │   ├── job_queue.py        # FIFO JobQueue (メモリキュー)
-│   ├── logger.py           # Core ロガー ({PROJECT_ROOT}/data/runtime/logs/alice.log)
+│   ├── logger.py           # Core ロガー (<ALICE_DATA_DIR>/runtime/logs/alice.log)
 │   ├── session.py          # ユーザー対話セッションモデル
 │   ├── session_manager.py  # セッション状態管理
 │   ├── worker.py           # CoreWorker (MODULE_RUNNERS 定義 & 順次実行)
@@ -169,3 +193,26 @@ ALICE_Core/
 * Job / Queue の DB 永続化（SQLite / Redis / Celery 等）
 * Module 通信の HTTP / gRPC 化
 * Publisher の他サービス拡張（Discord, Slack, Obsidian 等）
+
+## 10. Browser API
+
+Rabbit-Hole のホーム画面は `/home` で提供します。`ALICE_Navigators/` 直下の各ナビゲーターディレクトリにある `navigator.json` を読み取り、利用可能な案内先をカード表示します。登録には `name`、`description`、`path` を設定し、任意で同一オリジンの `image` パスを指定します。現在のNoelは `/noel` へ遷移します。ホーム画面は `/admin` と同じ起動スプラッシュの後、森のラビットホールをくぐる短い演出を表示し、演出はスキップできます。`/home` と `/noel` の画面、API、静的ファイルはHTTPS必須です。TLS終端をCloudflare Tunnel等に任せる場合は、Coreが信頼するプロキシから `X-Forwarded-Proto: https` を転送してください。ローカルでCore自身にTLS終端させる場合は、起動時に `--ssl-keyfile` と `--ssl-certfile` を両方指定します。例: `./start_alice_core.sh --ip 127.0.0.1 --port 8001 --ssl-keyfile /path/to/key.pem --ssl-certfile /path/to/cert.pem`。
+
+| Method / Path | 内容 |
+| :--- | :--- |
+| `GET /home` | Rabbit-Hole ホーム画面を返す。 |
+| `GET /home/api/navigators` | `ALICE_Navigators/` 内の有効な `navigator.json` を一覧で返す。 |
+
+Noel のブラウザー画面は `https://rabbit-hole.project-alice.net/noel`（ソース: `ALICE_Navigators/Noel/`）で提供し、画像は同じ Rabbit Hole Core インスタンスから配信します。Noel は文字起こし専用UIとして `/noel/api` 配下の匿名 API を使用し、`/admin` の管理者認証から分離しています。HTTPS 必須で、Cookie は HttpOnly / Secure / SameSite=Strict の host-only 設定です。セッションは Job の分離用で、本人確認には使いません。
+
+| Method / Path | 内容 |
+| :--- | :--- |
+| `GET /noel/api/session` | ブラウザーセッション用 Cookie を発行し、対応する `user_id` を返す。 |
+| `POST /noel/api/transcribe` | multipart/form-data の `audio` を受け付け、`["transcript"]` のみを実行する文字起こし Job を登録する。MP3 / M4A / WAV、100 MiB 以下、音声 2 時間以下。ffprobe で実データを検証する。 |
+| `GET /noel/api/jobs/{job_id}` | セッション所有 Job の状態と進捗 (`progress.stage`, `progress.percent`) を返す。他セッションの Job は 404。 |
+| `GET /noel/api/jobs/{job_id}/live-transcript` | Whisper が生成した途中の文字起こしテキストを返す。未生成の場合は 204。 |
+| `GET /noel/api/jobs/{job_id}/transcript` | 所有 Job の Whisper 文字起こし結果 (`transcript/transcript.txt`) を返す。未生成の場合は 409。 |
+| `POST /noel/api/minutes` | 議事録生成用の既存 API。`["transcript", "summary", "minutes"]` を実行する。別 Navigator から利用するため維持する。 |
+| `GET /noel/api/jobs/{job_id}/minutes` | 議事録生成 Job の議事録を返す。未生成の場合は 409。 |
+
+Job の `user_id` は署名済みセッション Cookie から導出し、Cookie 値そのものは応答に含めません。各取得時に所有者を照合します。1 セッション 1 件、Noel 全体で実行中・待機中合計 2 件、送信元 IP あたり 15 分で 5 回までに制限します。Uvicorn が信頼する proxy header 送信元は既定で loopback のみです。Cloudflared は同一ホストから loopback に接続させ、Cloudflare 側も Noel のホスト名を Tunnel 経由だけで公開してください。異なる接続元では `ALICE_CORE_TRUSTED_PROXY_IPS` を設定します。

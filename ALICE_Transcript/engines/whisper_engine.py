@@ -1,4 +1,5 @@
 import logging
+from typing import Callable
 from faster_whisper import WhisperModel
 import config
 
@@ -10,6 +11,7 @@ class WhisperEngine:
         self.model_name = model_name or getattr(config, "MODEL_NAME", "deepdml/faster-whisper-large-v3-turbo-ct2")
         self.device = device
         self.compute_type = compute_type
+        self.progress_callback: Callable | None = None
         try:
             self.model = WhisperModel(self.model_name, device=self.device, compute_type=self.compute_type)
         except Exception as exc:
@@ -68,7 +70,16 @@ class WhisperEngine:
             beam_size=beam_size,
             repetition_penalty=repetition_penalty,
         )
-        return list(segments), info
+        collected = []
+        for segment in segments:
+            collected.append(segment)
+            if self.progress_callback:
+                self.progress_callback(segment, info)
+        return collected, info
+
+    def set_progress_callback(self, callback: Callable | None) -> None:
+        """Set an optional callback invoked as Whisper yields each segment."""
+        self.progress_callback = callback
 
     def run(self, job):
         job.whisper_segments, job.whisper_info = self.transcribe(job.wav_audio)

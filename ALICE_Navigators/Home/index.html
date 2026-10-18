@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#060913">
+    <title>Project ALICE | Rabbit-Hole</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: "BIZ UDPGothic", "Yu Gothic", Meiryo, sans-serif;
+            background: #060913;
+            color: #f1f5ed;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+            background-color: #060913;
+            background-image:
+                linear-gradient(to bottom, rgba(6, 9, 19, .48), rgba(6, 9, 19, .64)),
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, .10), transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, .10), transparent 50%),
+                url("/home/assets/rabbit_hole_background.jpg");
+            background-size: cover;
+            background-position: center bottom;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-attachment: fixed;
+        }
+
+        .home-shell {
+            width: min(1080px, calc(100% - 36px));
+            margin: 0 auto;
+            padding: clamp(48px, 10vh, 100px) 0 64px;
+        }
+
+        .eyebrow {
+            margin: 0 0 12px;
+            color: #7dd3fc;
+            font-size: 12px;
+            letter-spacing: .28em;
+            text-transform: uppercase;
+            text-shadow: 0 0 18px rgba(56, 189, 248, .38);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(34px, 7vw, 64px);
+            font-weight: 600;
+            letter-spacing: .025em;
+            text-shadow: 0 5px 28px rgba(0, 0, 0, .5);
+        }
+
+        .intro {
+            max-width: 620px;
+            margin: 15px 0 0;
+            color: #c3d0c3;
+            line-height: 1.9;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            margin: 52px 0 18px;
+        }
+
+        .section-heading h2 { margin: 0; font-size: 19px; font-weight: 500; }
+        .section-heading span { color: #94a3b8; font-size: 12px; }
+
+        .navigator-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 275px), 1fr));
+            gap: 18px;
+        }
+
+        .navigator-card {
+            position: relative;
+            display: flex;
+            min-height: 190px;
+            align-items: center;
+            gap: 20px;
+            overflow: hidden;
+            padding: 22px;
+            border: 1px solid rgba(125, 211, 252, .2);
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, .82), rgba(17, 24, 39, .74));
+            -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+            color: inherit;
+            text-decoration: none;
+            box-shadow: 0 18px 48px rgba(2, 6, 23, .35), inset 0 1px rgba(255, 255, 255, .04);
+            transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+        }
+
+        .navigator-card::after {
+            position: absolute;
+            inset: auto -25px -70px auto;
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(125, 211, 252, .16), rgba(168, 85, 247, .08) 42%, transparent 72%);
+            content: "";
+            pointer-events: none;
+        }
+
+        .navigator-card:hover, .navigator-card:focus-visible {
+            transform: translateY(-4px);
+            border-color: rgba(125, 211, 252, .72);
+            box-shadow: 0 22px 52px rgba(2, 6, 23, .5), 0 0 30px rgba(56, 189, 248, .16), 0 0 46px rgba(168, 85, 247, .1);
+            outline: none;
+        }
+
+        .navigator-avatar {
+            flex: 0 0 112px;
+            width: 112px;
+            height: 132px;
+            object-fit: cover;
+            object-position: center 30%;
+            border: 1px solid rgba(255, 255, 255, .17);
+            border-radius: 14px;
+            background: #0f172a;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, .4);
+        }
+
+        .navigator-copy { position: relative; z-index: 1; }
+        .navigator-copy h3 { margin: 0 0 9px; font-size: 22px; font-weight: 600; }
+        .navigator-copy p { margin: 0; color: #cbd5e1; font-size: 13px; line-height: 1.8; }
+        .open-label { display: inline-block; margin-top: 15px; color: #fcd34d; font-size: 12px; }
+
+        .empty-state, .load-error {
+            grid-column: 1 / -1;
+            padding: 26px;
+            border: 1px solid rgba(125, 211, 252, .16);
+            border-radius: 16px;
+            color: #cbd5e1;
+            background: rgba(15, 23, 42, .76);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            line-height: 1.8;
+        }
+
+        .footnote { margin-top: 44px; color: #94a3b8; font-size: 11px; text-align: center; }
+
+        /* Admin splash followed by the Rabbit-Hole animation video. */
+        .intro-splash, .rabbit-passage {
+            position: fixed;
+            z-index: 20;
+            inset: 0;
+            display: grid;
+            place-items: center;
+        }
+
+        .intro-splash {
+            background-color: #eaf7ff;
+            background-image: url("/home/assets/rabbit_hole_splash.png");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: opacity .45s ease;
+        }
+
+        .skip-button {
+            position: absolute;
+            z-index: 2;
+            top: 20px;
+            right: 20px;
+            padding: 10px 16px;
+            border: 1px solid rgba(173, 223, 176, .45);
+            border-radius: 999px;
+            background: rgba(6, 15, 10, .78);
+            color: #f3fff1;
+            font: inherit;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .splash-progress {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            width: min(390px, calc(100% - 40px));
+            padding: 14px 16px;
+            transform: translateX(-50%);
+            border: 1px solid rgba(56, 189, 248, .3);
+            border-radius: 16px;
+            background: rgba(2, 8, 18, .8);
+            box-shadow: 0 12px 36px rgba(0, 0, 0, .4);
+        }
+
+        .progress-track { height: 9px; overflow: hidden; border-radius: 8px; background: #182437; }
+        .progress-bar {
+            width: 35%;
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #38bdf8, #a855f7, #ec4899);
+            transition: width .3s ease;
+        }
+
+        .progress-caption {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 9px;
+            color: #d1dbea;
+            font: 700 10px/1.4 monospace;
+            letter-spacing: .08em;
+        }
+
+        .rabbit-passage {
+            z-index: 19;
+            visibility: hidden;
+            overflow: hidden;
+            opacity: 0;
+            background: #020604;
+            transition: opacity .45s ease;
+        }
+
+        .rabbit-passage.active { visibility: visible; opacity: 1; }
+        .passage-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #020604;
+        }
+
+        .passage-caption {
+            position: absolute;
+            z-index: 2;
+            bottom: max(28px, env(safe-area-inset-bottom));
+            left: 50%;
+            margin: 0;
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: clamp(13px, 2.4vw, 18px);
+            letter-spacing: .14em;
+            text-shadow: 0 2px 14px #000;
+        }
+
+        .intro-splash.done { opacity: 0; pointer-events: none; }
+        .rabbit-passage.done { opacity: 0; }
+
+        @media (max-width: 600px) {
+            .home-shell { width: min(100% - 28px, 520px); padding-top: 58px; }
+            .section-heading { margin-top: 38px; }
+            .navigator-card { min-height: 164px; gap: 15px; padding: 17px; }
+            .navigator-avatar { flex-basis: 96px; width: 96px; height: 120px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+        }
+    </style>
+</head>
+<body>
+    <main class="home-shell">
+        <p class="eyebrow">A way into Project ALICE</p>
+        <h1>Rabbit-Hole</h1>
+        <p class="intro">不思議の国へようこそ。個性豊かなナビゲーターが、あなたの旅をサポートします。</p>
+
+        <div class="section-heading">
+            <h2>ナビゲーターを選ぶ</h2>
+            <span id="navigator-count">読み込み中</span>
+        </div>
+        <section id="navigator-grid" class="navigator-grid" aria-live="polite" aria-busy="true">
+            <div class="empty-state">ナビゲーターを探しています…</div>
+        </section>
+        <p class="footnote">PROJECT ALICE · RABBIT-HOLE</p>
+    </main>
+
+    <section id="intro-splash" class="intro-splash" aria-label="Project ALICE 起動演出">
+        <button class="skip-button" type="button" onclick="skipJourney()">演出をスキップ</button>
+        <div class="splash-progress" aria-live="polite">
+            <div class="progress-track"><div id="splash-progress" class="progress-bar"></div></div>
+            <div class="progress-caption"><span id="splash-status">INITIALIZING CORE SYSTEMS...</span><span id="splash-percent">35%</span></div>
+        </div>
+    </section>
+
+    <section id="rabbit-passage" class="rabbit-passage" aria-label="薄暗い森を進んでいます">
+        <video id="rabbit-passage-video" class="passage-video" muted playsinline preload="auto" aria-label="森を進み、Rabbit-Holeへ入る演出">
+            <source src="/home/assets/alice_animation.mp4" type="video/mp4">
+        </video>
+        <button class="skip-button" type="button" onclick="skipJourney()">演出をスキップ</button>
+        <p class="passage-caption">Rabbit-Holeへ…</p>
+    </section>
+
+    <script>
+        const grid = document.getElementById("navigator-grid");
+        const count = document.getElementById("navigator-count");
+
+        function addNavigatorCard(navigator) {
+            const card = document.createElement("a");
+            card.className = "navigator-card";
+            card.href = navigator.path;
+
+            if (navigator.image) {
+                const image = document.createElement("img");
+                image.className = "navigator-avatar";
+                image.src = navigator.image;
+                image.alt = `${navigator.name}のキャラクター`;
+                image.loading = "lazy";
+                image.onerror = () => image.remove();
+                card.append(image);
+            }
+
+            const copy = document.createElement("div");
+            copy.className = "navigator-copy";
+            const name = document.createElement("h3");
+            name.textContent = navigator.name;
+            const description = document.createElement("p");
+            description.textContent = navigator.description;
+            const open = document.createElement("span");
+            open.className = "open-label";
+            open.textContent = "案内を始める →";
+            copy.append(name, description, open);
+            card.append(copy);
+            grid.append(card);
+        }
+
+        async function loadNavigators() {
+            try {
+                const response = await fetch("/home/api/navigators", { cache: "no-store" });
+                if (!response.ok) throw new Error("一覧を取得できませんでした");
+                const data = await response.json();
+                const navigators = Array.isArray(data.navigators) ? data.navigators : [];
+                grid.replaceChildren();
+                if (!navigators.length) {
+                    const empty = document.createElement("div");
+                    empty.className = "empty-state";
+                    empty.textContent = "現在利用できるナビゲーターはありません。";
+                    grid.append(empty);
+                } else {
+                    navigators.forEach(addNavigatorCard);
+                }
+                count.textContent = `${navigators.length}名`;
+            } catch (error) {
+                grid.replaceChildren();
+                const message = document.createElement("div");
+                message.className = "load-error";
+                message.textContent = "ナビゲーター一覧を読み込めませんでした。ページを再読み込みしてください。";
+                grid.append(message);
+                count.textContent = "読み込みエラー";
+            } finally {
+                grid.setAttribute("aria-busy", "false");
+            }
+        }
+
+        function skipJourney() {
+            const video = document.getElementById("rabbit-passage-video");
+            if (video) video.pause();
+            document.getElementById("intro-splash")?.remove();
+            document.getElementById("rabbit-passage")?.remove();
+        }
+
+        function finishJourney() {
+            const passage = document.getElementById("rabbit-passage");
+            if (!passage || passage.dataset.finishing === "true") return;
+            passage.dataset.finishing = "true";
+            const video = document.getElementById("rabbit-passage-video");
+            if (video) video.pause();
+            passage.classList.add("done");
+            setTimeout(() => passage.remove(), 500);
+            setTimeout(() => document.getElementById("intro-splash")?.remove(), 500);
+        }
+
+        function startJourney() {
+            const splash = document.getElementById("intro-splash");
+            const passage = document.getElementById("rabbit-passage");
+            const bar = document.getElementById("splash-progress");
+            const percent = document.getElementById("splash-percent");
+            const status = document.getElementById("splash-status");
+            const steps = [
+                [65, "CONNECTING TO ALICE CORE..."],
+                [90, "FINDING THE RABBIT-HOLE..."],
+                [100, "READY · ENTERING THE FOREST..."]
+            ];
+            let index = 0;
+            const timer = setInterval(() => {
+                const [value, label] = steps[index++];
+                bar.style.width = `${value}%`;
+                percent.textContent = `${value}%`;
+                status.textContent = label;
+                if (index === steps.length) {
+                    clearInterval(timer);
+                    setTimeout(() => {
+                        splash.classList.add("done");
+                        passage.classList.add("active");
+                        const video = document.getElementById("rabbit-passage-video");
+                        video.addEventListener("ended", finishJourney, { once: true });
+                        video.addEventListener("timeupdate", () => {
+                            if (video.duration && video.currentTime >= video.duration - 0.5) finishJourney();
+                        });
+                        video.play().catch(finishJourney);
+                    }, 180);
+                }
+            }, 350);
+            setTimeout(() => {
+                if (document.getElementById("rabbit-passage")) finishJourney();
+            }, 8000);
+            document.querySelectorAll(".skip-button").forEach(button => button.addEventListener("click", () => clearInterval(timer), { once: true }));
+        }
+
+        loadNavigators();
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            skipJourney();
+        } else {
+            startJourney();
+        }
+    </script>
+</body>
+</html>
