@@ -26,7 +26,7 @@
 | **実行ユーザー** | **`product`**（UID 1003、ryo-komugi氏共同管理） | **`takuya`**（UID 1000、chmod 700で完全隔離） |
 | **配置ディレクトリ** | `/home/product/Project_ALICE` | `/home/takuya/Project_CHESHIRE` |
 | **コア機能** | Core, Transcript, Summary, Minute, Rabbit-Hole, Noel | CoPilot, 自律エージェント, 思考ストック, 家電, 予定 |
-| **メインUI / Input** | LINE Messaging API, Webポータル (`/home`, `/noel`) | **Discord Bot**（CHESHIRE専用対話窓口） |
+| **メインUI / Input** | LINE Messaging API, Webポータル (`/rabbit-hole`, `/noel`) | **Discord Bot**（CHESHIRE専用対話窓口） |
 | **管理コックピット** | **ALICE COCKPIT**（個人機能を除去したDashboard / Job Explorer / Logsのみ） | **CHESHIRE COCKPIT**（個人用ダッシュボード・エージェント管理） |
 | **待受ポート** | **`8000`**（Cloudflare変更不要） | **`8010`**（CHESHIRE WebUI / API） |
 | **Cloudflare ドメイン** | `project-alice.net` / `admin.project-alice.net` | `grin.project-alice.net`（Zero Trust認証でtakuyaのみ） |

@@ -11,7 +11,7 @@ from portal.download import router as download_router
 from portal.viewer import router as viewer_router
 from portal.admin import router as admin_router
 from portal.browser_minutes import router as browser_minutes_router
-from portal.home import router as home_router
+from portal.rabbit_hole import router as rabbit_hole_router
 from portal.auth import AdminAuthMiddleware
 from hub.container import job_service
 
@@ -46,7 +46,7 @@ app = FastAPI(
 @app.middleware("http")
 async def require_https_for_browser_portals(request: Request, call_next):
     path = request.url.path
-    is_browser_portal = any(path == root or path.startswith(root + "/") for root in ("/home", "/noel", "/kureha"))
+    is_browser_portal = any(path == root or path.startswith(root + "/") for root in ("/rabbit-hole", "/noel", "/kureha"))
     if is_browser_portal and request.url.scheme != "https":
         return JSONResponse(
             status_code=400,
@@ -74,14 +74,14 @@ app.include_router(download_router)
 app.include_router(viewer_router)
 app.include_router(admin_router, prefix="/admin")
 app.include_router(browser_minutes_router)
-app.include_router(home_router)
+app.include_router(rabbit_hole_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 Path(config.DIR_SHARE).mkdir(parents=True, exist_ok=True)
 app.mount("/share", StaticFiles(directory=config.DIR_SHARE), name="share")
 NOEL_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators" / "Noel"
 app.mount("/noel/assets", StaticFiles(directory=NOEL_DIR / "images"), name="noel-assets")
-HOME_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators" / "Home"
-app.mount("/home/assets", StaticFiles(directory=HOME_DIR / "images"), name="home-assets")
+RABBIT_HOLE_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators" / "RabbitHole"
+app.mount("/rabbit-hole/assets", StaticFiles(directory=RABBIT_HOLE_DIR / "images"), name="rabbit-hole-assets")
 KUREHA_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators" / "Kureha"
 app.mount("/kureha/assets", StaticFiles(directory=KUREHA_DIR / "images"), name="kureha-assets")
 
