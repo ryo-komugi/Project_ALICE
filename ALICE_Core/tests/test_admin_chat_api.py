@@ -7,19 +7,16 @@ from portal.chat_proxy import get_chat_status, get_chat_history, clear_chat_hist
 
 
 @pytest.mark.anyio
-async def test_admin_dashboard_html_contains_chat_tab():
-    """Verify admin cockpit HTML contains AI Console elements."""
+async def test_admin_dashboard_html_excludes_chat_tab():
+    """Verify admin cockpit HTML excludes personal AI Console elements."""
     response = await get_admin_dashboard()
     assert response.status_code == 200
     html = response.body.decode("utf-8")
-    assert 'id="tab-chat"' in html
-    assert 'id="nav-chat"' in html
-    assert 'id="mob-chat"' in html
-    assert 'id="ollama-status-badge"' in html
-    assert 'id="antigravity-status-badge"' in html
-    assert 'switchChatMode' in html
-    assert 'AI Console' in html
-    assert 'qwen3.5:9b' in html
+    assert 'id="tab-chat"' not in html
+    assert 'id="nav-chat"' not in html
+    assert 'id="mob-chat"' not in html
+    assert 'id="voice-chat-modal"' not in html
+    assert 'AI Console' not in html
 
 
 @pytest.mark.anyio
