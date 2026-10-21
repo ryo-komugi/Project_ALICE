@@ -17,7 +17,6 @@ def _resolve_python_bin(env_var: str, relative_subpath: str) -> str:
     # 2. プロジェクト内仮想環境
     candidates = [
         config.PROJECT_ROOT / "myenv" / relative_subpath / "bin" / "python",
-        Path(f"/home/takuya/Project_ALICE/myenv/{relative_subpath}/bin/python"),
     ]
     for cand in candidates:
         if cand.is_file():

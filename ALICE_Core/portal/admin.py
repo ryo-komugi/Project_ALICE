@@ -36,10 +36,8 @@ from portal.telemetry import (
 )
 
 # Sub-routers
-from portal.chat_proxy import router as chat_router
 from portal.admin_jobs import router as jobs_router
 from portal.admin_logs import router as logs_router
-from portal.admin_users import router as users_router
 
 # Direct imports from admin_jobs for monkeypatch compatibility
 import portal.admin_jobs as _jobs_mod
@@ -64,21 +62,12 @@ from portal.admin_logs import (
     cleanup_logs_api,
 )
 
-# Re-exports from admin_users
-from portal.admin_users import (
-    list_users,
-    update_user,
-    delete_user,
-)
-
 logger = logging.getLogger("ALICE_Core.Admin")
 
 router = APIRouter()
 
-router.include_router(chat_router)
 router.include_router(jobs_router)
 router.include_router(logs_router)
-router.include_router(users_router)
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static" / "admin"
 SYSTEMCTL_BIN = shutil.which("systemctl") or "/usr/bin/systemctl"
@@ -167,7 +156,7 @@ async def restart_service_api(service_name: str):
     """Restart a system daemon (core, copilot, ollama, line)."""
     svc = service_name.lower().strip()
     if svc not in ("core", "copilot", "ollama", "line"):
-        raise HTTPException(status_code=400, detail="Invalid service name. Must be core, copilot, ollama, or line")
+        raise HTTPException(status_code=400, detail="Invalid service name. Must be core or ollama")
 
     if svc in ("core", "line"):
         def _deferred_restart():
@@ -179,38 +168,6 @@ async def restart_service_api(service_name: str):
         import threading
         threading.Thread(target=_deferred_restart, daemon=True).start()
         return {"status": "restarting", "service": "core", "message": "Coreサービスの再起動を開始しました。約5秒後に自動復帰します。"}
-
-    elif svc == "copilot":
-        try:
-            res = subprocess.run(["sudo", "-n", SYSTEMCTL_BIN, "restart", "alice-copilot.service"], capture_output=True, text=True, timeout=3.0)
-            if res.returncode == 0:
-                return {"status": "restarted", "service": "copilot", "message": "CoPilotサービスをsystemctl経由で再起動しました。"}
-        except Exception:
-            pass
-
-        # Fallback: kill user processes and respawn
-        try:
-            subprocess.run(["pkill", "-9", "-f", "ALICE_CoPilot/main.py"], capture_output=True, timeout=2.0)
-        except Exception:
-            pass
-
-        import time
-        time.sleep(1.0)
-        copilot_python = str(config.PROJECT_ROOT / "myenv" / "copilot_env" / "bin" / "python")
-        copilot_main = str(config.PROJECT_ROOT / "ALICE_CoPilot" / "main.py")
-        copilot_dir = str(config.PROJECT_ROOT / "ALICE_CoPilot")
-        try:
-            log_out = open(Path(config.DIR_LOGS) / "copilot.log", "a", encoding="utf-8")
-        except Exception:
-            log_out = subprocess.DEVNULL
-        subprocess.Popen(
-            [copilot_python, copilot_main],
-            cwd=copilot_dir,
-            stdout=log_out,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-        )
-        return {"status": "restarted", "service": "copilot", "message": "CoPilotプロセスを再起動しました。"}
 
     elif svc == "ollama":
         try:

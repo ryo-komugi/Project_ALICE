@@ -1,7 +1,0 @@
-# Python
-__pycache__/
-*.py[cod]
-.aider*
-.env
-.codeboarding/*.db
-

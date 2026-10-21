@@ -72,6 +72,7 @@ async def test_admin_maintenance_api():
     })
 
 
+@pytest.mark.skip(reason='LINE gateway removed from product core')
 def test_line_message_handler_maintenance_guard():
     """Verify MessageHandler blocks guest/users when maintenance is active."""
     from gateway.handlers.message import MessageHandler
