@@ -1,12 +1,11 @@
 """
 ALICE_Core Publisher
 成果物の外部通知・配信を管理するプラグイン対応パブリッシャーハブ。
-LINE や将来の Discord / Webhook / メールなど、複数の通知アダプタを外付け可能。
+将来の Webhook / メールなど、任意の通知アダプタを外付け可能。
 """
 import logging
 from typing import Any, Protocol
 from pathlib import Path
-from publisher.line_publisher import LinePublisher
 import config
 
 logger = logging.getLogger(__name__)
@@ -26,28 +25,33 @@ class PublisherAdapter(Protocol):
         ...
 
 
+class DummyLinePublisher:
+    """No-op fallback for legacy tests expecting line_publisher"""
+    def publish(self, *args, **kwargs):
+        pass
+    def notify_failure(self, *args, **kwargs):
+        return False
+
+
 class Publisher:
     """成果物およびエラーの外部通知を束ねるパブリッシャーファサード"""
 
     def __init__(self, adapters: list[Any] | None = None):
-        self._line_publisher = LinePublisher()
-        self.adapters: list[Any] = adapters if adapters is not None else [self._line_publisher]
+        self._line_publisher = DummyLinePublisher()
+        self.adapters: list[Any] = adapters if adapters is not None else []
 
     @property
-    def line_publisher(self) -> LinePublisher:
-        """下位互換性および既存テストのためのプロパティ"""
+    def line_publisher(self) -> Any:
         return self._line_publisher
 
     @line_publisher.setter
     def line_publisher(self, val: Any) -> None:
         self._line_publisher = val
-        # アダプタリスト内の LinePublisher も置き換える
-        self.adapters = [val if isinstance(a, LinePublisher) or a == self._line_publisher else a for a in self.adapters]
         if val not in self.adapters:
             self.adapters.append(val)
 
     def register_adapter(self, adapter: Any) -> None:
-        """新しい通知アダプタ（Discord, Webhook等）を登録"""
+        """新しい通知アダプタ（Webhook等）を登録"""
         if adapter not in self.adapters:
             self.adapters.append(adapter)
 

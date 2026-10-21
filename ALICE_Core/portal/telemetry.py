@@ -205,7 +205,6 @@ def _get_service_status() -> dict[str, str]:
     """Check systemd service active status with process fallback."""
     services = {
         "core": "alice-core.service",
-        "copilot": "alice-copilot.service",
         "ollama": "ollama.service",
     }
     result = {}
@@ -224,17 +223,5 @@ def _get_service_status() -> dict[str, str]:
                 result[key] = status_text or "unknown"
         except Exception:
             result[key] = "unknown"
-
-    # CoPilot 手動稼働プロセス（ALICE_CoPilot/main.py）のフォールバック検知
-    if result.get("copilot") != "active":
-        try:
-            p_check = subprocess.run(["pgrep", "-f", "ALICE_CoPilot/main.py"], capture_output=True, text=True, timeout=1.0)
-            if p_check.returncode == 0 and p_check.stdout.strip():
-                result["copilot"] = "active"
-        except Exception:
-            pass
-
-    # LINE Gateway status (Active when Core is active)
-    result["line"] = "active" if result.get("core") == "active" else "inactive"
 
     return result
