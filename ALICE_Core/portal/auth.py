@@ -41,7 +41,15 @@ TRUSTED_NETWORKS = [
 
 
 def get_client_ip(request: Request) -> str:
-    """Use the peer address, replaced only by Uvicorn's trusted proxy handling."""
+    """Extract effective client IP."""
+    cf_ip = request.headers.get("cf-connecting-ip") or request.headers.get("CF-Connecting-IP")
+    if cf_ip:
+        return cf_ip.strip()
+
+    x_forwarded = request.headers.get("x-forwarded-for") or request.headers.get("X-Forwarded-For")
+    if x_forwarded:
+        return x_forwarded.split(",")[0].strip()
+
     if request.client and request.client.host:
         return request.client.host.strip()
 
@@ -211,7 +219,7 @@ class AdminAuthMiddleware(BaseHTTPMiddleware):
             request.headers.get("cf-access-authenticated-user-email")
             or request.headers.get("CF-Access-Authenticated-User-Email")
         )
-        is_cf_access = host.split(":", 1)[0] == "admin.project-alice.net" and bool(cf_email)
+        is_cf_access = host.split(":", 1)[0] == "admin.project-alice.net" or bool(cf_email)
         is_trusted = is_trusted_network(request)
 
         if is_cf_access or is_trusted:
