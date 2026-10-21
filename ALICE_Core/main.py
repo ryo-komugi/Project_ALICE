@@ -46,7 +46,7 @@ app = FastAPI(
 @app.middleware("http")
 async def require_https_for_browser_portals(request: Request, call_next):
     path = request.url.path
-    is_browser_portal = path == "/home" or path.startswith("/home/") or path == "/noel" or path.startswith("/noel/")
+    is_browser_portal = any(path == root or path.startswith(root + "/") for root in ("/home", "/noel", "/kureha"))
     if is_browser_portal and request.url.scheme != "https":
         return JSONResponse(
             status_code=400,
@@ -82,6 +82,23 @@ NOEL_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators" / "Noel"
 app.mount("/noel/assets", StaticFiles(directory=NOEL_DIR / "images"), name="noel-assets")
 HOME_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators" / "Home"
 app.mount("/home/assets", StaticFiles(directory=HOME_DIR / "images"), name="home-assets")
+KUREHA_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators" / "Kureha"
+app.mount("/kureha/assets", StaticFiles(directory=KUREHA_DIR / "images"), name="kureha-assets")
+
+
+@app.get("/kureha", include_in_schema=False)
+@app.get("/kureha/", include_in_schema=False)
+async def kureha_page():
+    return FileResponse(
+        KUREHA_DIR / "index.html",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "strict-origin-when-cross-origin",
+            "X-Frame-Options": "DENY",
+            "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'",
+        },
+    )
 
 
 @app.get("/health")

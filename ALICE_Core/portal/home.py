@@ -50,7 +50,7 @@ async def list_navigators():
     if not NAVIGATORS_DIR.is_dir():
         return {"navigators": navigators}
 
-    for directory in sorted(NAVIGATORS_DIR.iterdir(), key=lambda item: item.name.casefold()):
+    for directory in NAVIGATORS_DIR.iterdir():
         if not directory.is_dir():
             continue
         slug = directory.name.casefold()
@@ -67,7 +67,10 @@ async def list_navigators():
         description = manifest.get("description")
         path = manifest.get("path")
         image = manifest.get("image", "")
+        order = manifest.get("order", 1000)
         if not all(isinstance(value, str) for value in (name, description, path, image)):
+            continue
+        if not isinstance(order, int):
             continue
         if not name.strip() or not LOCAL_PATH_PATTERN.fullmatch(path) or ".." in path.split("/"):
             continue
@@ -79,5 +82,7 @@ async def list_navigators():
             "description": description[:240],
             "path": path,
             "image": image,
+            "order": order,
         })
+    navigators.sort(key=lambda navigator: (navigator["order"], navigator["name"].casefold()))
     return {"navigators": navigators}

@@ -2,5 +2,6 @@
   "name": "Noel",
   "description": "音声ファイルから、会話の文字起こしを行います。",
   "path": "/noel",
+  "order": 10,
   "image": "/noel/assets/ai_character_noel.png"
 }

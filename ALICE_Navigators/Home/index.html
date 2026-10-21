@@ -75,7 +75,7 @@
 
         .navigator-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 275px), 1fr));
+            grid-template-columns: minmax(0, 1fr);
             gap: 18px;
         }
 
@@ -330,6 +330,14 @@
                 if (!response.ok) throw new Error("一覧を取得できませんでした");
                 const data = await response.json();
                 const navigators = Array.isArray(data.navigators) ? data.navigators : [];
+                navigators.sort((a, b) => {
+                    const aOrder = Number.isInteger(a.order) ? a.order : Number.MAX_SAFE_INTEGER;
+                    const bOrder = Number.isInteger(b.order) ? b.order : Number.MAX_SAFE_INTEGER;
+                    if (aOrder !== bOrder) return aOrder - bOrder;
+                    const aPath = String(a.path || "");
+                    const bPath = String(b.path || "");
+                    return aPath < bPath ? -1 : aPath > bPath ? 1 : 0;
+                });
                 grid.replaceChildren();
                 if (!navigators.length) {
                     const empty = document.createElement("div");
