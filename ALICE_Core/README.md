@@ -212,7 +212,7 @@ Noel のブラウザー画面は `https://project-alice.net/noel`（ソース: `
 | Method / Path | 内容 |
 | :--- | :--- |
 | `GET /noel/api/session` | ブラウザーセッション用 Cookie を発行し、対応する `user_id` を返す。 |
-| `POST /noel/api/transcribe` | multipart/form-data の `audio` を受け付け、`["transcript"]` のみを実行する文字起こし Job を登録する。MP3 / M4A / WAV、100 MiB 以下、音声 2 時間以下。ffprobe で実データを検証する。 |
+| `POST /noel/api/transcribe` | multipart/form-data の `audio` を受け付け、`["transcript"]` のみを実行する文字起こし Job を登録する。MP3 / M4A / WAV、100 MiB 以下、音声 2 時間以下。ffprobe で実データを検証し、M4A の補助 data トラックは許容する。 |
 | `GET /noel/api/jobs/{job_id}` | セッション所有 Job の状態と進捗 (`progress.stage`, `progress.percent`) を返す。他セッションの Job は 404。 |
 | `GET /noel/api/jobs/{job_id}/live-transcript` | Whisper が生成した途中の文字起こしテキストを返す。未生成の場合は 204。 |
 | `GET /noel/api/jobs/{job_id}/transcript` | 所有 Job の Whisper 文字起こし結果 (`transcript/transcript.txt`) を返す。未生成の場合は 409。 |

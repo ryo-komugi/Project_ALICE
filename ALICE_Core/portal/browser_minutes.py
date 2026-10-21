@@ -167,7 +167,9 @@ async def _submit_audio_job(request: Request, response: Response, workflow: list
         except Exception:
             raise HTTPException(status_code=415, detail="Invalid or unreadable audio file")
         expected_formats = {".mp3": {"mp3"}, ".m4a": {"mov", "mp4", "m4a", "3gp", "3g2", "mj2"}, ".wav": {"wav"}}
-        if len(streams) != 1 or streams[0].get("codec_type") != "audio" or not (fmt & expected_formats[suffix]):
+        audio_streams = [stream for stream in streams if stream.get("codec_type") == "audio"]
+        has_unsupported_stream = any(stream.get("codec_type") not in {"audio", "data"} for stream in streams)
+        if len(audio_streams) != 1 or has_unsupported_stream or not (fmt & expected_formats[suffix]):
             raise HTTPException(status_code=415, detail="File content does not match the selected audio format")
         if not (0 < duration <= MAX_DURATION_SECONDS):
             raise HTTPException(status_code=413, detail="Audio duration must be at most 2 hours")
