@@ -113,10 +113,10 @@ Cloudflare Tunnel は既存のリモート管理 Tunnel を使用します。`ra
 | :--- | :--- |
 | Domain | `project-alice.net` |
 | Subdomain | `rabbit-hole` |
-| Path | `^/(home|noel)(/.*)?$` |
+| Path | `^/(home|noel|kureha)(/.*)?$` |
 | Service URL | `http://127.0.0.1:8001` |
 
-Path は `/home`・`/noel` とそれぞれの配下に一致させ、別インスタンスの `/admin` や `/share` 等をこの公開アプリルートから除外します。Cloudflare は Path を除去・書き換えずに転送するため、Rabbit Hole Core は要求パスをそのまま受け取ります。公開アプリルート作成時に DNS レコードも Tunnel 向けに登録されます。Cloudflare Access アプリケーションは作成せず、Noel は匿名利用の方針です。
+Path は `/home`・`/noel`・`/kureha` とそれぞれの配下に一致させ、別インスタンスの `/admin` や `/share` 等をこの公開アプリルートから除外します。Cloudflare は Path を除去・書き換えずに転送するため、Rabbit Hole Core は要求パスをそのまま受け取ります。公開アプリルート作成時に DNS レコードも Tunnel 向けに登録されます。Cloudflare Access アプリケーションは作成せず、Noel と議事録生成ナビゲーターは匿名利用の方針です。
 
 Rabbit Hole 版は別のコード checkout / systemd service で起動し、たとえば `ALICE_DATA_DIR=/data/alice/rabbit-hole` と `ALICE_GPU_LOCK_FILE=/tmp/alice_gpu.lock` を設定します。GPU ロックだけは現行版と共有し、同時に GPU 処理を走らせないようにします。`ALICE_ENABLE_IP_MONITOR=false` とし、IP 監視・Discord通知の二重起動を防ぎます。ブラウザー Job の成果物は LINE に送らず、Noel API から取得します。手動起動例:
 
@@ -196,12 +196,13 @@ ALICE_Core/
 
 ## 10. Browser API
 
-Rabbit-Hole のホーム画面は `/home` で提供します。`ALICE_Navigators/` 直下の各ナビゲーターディレクトリにある `navigator.json` を読み取り、利用可能な案内先をカード表示します。登録には `name`、`description`、`path` を設定し、任意で同一オリジンの `image` パスを指定します。現在のNoelは `/noel` へ遷移します。ホーム画面は `/admin` と同じ起動スプラッシュの後、森のラビットホールをくぐる短い演出を表示し、演出はスキップできます。`/home` と `/noel` の画面、API、静的ファイルはHTTPS必須です。TLS終端をCloudflare Tunnel等に任せる場合は、Coreが信頼するプロキシから `X-Forwarded-Proto: https` を転送してください。ローカルでCore自身にTLS終端させる場合は、起動時に `--ssl-keyfile` と `--ssl-certfile` を両方指定します。例: `./start_alice_core.sh --ip 127.0.0.1 --port 8001 --ssl-keyfile /path/to/key.pem --ssl-certfile /path/to/cert.pem`。
+Rabbit-Hole のホーム画面は `/home` で提供します。`ALICE_Navigators/` 直下の各ナビゲーターディレクトリにある `navigator.json` を読み取り、利用可能な案内先をカード表示します。登録には `name`、`description`、`path` を設定し、任意で同一オリジンの `image` パスを指定します。Noelは `/noel`、議事録生成ナビゲーター Kureha は `/kureha` へ遷移します。ホーム画面は `/admin` と同じ起動スプラッシュの後、森のラビットホールをくぐる短い演出を表示し、演出はスキップできます。`/home`・`/noel`・`/kureha` 配下の画面、API、静的ファイルはHTTPS必須です。TLS終端をCloudflare Tunnel等に任せる場合は、Coreが信頼するプロキシから `X-Forwarded-Proto: https` を転送してください。ローカルでCore自身にTLS終端させる場合は、起動時に `--ssl-keyfile` と `--ssl-certfile` を両方指定します。例: `./start_alice_core.sh --ip 127.0.0.1 --port 8001 --ssl-keyfile /path/to/key.pem --ssl-certfile /path/to/cert.pem`。
 
 | Method / Path | 内容 |
 | :--- | :--- |
 | `GET /home` | Rabbit-Hole ホーム画面を返す。 |
 | `GET /home/api/navigators` | `ALICE_Navigators/` 内の有効な `navigator.json` を一覧で返す。 |
+| `GET /kureha` | 音声をアップロードして議事録を生成・取得するナビゲーターを返す。 |
 
 Noel のブラウザー画面は `https://rabbit-hole.project-alice.net/noel`（ソース: `ALICE_Navigators/Noel/`）で提供し、画像は同じ Rabbit Hole Core インスタンスから配信します。Noel は文字起こし専用UIとして `/noel/api` 配下の匿名 API を使用し、`/admin` の管理者認証から分離しています。HTTPS 必須で、Cookie は HttpOnly / Secure / SameSite=Strict の host-only 設定です。セッションは Job の分離用で、本人確認には使いません。
 

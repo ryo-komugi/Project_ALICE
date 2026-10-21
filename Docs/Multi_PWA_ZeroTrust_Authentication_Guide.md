@@ -12,7 +12,7 @@
 | URL / hostname | サービス名 | 稼働場所 / ポート | 認証方式 (Cloudflare Access) | PWAアイコン |
 | :--- | :--- | :--- | :--- | :--- |
 | **`admin.project-alice.net`** | **ALICE コックピット** | alice-server (`:8000`) | 自宅IP/WARP: Bypass, 外部: PIN 15分 | 🤖 ALICE |
-| **`rabbit-hole.project-alice.net/noel`** | **Noel 文字起こし画面** | alice-server (`:8001`) | **匿名利用（アプリ内の低いジョブ上限）** | 🐇 Noel |
+| **`rabbit-hole.project-alice.net/noel` / `/kureha`** | **Noel 文字起こし・Kureha 議事録生成ナビゲーター** | alice-server (`:8001`) | **匿名利用（アプリ内の低いジョブ上限）** | 🐇 Noel / 🪶 Kureha |
 | **`wol.project-alice.net`** | **Wake on LAN (WoL)** | タブレット / 別マシン (`:port`) | **同上（共通ポリシー適用）** | ⚡ PC電源 |
 | **`[app].project-alice.net`** | **将来の別PWA** | 任意のマシン | **同上（共通ポリシー適用）** | 📱 各アプリ |
 | **`project-alice.net`** | **LINE Webhook / 共有** | alice-server (`:8000`) | **認証なし（完全オープン）** | （PWAなし） |
@@ -21,7 +21,7 @@
 1. **PWAの完全独立性**: PWAはオリジン（ドメイン）単位で別アプリとして端末に保存される。サブドメインを分けることで、アプリアイコン・キャッシュ・Service Workerが競合せず、複数アプリを並べて快適に利用できる。
 2. **ルーティングの柔軟性**: Cloudflare Tunnel を介して、同じ自宅LAN内にある別端末（タブレットやラズパイ）へサブドメイン単位で直接パケットを流せる。
 
-Noel は現行 ALICE と並行稼働する Rabbit Hole 版 Core 上で動作させる。既存 `project-alice.net` は現行 Core (`:8000`) に維持し、`rabbit-hole.project-alice.net` の公開アプリルートを Rabbit Hole 版 Core (`:8001`) に接続する。ルートの Path は `/noel` とその配下に限定し、他の Core 管理画面や共有領域を公開しない。Cloudflare Access のログインを要求せず、アプリ側で HTTPS、ブラウザーセッション単位の分離、アップロード検証、ジョブ数制限を行う。Noel は Whisper 文字起こし結果を表示し、議事録生成 API は別 Navigator 用として Core に維持する。
+Noel と Kureha 議事録生成ナビゲーターは現行 ALICE と並行稼働する Rabbit Hole 版 Core 上で動作させる。既存 `project-alice.net` は現行 Core (`:8000`) に維持し、`rabbit-hole.project-alice.net` の公開アプリルートを Rabbit Hole 版 Core (`:8001`) に接続する。ルートの Path は `/home`・`/noel`・`/kureha` とそれぞれの配下に限定し、他の Core 管理画面や共有領域を公開しない。Cloudflare Access のログインを要求せず、アプリ側で HTTPS、ブラウザーセッション単位の分離、アップロード検証、ジョブ数制限を行う。Noel は Whisper 文字起こし結果を表示し、議事録生成ナビゲーターは音声から議事録を生成する。
 
 ---
 

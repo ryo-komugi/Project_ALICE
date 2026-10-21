@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0f172a">
+    <title>議事録生成 | Kureha | Project ALICE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+        * { box-sizing: border-box; }
+        body {
+            min-height: 100vh; margin: 0; padding: 0; color: #fff; text-align: center;
+            font-family: 'Poppins', 'BIZ UDPGothic', 'BIZ UDPゴシック', sans-serif;
+            background-color: #060913;
+            background-image: linear-gradient(to bottom, rgba(6, 9, 19, .88), rgba(6, 9, 19, .82)),
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, .15) 0, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, .15) 0, transparent 50%),
+                url("/kureha/assets/alice_background.png");
+            background-size: cover; background-position: center bottom; background-repeat: no-repeat;
+            background-attachment: fixed; position: relative;
+        }
+        body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, .06), transparent 55%); }
+        .header {
+            position: fixed; z-index: 100; top: 0; right: 0; display: flex; align-items: center; justify-content: center;
+            width: 100%; min-height: 82px; padding: 20px; box-sizing: border-box;
+            background: rgba(15, 23, 42, .82); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(56, 189, 248, .32); box-shadow: 0 10px 32px rgba(2, 6, 23, .35);
+            font-family: 'BIZ UDPGothic', 'BIZ UDPゴシック', 'Poppins', sans-serif; font-size: 32px; font-weight: 900;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, .9), 0 0 20px rgba(56, 189, 248, .4);
+        }
+        .header span { color: transparent; background: linear-gradient(90deg, #7dd3fc, #f0f9ff 55%, #fcd34d); -webkit-background-clip: text; background-clip: text; }
+        .container {
+            position: relative; z-index: 1; display: grid; grid-template-columns: minmax(280px, 400px) minmax(0, 1fr);
+            align-items: center; gap: clamp(24px, 4vw, 52px); width: min(1100px, calc(100% - 40px));
+            margin: 130px auto 40px; padding: clamp(22px, 4vw, 40px); text-align: center;
+            background: rgba(255, 255, 255, .15); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            border-radius: 15px; box-shadow: 0 6px 15px rgba(0, 0, 0, .2);
+        }
+        .image-container { width: 100%; }
+        .character-art { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 10px; box-shadow: 0 12px 32px rgba(0, 0, 0, .3); }
+        .content { min-width: 0; }
+        .content-title { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+        .character-name { margin: 0 0 20px; font-size: 48px; font-weight: 600; line-height: 1.2; }
+        .intro { max-width: 540px; margin: 0 auto 22px; color: rgba(255, 255, 255, .88); font-size: 14px; line-height: 1.8; }
+        input[type="file"] { display: none; }
+        .custom-file-upload, .upload-button {
+            display: inline-block; padding: 12px 25px; border: 0; border-radius: 8px; color: #fff;
+            background: linear-gradient(135deg, #00c6ff, #0072ff); font: inherit; font-size: 16px; font-weight: 700;
+            cursor: pointer; transition: .3s; box-shadow: 0 4px 10px rgba(0, 198, 255, .3);
+        }
+        .custom-file-upload:hover, .upload-button:hover:not(:disabled) { background: linear-gradient(135deg, #0072ff, #00c6ff); box-shadow: 0 6px 15px rgba(0, 198, 255, .5); }
+        .upload-button { margin-top: 15px; }
+        .upload-button:disabled { cursor: wait; opacity: .7; }
+        .file-name, .hint { color: rgba(255, 255, 255, .8); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+        .file-name { min-height: 22px; margin: 10px 0 0; }
+        .hint { margin: 8px 0 0; }
+        .processing-status { max-width: 480px; margin: 22px auto 0; text-align: left; }
+        .processing-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 7px; font-size: 14px; }
+        .progress-track { height: 12px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .25); }
+        .progress-bar { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #00c6ff, #7b7dff); transition: width .4s ease; }
+        .result { margin-top: 22px; }
+        .result h2 { margin: 0 0 10px; font-size: 20px; }
+        pre { min-height: 80px; max-height: 42vh; margin: 0; overflow: auto; padding: 15px; border-radius: 8px; background: rgba(255, 255, 255, .3); color: #fff; font: 14px/1.7 ui-monospace, monospace; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 4px 10px rgba(0, 0, 0, .1); }
+        .error { color: #fecaca; }
+        .download { display: inline-block; margin-top: 12px; color: #bae6fd; }
+        @media (max-width: 760px) {
+            .container { grid-template-columns: 1fr; width: min(620px, calc(100% - 28px)); margin-top: 108px; gap: 24px; }
+            .image-container { width: min(100%, 360px); margin: 0 auto; }
+        }
+        @media (max-width: 480px) {
+            .header { min-height: 68px; font-size: 25px; }
+            .container { margin-top: 88px; padding: 18px; }
+            .character-name { font-size: 40px; }
+            .custom-file-upload, .upload-button { width: 100%; padding: 12px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header"><span>PROJECT ALICE</span></header>
+    <main class="container">
+        <div class="image-container">
+            <img class="character-art" src="/kureha/assets/ai_character_kureha.png" alt="クレハが机に向かい、羽根ペンで記録を書いているイラスト">
+        </div>
+        <section class="content">
+            <h1 class="content-title">音声から議事録を作成</h1>
+            <h2 class="character-name">Kureha</h2>
+            <p class="intro">会議や面談の音声から、文字起こし・要約・議事録を順に作成します。完了後、この画面で議事録を確認して Markdown ファイルを保存できます。</p>
+            <label class="custom-file-upload" for="audio">音声ファイルを選択</label>
+            <input id="audio" type="file" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav">
+            <p class="file-name" id="file-name" aria-live="polite">選択されていません</p>
+            <p class="hint">MP3 / M4A / WAV、100 MiB 以下、音声の長さは2時間以内です。</p>
+            <button id="submit" class="upload-button" type="button">アップロードして議事録を生成</button>
+            <div class="processing-status" aria-live="polite">
+                <div class="processing-label"><span id="stage">待機中</span><span id="percent">0%</span></div>
+                <div class="progress-track" role="progressbar" aria-label="議事録生成の進捗" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track">
+                    <div class="progress-bar" id="bar"></div>
+                </div>
+            </div>
+            <section class="result" aria-live="polite">
+                <h2>生成結果</h2>
+                <pre id="output">音声ファイルを選択して「議事録を生成」を押してください。</pre>
+                <a id="download" class="download" hidden download="minutes.md">議事録を Markdown で保存</a>
+            </section>
+        </section>
+    </main>
+    <script>
+        const api = "/noel/api";
+        const fileInput = document.getElementById("audio");
+        const submit = document.getElementById("submit");
+        const output = document.getElementById("output");
+        const stage = document.getElementById("stage");
+        const percent = document.getElementById("percent");
+        const bar = document.getElementById("bar");
+        const download = document.getElementById("download");
+        const progressTrack = document.getElementById("progress-track");
+
+        fileInput.addEventListener("change", () => {
+            document.getElementById("file-name").textContent = fileInput.files[0]?.name || "選択されていません";
+        });
+
+        function setProgress(progress = {}) {
+            const value = Math.max(0, Math.min(100, Number(progress.percent) || 0));
+            stage.textContent = progress.stage || "処理中";
+            percent.textContent = `${value}%`;
+            bar.style.width = `${value}%`;
+            progressTrack.setAttribute("aria-valuenow", String(value));
+        }
+
+        async function poll(statusUrl, minutesUrl) {
+            while (true) {
+                const response = await fetch(statusUrl, { credentials: "same-origin", cache: "no-store" });
+                const job = await response.json();
+                if (!response.ok) throw new Error(job.detail || "処理状況を取得できませんでした。");
+                setProgress(job.progress);
+                if (job.status === "COMPLETED") {
+                    const result = await fetch(minutesUrl, { credentials: "same-origin", cache: "no-store" });
+                    if (!result.ok) throw new Error("議事録を取得できませんでした。");
+                    const markdown = await result.text();
+                    output.textContent = markdown;
+                    download.href = URL.createObjectURL(new Blob([markdown], { type: "text/markdown;charset=utf-8" }));
+                    download.hidden = false;
+                    setProgress({ stage: "完了", percent: 100 });
+                    return;
+                }
+                if (job.status === "FAILED") throw new Error(job.error_message || "議事録の生成に失敗しました。");
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+
+        submit.addEventListener("click", async () => {
+            const file = fileInput.files[0];
+            if (!file) { output.textContent = "音声ファイルを選択してください。"; return; }
+            if (file.size > 100 * 1024 * 1024) { output.textContent = "ファイルは100 MiB以下にしてください。"; return; }
+            submit.disabled = true;
+            download.hidden = true;
+            output.classList.remove("error");
+            output.textContent = "音声をアップロードしています...";
+            setProgress({ stage: "音声をアップロード中", percent: 0 });
+            try {
+                const session = await fetch(`${api}/session`, { credentials: "same-origin", cache: "no-store" });
+                if (!session.ok) throw new Error("ブラウザーセッションを開始できませんでした。");
+                const data = new FormData();
+                data.append("audio", file);
+                const response = await fetch(`${api}/minutes`, { method: "POST", body: data, credentials: "same-origin", cache: "no-store" });
+                const job = await response.json();
+                if (!response.ok) throw new Error(job.detail || "アップロードに失敗しました。");
+                output.textContent = "文字起こしと議事録を作成しています...";
+                await poll(job.status_url, job.minutes_url);
+            } catch (error) {
+                output.textContent = error.message;
+                output.classList.add("error");
+                setProgress({ stage: "エラー", percent: 0 });
+            } finally {
+                submit.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

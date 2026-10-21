@@ -1,0 +1,7 @@
+{
+  "name": "Kureha",
+  "description": "音声ファイルから文字起こしと議事録を生成します。",
+  "path": "/kureha",
+  "order": 20,
+  "image": "/kureha/assets/ai_character_kureha.png"
+}
