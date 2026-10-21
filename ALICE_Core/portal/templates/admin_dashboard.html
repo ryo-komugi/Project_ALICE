@@ -234,11 +234,6 @@
           System Logs
         </button>
 
-        <button onclick="switchTab('users')" id="nav-users" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-          User Directory
-        </button>
-
         <a href="/admin/logout" class="w-full flex items-center gap-3 px-4 py-2.5 mt-3 rounded-xl text-xs font-medium transition-all text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/40 border border-rose-900/40 cursor-pointer">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           <span>ログアウト</span>
@@ -744,69 +739,6 @@
       </div>
     </section>
 
-    <!-- TAB 4: USER DIRECTORY -->
-    <section id="tab-users" class="tab-content hidden space-y-4">
-      <div class="glass-panel px-5 py-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-        <div>
-          <h2 class="text-xl md:text-2xl font-bold tracking-tight tab-title flex items-center gap-2.5">
-            <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
-            <span>User Directory</span>
-          </h2>
-          <p class="text-xs tab-desc mt-0.5">登録ユーザーの名前変更・アクセス権限制御（users.db）</p>
-        </div>
-        <div class="flex items-center gap-3 text-xs font-mono">
-          <div class="text-[11px] text-slate-400">
-            登録ユーザー数: <strong id="user-count" class="text-sky-300">0</strong> 名
-          </div>
-          <button onclick="fetchUsers()" title="最新情報に更新" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700/60 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Info Banner explaining Automatic Registration -->
-      <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 text-xs font-mono flex items-start gap-2.5 text-slate-400">
-        <span class="text-sky-400 text-sm">💡</span>
-        <div class="text-[11px] leading-relaxed">
-          登録されたユーザーの表示名やステータスを管理・制御できます。<br>
-          コックピット上での呼びやすい名前に変更して「保存」するか、不要なユーザーは「REJECTED（拒否）」または「削除」してください。
-        </div>
-      </div>
-
-      <!-- Search Box -->
-      <div class="flex items-center justify-between gap-3 text-xs font-mono">
-        <div class="relative w-full max-w-xs">
-          <input id="user-search-input" onkeyup="filterUsers()" type="text" placeholder="名前またはUser IDで絞り込み..." class="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-slate-700 text-xs">
-        </div>
-      </div>
-
-      <!-- User Mapping Table -->
-      <div class="glass-panel rounded-2xl overflow-hidden shadow-lg">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs font-mono border-collapse">
-            <thead>
-              <tr class="bg-slate-900/80 text-slate-400 border-b border-slate-800 text-[11px]">
-                <th class="py-3 px-4 font-semibold">表示名 (コックピット反映名)</th>
-                <th class="py-3 px-4 font-semibold">User ID</th>
-                <th class="py-3 px-4 font-semibold">認証ステータス</th>
-                <th class="py-3 px-4 font-semibold text-right">操作</th>
-              </tr>
-            </thead>
-            <tbody id="user-table-body" class="divide-y divide-slate-800/60">
-              <tr>
-                <td colspan="4" class="text-center py-8 text-slate-500 font-mono text-xs">ユーザーを読み込み中...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Toast Notification -->
-      <div id="user-toast-msg" class="text-center text-xs font-mono text-emerald-400 opacity-0 transition-opacity">
-        ✓ メッセージ
-      </div>
-    </section>
-
   </main>
 
   <!-- ========================================================================= -->
@@ -892,10 +824,6 @@
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
       Logs
     </button>
-    <button onclick="switchTab('users')" id="mob-users" class="flex flex-col items-center gap-1 text-slate-400 text-[10px] font-medium">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-      Users
-    </button>
   </nav>
 
   <!-- ========================================================================= -->
@@ -951,12 +879,10 @@
         navBtn.classList.remove('text-slate-400');
       }
 
-      if (tabId === 'users') {
-        fetchUsers();
-      }
+
 
       // Update Mobile Nav
-      ['dashboard', 'jobs', 'logs', 'users'].forEach(id => {
+      ['dashboard', 'jobs', 'logs'].forEach(id => {
         const mobEl = document.getElementById('mob-' + id);
         if (mobEl) {
           if (id === tabId) {
@@ -1861,165 +1787,10 @@
 
       try {
         const hashTab = (window.location.hash || '').replace('#', '');
-        if (['dashboard', 'jobs', 'logs', 'users'].includes(hashTab)) {
+        if (['dashboard', 'jobs', 'logs'].includes(hashTab)) {
           switchTab(hashTab);
         }
       } catch (e) {}
-    }
-
-    // ==========================================
-    // User Directory Management
-    // ==========================================
-    let allUsers = [];
-
-    async function fetchUsers() {
-      try {
-        const res = await aliceFetch('/admin/api/users');
-        if (!res || !res.ok) throw new Error('Failed to fetch users');
-        allUsers = await res.json();
-        renderUserTable();
-      } catch (e) {
-        console.error('Failed to load users:', e);
-        showUserToast('⚠️ ユーザー情報の読み込みに失敗しました: ' + e.message, true);
-      }
-    }
-
-    function renderUserTable() {
-      const tbody = document.getElementById('user-table-body');
-      const countEl = document.getElementById('user-count');
-      if (countEl) countEl.innerText = allUsers.length;
-
-      const userSearchEl = document.getElementById('user-search-input');
-      const q = (userSearchEl && userSearchEl.value ? userSearchEl.value : '').toLowerCase();
-      const filtered = allUsers.filter(u => 
-        (u.display_name || '').toLowerCase().includes(q) || (u.user_id || '').toLowerCase().includes(q)
-      );
-
-      if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500 font-mono text-xs">該当するユーザーはいません</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = filtered.map((u, idx) => {
-        const initial = (u.display_name && u.display_name.trim().length > 0) ? u.display_name.trim().charAt(0) : '?';
-        const isReady = u.status === 'READY';
-        const isWait = u.status === 'WAIT_INVITE_CODE';
-        const isReject = u.status === 'REJECTED';
-
-        let selectClass = 'bg-slate-950 border rounded-lg px-2.5 py-1 text-[11px] font-semibold focus:outline-none ';
-        if (isReady) selectClass += 'border-emerald-800/80 text-emerald-300';
-        else if (isWait) selectClass += 'border-amber-800/80 text-amber-300';
-        else selectClass += 'border-rose-800/80 text-rose-300';
-
-        return `
-          <tr id="row-user-${idx}" class="hover:bg-slate-800/30 transition-colors">
-            <td class="py-3 px-4">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-sky-950 border border-sky-800 flex items-center justify-center text-sky-300 font-bold text-xs shrink-0">
-                  ${initial}
-                </div>
-                <input id="input-name-${idx}" type="text" value="${u.display_name || ''}" class="bg-slate-950 border border-slate-700 hover:border-slate-500 focus:border-sky-400 rounded-lg px-2.5 py-1 text-white font-bold text-xs focus:outline-none transition-colors w-36 sm:w-44">
-              </div>
-            </td>
-            <td class="py-3 px-4">
-              <div class="flex items-center gap-1.5 text-slate-400">
-                <span class="font-mono text-[11px]">${u.user_id}</span>
-                <button onclick="copyUserId('${u.user_id}')" title="IDをコピー" class="p-1 text-slate-500 hover:text-sky-300 transition-colors">📋</button>
-              </div>
-            </td>
-            <td class="py-3 px-4">
-              <select id="status-select-${idx}" onchange="updateUserStatusColor(this)" class="${selectClass}">
-                <option value="READY" class="bg-slate-900 text-slate-200" ${isReady ? 'selected' : ''}>🟢 READY (利用可)</option>
-                <option value="WAIT_INVITE_CODE" class="bg-slate-900 text-slate-200" ${isWait ? 'selected' : ''}>🟡 WAIT_INVITE (招待待機)</option>
-                <option value="REJECTED" class="bg-slate-900 text-slate-200" ${isReject ? 'selected' : ''}>🔴 REJECTED (アクセス拒否)</option>
-              </select>
-            </td>
-            <td class="py-3 px-4 text-right">
-              <div class="flex items-center justify-end gap-2">
-                <button onclick="saveUserRow('${u.user_id}', ${idx})" class="px-2.5 py-1 rounded-lg bg-sky-900 hover:bg-sky-800 text-sky-200 border border-sky-700/60 font-semibold text-xs transition-all">
-                  保存
-                </button>
-                <button onclick="deleteUserRow('${u.user_id}', '${u.display_name || u.user_id}')" title="このユーザーを削除" class="px-2.5 py-1 rounded-lg bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800/80 font-semibold text-xs flex items-center gap-1 transition-all">
-                  <svg class="w-3.5 h-3.5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                  <span>削除</span>
-                </button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    function updateUserStatusColor(selectEl) {
-      if (selectEl.value === 'READY') {
-        selectEl.className = 'bg-slate-950 border border-emerald-800/80 rounded-lg px-2.5 py-1 text-[11px] text-emerald-300 font-semibold focus:outline-none';
-      } else if (selectEl.value === 'WAIT_INVITE_CODE') {
-        selectEl.className = 'bg-slate-950 border border-amber-800/80 rounded-lg px-2.5 py-1 text-[11px] text-amber-300 font-semibold focus:outline-none';
-      } else if (selectEl.value === 'REJECTED') {
-        selectEl.className = 'bg-slate-950 border border-rose-800/80 rounded-lg px-2.5 py-1 text-[11px] text-rose-300 font-semibold focus:outline-none';
-      }
-    }
-
-    function filterUsers() {
-      renderUserTable();
-    }
-
-    function copyUserId(id) {
-      navigator.clipboard.writeText(id).then(() => {
-        showUserToast(`📋 User IDをコピーしました: ${id.substring(0, 12)}...`);
-      });
-    }
-
-    async function saveUserRow(userId, idx) {
-      const nameInput = document.getElementById('input-name-' + idx);
-      const newName = nameInput ? nameInput.value.trim() : '';
-      const statusSelect = document.getElementById('status-select-' + idx);
-      const newStatus = statusSelect ? statusSelect.value : 'READY';
-
-      if (!newName) {
-        alert('表示名を入力してください');
-        return;
-      }
-
-      try {
-        const res = await aliceFetch(`/admin/api/users/${userId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ display_name: newName, status: newStatus })
-        });
-        if (!res || !res.ok) throw new Error('Update failed');
-        showUserToast(`✓ 「${newName}」の設定を保存しました (ステータス: ${newStatus})`);
-        fetchUsers();
-      } catch (e) {
-        console.error('Failed to update user:', e);
-        showUserToast('⚠️ 保存に失敗しました: ' + e.message, true);
-      }
-    }
-
-    async function deleteUserRow(userId, defaultName) {
-      if (!confirm(`「${defaultName}」を削除しますか？
-※削除されたユーザーはアクセス権限が解除されます。`)) {
-        return;
-      }
-
-      try {
-        const res = await aliceFetch(`/admin/api/users/${userId}`, { method: 'DELETE' });
-        if (!res || !res.ok) throw new Error('Delete failed');
-        showUserToast(`🗑️ 「${defaultName}」を削除しました`);
-        fetchUsers();
-      } catch (e) {
-        console.error('Failed to delete user:', e);
-        showUserToast('⚠️ 削除に失敗しました: ' + e.message, true);
-      }
-    }
-
-    function showUserToast(msg, isErr=false) {
-      const toast = document.getElementById('user-toast-msg');
-      if (!toast) return;
-      toast.innerText = msg;
-      toast.className = 'text-center text-xs font-mono ' + (isErr ? 'text-rose-400' : 'text-emerald-400') + ' transition-opacity';
-      toast.classList.remove('opacity-0');
-      setTimeout(() => toast.classList.add('opacity-0'), 2500);
     }
 
     async function handleLogout() {

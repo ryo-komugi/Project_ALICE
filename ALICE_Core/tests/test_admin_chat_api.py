@@ -23,6 +23,18 @@ from portal.chat_proxy import get_chat_status, get_chat_history, clear_chat_hist
 
 
 @pytest.mark.anyio
+async def test_admin_dashboard_html_excludes_users_tab():
+    """Verify admin cockpit HTML excludes User Directory elements."""
+    response = await get_admin_dashboard()
+    assert response.status_code == 200
+    html = response.body.decode("utf-8")
+    assert 'id="tab-users"' not in html
+    assert 'id="nav-users"' not in html
+    assert 'id="mob-users"' not in html
+    assert 'User Directory' not in html
+
+
+@pytest.mark.anyio
 async def test_admin_dashboard_html_excludes_chat_tab():
     """Verify admin cockpit HTML excludes personal AI Console elements."""
     response = await get_admin_dashboard()
