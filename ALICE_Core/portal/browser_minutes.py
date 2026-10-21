@@ -185,11 +185,15 @@ async def _submit_audio_job(request: Request, response: Response, workflow: list
             _reservations[uid] = max(0, _reservations[uid] - 1)
 
 
-def _owned_job(job_id: str, uid: str):
+def _owned_job(job_id: str, uid: str, request: Request | None = None):
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,160}", job_id):
         raise HTTPException(status_code=404, detail="Job not found")
     job = workspace_manager.get_job(job_id)
-    if not job or not hmac.compare_digest(str(job.user_id), uid):
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if request and _is_local_request(request):
+        return job
+    if not hmac.compare_digest(str(job.user_id), uid):
         raise HTTPException(status_code=404, detail="Job not found")
     return job
 
@@ -197,7 +201,7 @@ def _owned_job(job_id: str, uid: str):
 @router.get("/jobs/{job_id}")
 async def get_job_status(job_id: str, request: Request, response: Response):
     _require_https(request)
-    job = _owned_job(job_id, _session_id(request))
+    job = _owned_job(job_id, _session_id(request), request)
     progress = {"stage": "処理待ち", "percent": 0}
     progress_path = (job.workspace_dir / "transcript" / "progress.json").resolve()
     if progress_path.is_relative_to(job.workspace_dir.resolve()) and progress_path.is_file():
@@ -223,7 +227,7 @@ async def get_job_status(job_id: str, request: Request, response: Response):
 @router.get("/jobs/{job_id}/minutes")
 async def get_minutes(job_id: str, request: Request, response: Response):
     _require_https(request)
-    job = _owned_job(job_id, _session_id(request))
+    job = _owned_job(job_id, _session_id(request), request)
     path = (job.workspace_dir / "minutes" / "minutes.md").resolve()
     if not path.is_relative_to(job.workspace_dir.resolve()) or not path.is_file():
         raise HTTPException(status_code=409, detail="Minutes are not ready")
@@ -234,7 +238,7 @@ async def get_minutes(job_id: str, request: Request, response: Response):
 @router.get("/jobs/{job_id}/transcript")
 async def get_transcript(job_id: str, request: Request, response: Response):
     _require_https(request)
-    job = _owned_job(job_id, _session_id(request))
+    job = _owned_job(job_id, _session_id(request), request)
     path = (job.workspace_dir / "transcript" / "transcript.txt").resolve()
     if not path.is_relative_to(job.workspace_dir.resolve()) or not path.is_file():
         raise HTTPException(status_code=409, detail="Transcript is not ready")
@@ -245,7 +249,7 @@ async def get_transcript(job_id: str, request: Request, response: Response):
 @router.get("/jobs/{job_id}/live-transcript")
 async def get_live_transcript(job_id: str, request: Request, response: Response):
     _require_https(request)
-    job = _owned_job(job_id, _session_id(request))
+    job = _owned_job(job_id, _session_id(request), request)
     path = (job.workspace_dir / "transcript" / "live_transcript.txt").resolve()
     if not path.is_relative_to(job.workspace_dir.resolve()):
         raise HTTPException(status_code=404, detail="Transcript not found")
