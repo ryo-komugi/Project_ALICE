@@ -1,27 +1,27 @@
 # Project_ALICE マルチPWA共通認証・アクセス設計仕様書
 
 > **【目的】**  
-> Project ALICE の Web サービスにおけるドメインとアクセス設計を定める。Noel は一般利用向けのため `https://rabbit-hole.project-alice.net/noel` で公開し、現行 ALICE の稼働系統と分離する。
+> Project ALICE の Web サービスにおけるドメインとアクセス設計を定める。Noel と Kureha は一般利用向けに `https://project-alice.net/noel`、`https://project-alice.net/kureha` で公開し、Rabbit Hole を本筋とする ALICE Core (`127.0.0.1:8000`) で提供する。
 
 ---
 
 ## 1. 全体アーキテクチャ & ドメイン設計
 
-管理PWA等は **サブドメイン分離方式** で運用する。Noel は既存 `project-alice.net` のサブドメイン `rabbit-hole.project-alice.net/noel` で提供する。
+管理PWA等は **サブドメイン分離方式** で運用する。管理PWAは `admin.project-alice.net`、一般利用のブラウザー画面はサブドメインなしの `project-alice.net` で提供する。`rabbit-hole.project-alice.net` は使用しない。
 
 | URL / hostname | サービス名 | 稼働場所 / ポート | 認証方式 (Cloudflare Access) | PWAアイコン |
 | :--- | :--- | :--- | :--- | :--- |
 | **`admin.project-alice.net`** | **ALICE コックピット** | alice-server (`:8000`) | 自宅IP/WARP: Bypass, 外部: PIN 15分 | 🤖 ALICE |
-| **`rabbit-hole.project-alice.net/noel` / `/kureha`** | **Noel 文字起こし・Kureha 議事録生成ナビゲーター** | alice-server (`:8001`) | **匿名利用（アプリ内の低いジョブ上限）** | 🐇 Noel / 🪶 Kureha |
+| **`project-alice.net/rabbit-hole` / `/noel` / `/kureha`** | **Rabbit Hole ホーム・Noel 文字起こし・Kureha 議事録生成ナビゲーター** | alice-server (`:8000`) | **匿名利用（アプリ内の低いジョブ上限）** | 🐇 Noel / 🪶 Kureha |
 | **`wol.project-alice.net`** | **Wake on LAN (WoL)** | タブレット / 別マシン (`:port`) | **同上（共通ポリシー適用）** | ⚡ PC電源 |
 | **`[app].project-alice.net`** | **将来の別PWA** | 任意のマシン | **同上（共通ポリシー適用）** | 📱 各アプリ |
-| **`project-alice.net`** | **LINE Webhook / 共有** | alice-server (`:8000`) | **認証なし（完全オープン）** | （PWAなし） |
+| **`project-alice.net`** | **LINE Webhook / 共有** | alice-server (`:8000`) | **認証なし（アプリ側の各ルート制御に従う）** | （PWAなし） |
 
 ### 管理PWAをサブドメイン分離にする理由
 1. **PWAの完全独立性**: PWAはオリジン（ドメイン）単位で別アプリとして端末に保存される。サブドメインを分けることで、アプリアイコン・キャッシュ・Service Workerが競合せず、複数アプリを並べて快適に利用できる。
 2. **ルーティングの柔軟性**: Cloudflare Tunnel を介して、同じ自宅LAN内にある別端末（タブレットやラズパイ）へサブドメイン単位で直接パケットを流せる。
 
-Noel と Kureha 議事録生成ナビゲーターは現行 ALICE と並行稼働する Rabbit Hole 版 Core 上で動作させる。既存 `project-alice.net` は現行 Core (`:8000`) に維持し、`rabbit-hole.project-alice.net` の公開アプリルートを Rabbit Hole 版 Core (`:8001`) に接続する。ルートの Path は `/home`・`/noel`・`/kureha` とそれぞれの配下に限定し、他の Core 管理画面や共有領域を公開しない。Cloudflare Access のログインを要求せず、アプリ側で HTTPS、ブラウザーセッション単位の分離、アップロード検証、ジョブ数制限を行う。Noel は Whisper 文字起こし結果を表示し、議事録生成ナビゲーターは音声から議事録を生成する。
+Noel と Kureha 議事録生成ナビゲーターは Rabbit Hole を本筋とする ALICE Core (`:8000`) 上で動作させる。`project-alice.net` のブラウザー画面用公開アプリルートは、Cloudflare Tunnel から同じ Core (`http://127.0.0.1:8000`) に接続する。Domain は `project-alice.net`、Subdomain は空欄、Path は `/rabbit-hole`・`/noel`・`/kureha` とそれぞれの配下に限定し、`/admin` や `/share` 等をこの公開アプリルートから除外する。既存の LINE Webhook 用ルートは維持する。`rabbit-hole.project-alice.net` の公開ルートは廃止する。Cloudflare Access のログインを要求せず、アプリ側で HTTPS、ブラウザーセッション単位の分離、アップロード検証、ジョブ数制限を行う。Noel は Whisper 文字起こし結果を表示し、議事録生成ナビゲーターは音声から議事録を生成する。
 
 ---
 

@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Usage: ./start_alice_core.sh [--ip IP] [--port PORT]
+# Usage: ./start_alice_core.sh [--foreground|--background] [--log-file PATH] [--ip IP] [--port PORT]
 #   Options are optional and can be specified in either order. Defaults are
 #   ALICE_CORE_HOST/ALICE_CORE_PORT, then 127.0.0.1/8000. Options take precedence.
+#   Foreground mode is the default. Background mode writes Uvicorn output to
+#   <ALICE_DATA_DIR>/runtime/logs/alice-core-startup.log unless --log-file is set.
 # Examples:
 #   ./start_alice_core.sh
 #   ./start_alice_core.sh --ip 127.0.0.1 --port 8001
 #   ./start_alice_core.sh --port 8001 --ip 0.0.0.0
+#   ./start_alice_core.sh --background --port 8001
+#   ./start_alice_core.sh --foreground --port 8001
 # Either option can be used alone.
 set -Eeuo pipefail
 
@@ -19,13 +23,36 @@ CORE_HOST="${ALICE_CORE_HOST:-127.0.0.1}"
 CORE_PORT="${ALICE_CORE_PORT:-8000}"
 CORE_SSL_KEYFILE="${ALICE_CORE_SSL_KEYFILE:-}"
 CORE_SSL_CERTFILE="${ALICE_CORE_SSL_CERTFILE:-}"
+RUN_MODE="foreground"
+LOG_FILE=""
+
+usage() {
+  echo "Usage: $0 [--foreground|--background] [--log-file PATH] [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]"
+}
 
 while (( $# )); do
   case "$1" in
+    --foreground)
+      RUN_MODE="foreground"
+      shift
+      ;;
+    --background)
+      RUN_MODE="background"
+      shift
+      ;;
+    --log-file)
+      if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
+        echo "Missing value for --log-file" >&2
+        usage >&2
+        exit 2
+      fi
+      LOG_FILE="$2"
+      shift 2
+      ;;
     --ip)
       if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
         echo "Missing value for --ip" >&2
-        echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]" >&2
+        usage >&2
         exit 2
       fi
       CORE_HOST="$2"
@@ -34,7 +61,7 @@ while (( $# )); do
     --port)
       if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
         echo "Missing value for --port" >&2
-        echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]" >&2
+        usage >&2
         exit 2
       fi
       CORE_PORT="$2"
@@ -43,7 +70,7 @@ while (( $# )); do
     --ssl-keyfile)
       if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
         echo "Missing value for --ssl-keyfile" >&2
-        echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]" >&2
+        usage >&2
         exit 2
       fi
       CORE_SSL_KEYFILE="$2"
@@ -52,19 +79,19 @@ while (( $# )); do
     --ssl-certfile)
       if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
         echo "Missing value for --ssl-certfile" >&2
-        echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]" >&2
+        usage >&2
         exit 2
       fi
       CORE_SSL_CERTFILE="$2"
       shift 2
       ;;
     -h|--help)
-      echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]"
+      usage
       exit 0
       ;;
     *)
       echo "Unknown argument: $1" >&2
-      echo "Usage: $0 [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]" >&2
+      usage >&2
       exit 2
       ;;
   esac
@@ -160,9 +187,46 @@ if [[ -n "${CORE_SSL_KEYFILE}" ]]; then
   UVICORN_SSL_ARGS+=(--ssl-keyfile "${CORE_SSL_KEYFILE}" --ssl-certfile "${CORE_SSL_CERTFILE}")
 fi
 
-exec "${PYTHON_BIN}" -m uvicorn main:app \
+UVICORN_CMD=("${PYTHON_BIN}" -m uvicorn main:app \
   --host "${CORE_HOST}" \
   --port "${CORE_PORT}" \
   --proxy-headers \
   --forwarded-allow-ips "${ALICE_CORE_TRUSTED_PROXY_IPS:-127.0.0.1}" \
-  "${UVICORN_SSL_ARGS[@]}"
+  "${UVICORN_SSL_ARGS[@]}")
+
+if [[ "${RUN_MODE}" == "foreground" ]]; then
+  exec "${UVICORN_CMD[@]}"
+fi
+
+if [[ -z "${LOG_FILE}" ]]; then
+  DATA_DIR="$("${PYTHON_BIN}" - "${ENV_FILE}" "${PROJECT_ROOT_FROM_SCRIPT}" <<'PY'
+import os
+import sys
+from pathlib import Path
+from dotenv import dotenv_values
+
+env_file = Path(sys.argv[1])
+project_root = Path(sys.argv[2])
+env_values = dotenv_values(env_file)
+data_dir = os.environ.get("ALICE_DATA_DIR") or env_values.get("ALICE_DATA_DIR")
+path = Path(data_dir).expanduser() if data_dir else project_root / "data"
+if not path.is_absolute():
+    path = project_root / path
+print(path)
+PY
+  )"
+  LOG_FILE="${DATA_DIR}/runtime/logs/alice-core-startup.log"
+elif [[ "${LOG_FILE}" != /* ]]; then
+  LOG_FILE="${PROJECT_ROOT_FROM_SCRIPT}/${LOG_FILE}"
+fi
+
+if ! mkdir -p -- "$(dirname -- "${LOG_FILE}")" || ! touch -- "${LOG_FILE}"; then
+  echo "Cannot create background log file: ${LOG_FILE}" >&2
+  exit 1
+fi
+
+printf '%s\n' "Starting ALICE_Core as $(id -un) (uid=$(id -u), gid=$(id -g)) at ${CORE_HOST}:${CORE_PORT}" >> "${LOG_FILE}"
+nohup "${UVICORN_CMD[@]}" >> "${LOG_FILE}" 2>&1 </dev/null &
+CORE_PID=$!
+echo "ALICE_Core launched in background (pid=${CORE_PID})"
+echo "Log file: ${LOG_FILE}"

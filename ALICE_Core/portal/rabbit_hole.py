@@ -1,4 +1,4 @@
-"""Public Rabbit-Hole home page and navigator directory."""
+"""Public Rabbit-Hole landing page and navigator directory."""
 import json
 import re
 from pathlib import Path
@@ -6,19 +6,20 @@ from pathlib import Path
 from fastapi import APIRouter
 from fastapi.responses import FileResponse
 
-router = APIRouter(tags=["Rabbit-Hole Home"])
+router = APIRouter(tags=["Rabbit-Hole"])
 NAVIGATORS_DIR = Path(__file__).resolve().parents[2] / "ALICE_Navigators"
-HOME_PAGE = NAVIGATORS_DIR / "Home" / "index.html"
-FOREST_PREVIEW_PAGE = NAVIGATORS_DIR / "Home" / "forest_preview.html"
+RABBIT_HOLE_DIR = NAVIGATORS_DIR / "RabbitHole"
+RABBIT_HOLE_PAGE = RABBIT_HOLE_DIR / "index.html"
+FOREST_PREVIEW_PAGE = RABBIT_HOLE_DIR / "forest_preview.html"
 SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
 LOCAL_PATH_PATTERN = re.compile(r"^/(?!/)[A-Za-z0-9_./-]{1,240}$")
 
 
-@router.get("/home", include_in_schema=False)
-@router.get("/home/", include_in_schema=False)
+@router.get("/rabbit-hole", include_in_schema=False)
+@router.get("/rabbit-hole/", include_in_schema=False)
 async def rabbit_hole_home():
     return FileResponse(
-        HOME_PAGE,
+        RABBIT_HOLE_PAGE,
         headers={
             "Cache-Control": "no-cache",
             "X-Content-Type-Options": "nosniff",
@@ -29,7 +30,7 @@ async def rabbit_hole_home():
     )
 
 
-@router.get("/home/forest-preview", include_in_schema=False)
+@router.get("/rabbit-hole/forest-preview", include_in_schema=False)
 async def forest_animation_preview():
     """Standalone preview of the proposed forest passage animation."""
     return FileResponse(
@@ -44,7 +45,7 @@ async def forest_animation_preview():
     )
 
 
-@router.get("/home/api/navigators", include_in_schema=False)
+@router.get("/rabbit-hole/api/navigators", include_in_schema=False)
 async def list_navigators():
     navigators = []
     if not NAVIGATORS_DIR.is_dir():
