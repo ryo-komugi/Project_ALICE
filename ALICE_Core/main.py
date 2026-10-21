@@ -62,13 +62,6 @@ async def require_https_for_browser_portals(request: Request, call_next):
 # Admin認証ミドルウェア (/admin配下をセッション保護)
 app.add_middleware(AdminAuthMiddleware)
 
-# LINE Gateway Adapter (将来の脱LINE・別アダプタ移行を考慮したオプショナルマウント)
-if config.LINE_ENABLED:
-    from gateway.webhook import router as webhook_router
-    app.include_router(webhook_router)
-    print("[Main] LINE Gateway Adapter: ENABLED (/webhook)")
-else:
-    print("[Main] LINE Gateway Adapter: DISABLED (missing CHANNEL_SECRET/CHANNEL_ACCESS_TOKEN)")
 
 app.include_router(download_router)
 app.include_router(viewer_router)

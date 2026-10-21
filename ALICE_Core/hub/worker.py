@@ -462,7 +462,7 @@ class CoreWorker:
             try:
                 if self.publisher and hasattr(self.publisher, "notify_failure"):
                     self.publisher.notify_failure(job, message)
-                elif self.sender and hasattr(self.sender, "push_text"):
+                if self.sender and hasattr(self.sender, "push_text"):
                     self.sender.push_text(job.user_id, f"【エラー】\n{message}")
             except Exception as e:
                 logger.error(f"[CoreWorker] Failed to send failure notification to {job.user_id}: {e}")

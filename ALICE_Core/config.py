@@ -11,17 +11,6 @@ CORE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(CORE_DIR.parent)))
 
 # =========================
-# LINE Adapter (Optional External Interface)
-# =========================
-CHANNEL_SECRET = os.getenv("CHANNEL_SECRET", "")
-CHANNEL_ACCESS_TOKEN = os.getenv("CHANNEL_ACCESS_TOKEN", "")
-BASE_URL = os.getenv("LINE_API_BASE_URL", "https://api.line.me") + "/v2/bot"
-BASE_DATA_URL = os.getenv("LINE_DATA_API_BASE_URL", "https://api-data.line.me") + "/v2/bot"
-INVITE_CODE = os.getenv("INVITE_CODE", "")
-LINE_ADMIN_USER = os.getenv("LINE_ADMIN_USER", "")
-LINE_ENABLED = bool(CHANNEL_SECRET and CHANNEL_ACCESS_TOKEN)
-
-# =========================
 # Public URL
 # =========================
 PUBLIC_URL = os.getenv("PUBLIC_URL", "https://project-alice.net")
