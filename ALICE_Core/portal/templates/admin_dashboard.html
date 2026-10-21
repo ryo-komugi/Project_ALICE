@@ -333,7 +333,7 @@
         <div class="flex items-center gap-2.5 text-xs font-mono">
           <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
           <strong class="text-amber-300 font-bold uppercase tracking-wider">⚠️ MAINTENANCE MODE ACTIVE:</strong>
-          <span>一般LINEユーザーの受付を一時停止し、案内メッセージを自動返却中</span>
+          <span>一般受付を一時停止し、案内メッセージを自動返却中</span>
         </div>
         <button onclick="openMaintenanceModal()" class="px-3 py-1 rounded bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 text-amber-200 text-xs font-mono font-semibold transition-all">
           設定変更
@@ -544,14 +544,6 @@
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             </button>
           </div>
-          <!-- LINE Gateway -->
-          <div class="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1 gap-2">
-            <span class="text-slate-400">LINE Gateway:</span>
-            <span id="svc-line" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold text-[11px]">checking...</span>
-            <button onclick="restartService('line')" title="LINE Gateway (Core) を再起動" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-sky-300 transition-colors">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            </button>
-          </div>
           <!-- Maintenance Control Button -->
           <button id="btn-open-maintenance" onclick="openMaintenanceModal()" title="メンテナンスモードの設定・管理" class="flex items-center bg-slate-900/90 border border-slate-800 hover:border-amber-500/70 rounded-lg px-2.5 py-1 gap-2 transition-all group cursor-pointer">
             <span id="maintenance-indicator" class="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -758,9 +750,9 @@
         <div>
           <h2 class="text-xl md:text-2xl font-bold tracking-tight tab-title flex items-center gap-2.5">
             <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
-            <span>User Directory & LINE Access Control</span>
+            <span>User Directory</span>
           </h2>
-          <p class="text-xs tab-desc mt-0.5">LINE友だち追加時に自動登録されたユーザーの名前変更・アクセス権限制御（users.db）</p>
+          <p class="text-xs tab-desc mt-0.5">登録ユーザーの名前変更・アクセス権限制御（users.db）</p>
         </div>
         <div class="flex items-center gap-3 text-xs font-mono">
           <div class="text-[11px] text-slate-400">
@@ -776,7 +768,7 @@
       <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 text-xs font-mono flex items-start gap-2.5 text-slate-400">
         <span class="text-sky-400 text-sm">💡</span>
         <div class="text-[11px] leading-relaxed">
-          LINEユーザーがBotを友だち追加すると、初期表示名（LINEのアカウント名）で自動登録されます。<br>
+          登録されたユーザーの表示名やステータスを管理・制御できます。<br>
           コックピット上での呼びやすい名前に変更して「保存」するか、不要なユーザーは「REJECTED（拒否）」または「削除」してください。
         </div>
       </div>
@@ -784,7 +776,7 @@
       <!-- Search Box -->
       <div class="flex items-center justify-between gap-3 text-xs font-mono">
         <div class="relative w-full max-w-xs">
-          <input id="user-search-input" onkeyup="filterUsers()" type="text" placeholder="名前またはLINE IDで絞り込み..." class="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-slate-700 text-xs">
+          <input id="user-search-input" onkeyup="filterUsers()" type="text" placeholder="名前またはUser IDで絞り込み..." class="w-full bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-slate-700 text-xs">
         </div>
       </div>
 
@@ -795,7 +787,7 @@
             <thead>
               <tr class="bg-slate-900/80 text-slate-400 border-b border-slate-800 text-[11px]">
                 <th class="py-3 px-4 font-semibold">表示名 (コックピット反映名)</th>
-                <th class="py-3 px-4 font-semibold">LINE User ID</th>
+                <th class="py-3 px-4 font-semibold">User ID</th>
                 <th class="py-3 px-4 font-semibold">認証ステータス</th>
                 <th class="py-3 px-4 font-semibold text-right">操作</th>
               </tr>
@@ -832,7 +824,7 @@
           </div>
           <div>
             <h3 class="text-base font-bold text-white font-brand">システムメンテナンス制御 (Maintenance Guard)</h3>
-            <p class="text-xs text-slate-400">LINE・外部受付の一時停止および自動案内文の管理</p>
+            <p class="text-xs text-slate-400">外部受付の一時停止および自動案内文の管理</p>
           </div>
         </div>
         <button onclick="closeMaintenanceModal()" class="text-slate-400 hover:text-white text-lg font-bold p-1 cursor-pointer">✕</button>
@@ -847,7 +839,7 @@
               <span>メンテナンスモード</span>
               <span id="modal-status-text" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">OFF</span>
             </div>
-            <div class="text-xs text-slate-400 mt-0.5">有効にすると一般LINEユーザーからの受付を一時停止します</div>
+            <div class="text-xs text-slate-400 mt-0.5">有効にすると外部からの受付を一時停止します</div>
           </div>
           <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" id="modal-maintenance-toggle" class="sr-only peer" onchange="onMaintenanceToggleChange()">
@@ -858,10 +850,10 @@
         <!-- Message Textarea -->
         <div>
           <label class="block font-semibold text-white text-xs font-mono mb-1 flex items-center justify-between">
-            <span>LINE返答メッセージ (Maintenance Message)</span>
+            <span>自動返答メッセージ (Maintenance Message)</span>
             <button onclick="resetDefaultMaintenanceMessage()" class="text-[11px] text-amber-400 hover:underline cursor-pointer">定型文に戻す</button>
           </label>
-          <p class="text-[11px] text-slate-400 mb-2">メンテ中にユーザーがメッセージや音声を送信した際、即座に返信される案内文です。</p>
+          <p class="text-[11px] text-slate-400 mb-2">メンテ中にユーザーがリクエストを送信した際、即座に応答される案内文です。</p>
           <textarea id="modal-maintenance-message" rows="4" class="w-full p-3 rounded-xl bg-slate-950/90 border border-slate-800 focus:border-amber-500 focus:outline-none text-xs font-mono text-slate-200 resize-none leading-relaxed"></textarea>
         </div>
 
@@ -869,7 +861,7 @@
         <div class="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800/80">
           <input type="checkbox" id="modal-maintenance-bypass" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-amber-600 focus:ring-amber-500 cursor-pointer">
           <label for="modal-maintenance-bypass" class="text-xs text-slate-300 cursor-pointer select-none">
-            管理者 (<code class="text-amber-300 font-mono">LINE_ADMIN_USER</code>) はメンテ中もテスト利用・通常応答を許可する
+            管理者 (<code class="text-amber-300 font-mono">ADMIN_USER</code>) はメンテ中もテスト利用・通常応答を許可する
           </label>
         </div>
       </div>
@@ -1124,7 +1116,7 @@
     }
 
     async function restartService(serviceName) {
-      const names = { core: 'ALICE Core', copilot: 'CoPilot (Discord)', ollama: 'Ollama (LLM)', line: 'LINE Gateway' };
+      const names = { core: 'ALICE Core', copilot: 'CoPilot (Discord)', ollama: 'Ollama (LLM)' };
       const label = names[serviceName] || serviceName;
       if (!confirm(`${label} を再起動しますか？
 ※実行中のジョブがある場合は一時的に中断される可能性があります。`)) {
@@ -1290,7 +1282,6 @@
           updateServiceBadge('svc-core', data.services.core);
           updateServiceBadge('svc-copilot', data.services.copilot);
           updateServiceBadge('svc-ollama', data.services.ollama);
-          updateServiceBadge('svc-line', data.services.line);
         } catch (e) {}
 
         // Sidebar Telemetry
@@ -1975,7 +1966,7 @@
 
     function copyUserId(id) {
       navigator.clipboard.writeText(id).then(() => {
-        showUserToast(`📋 LINE IDをコピーしました: ${id.substring(0, 12)}...`);
+        showUserToast(`📋 User IDをコピーしました: ${id.substring(0, 12)}...`);
       });
     }
 
@@ -2007,7 +1998,7 @@
 
     async function deleteUserRow(userId, defaultName) {
       if (!confirm(`「${defaultName}」を削除しますか？
-※削除されたユーザーはLINEからのアクセス権限が解除されます。`)) {
+※削除されたユーザーはアクセス権限が解除されます。`)) {
         return;
       }
 
