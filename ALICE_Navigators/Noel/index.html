@@ -8,6 +8,8 @@
         /* フォント */
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
 
+        * { box-sizing: border-box; }
+
         body {
             font-family: 'Poppins', sans-serif;
             text-align: center;
@@ -74,33 +76,60 @@
         .container {
             position: relative;
             z-index: 1;
-            max-width: 1000px;
-            margin: 130px auto 40px auto; /* タイトルバー分の余白を追加 */
+            display: grid;
+            grid-template-columns: minmax(280px, 400px) minmax(0, 1fr);
+            align-items: center;
+            gap: clamp(24px, 4vw, 52px);
+            width: min(1100px, calc(100% - 40px));
+            margin: 130px auto 40px;
             text-align: center;
-            background: rgba(255, 255, 255, 0.15); /* 半透明のホワイト */
-            backdrop-filter: blur(10px); /* 背景ぼかし */
-            padding: 25px;
+            background: rgba(255, 255, 255, 0.15);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            padding: clamp(22px, 4vw, 40px);
             border-radius: 15px;
-            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
+
+        .image-container { position: relative; width: 100%; }
+
+        .character-art {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 10px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .content { min-width: 0; }
 
         .content_title {
+            margin: 0 0 4px;
             font-size: 18px;
             font-weight: 600;
-            margin-bottom: 0px;
         }
 
-        .charactet_name {
-            margin-top: 00px;
-            font-weight: bold; /* 太字に変更 */
-            font-size: 48px;
+        .character-name {
+            margin: 0 0 20px;
             font-weight: 600;
-            margin-bottom: 20px;
+            font-size: 48px;
+            line-height: 1.2;
         }
 
         /* ファイルアップロードボタン */
         input[type="file"] {
             display: none;
+        }
+
+        #file-name {
+            min-height: 22px;
+            margin: 10px 0 0;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+            line-height: 1.7;
+            overflow-wrap: anywhere;
         }
 
         .custom-file-upload {
@@ -146,7 +175,7 @@
         }
 
         .processing-status {
-            margin: 18px auto 0;
+            margin: 22px auto 0;
             max-width: 480px;
             text-align: left;
         }
@@ -176,19 +205,22 @@
 
         /* 変換結果 */
         #output {
-            margin-top: 20px;
+            margin: 0;
             padding: 15px;
             border-radius: 8px;
             min-height: 80px;
-            max-height: 80px; /* ここを設定してスクロール可能に */
-            overflow-y: auto; /* 縦スクロールを許可 */
+            max-height: 42vh;
+            overflow: auto;
             background: rgba(255, 255, 255, 0.3);
             color: #fff;
             font-size: 14px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            text-align: center; /* デフォルトは中央揃え */
-            white-space: pre-wrap; /* 改行を保持 */
+            text-align: center;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
+
+        .result-title { margin: 22px 0 10px; font-size: 20px; }
 
         /* スクロールバーのカスタマイズ（オプション） */
         #output::-webkit-scrollbar {
@@ -202,16 +234,6 @@
 
         #output::-webkit-scrollbar-track {
             background: rgba(255, 255, 255, 0.1); /* スクロールバーの背景 */
-        }
-
-        .table_col {
-            width: 500px;
-        }
-
-        /* Noel の画像とスピナーを重ねるためのコンテナ */
-        .image-container {
-            position: relative; /* 相対位置指定 */
-            display: inline-block; /* 画像のサイズに合わせる */
         }
 
         /* ローディングスピナー */
@@ -236,6 +258,23 @@
             0% { transform: translate(-50%, -50%) rotate(0deg); }
             100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
+
+        @media (max-width: 760px) {
+            .container {
+                grid-template-columns: 1fr;
+                width: min(620px, calc(100% - 28px));
+                margin-top: 108px;
+                gap: 24px;
+            }
+            .image-container { width: min(100%, 360px); margin: 0 auto; }
+        }
+
+        @media (max-width: 480px) {
+            .header { min-height: 68px; font-size: 25px; }
+            .container { margin-top: 88px; padding: 18px; }
+            .character-name { font-size: 40px; }
+            .custom-file-upload, .upload-button { width: 100%; padding: 12px 16px; }
+        }
     </style>
 </head>
 <body>
@@ -246,51 +285,37 @@
     </div>
 
     <!-- メインコンテンツ -->
-    <div class="container">
-        <table>
-            <tr>
-                <td class="table_col">
-                    <!-- Noelの画像を包むdiv -->
-                    <div class="image-container">
-                        <img id="Noel" src="/noel/assets/ai_character_noel.png" width="400" height="400" alt="Noel">
+    <main class="container">
+        <div class="image-container">
+            <img id="Noel" class="character-art" src="/noel/assets/ai_character_noel.png" alt="Noel">
+            <div id="loading-spinner" class="spinner"></div>
+        </div>
+        <section class="content">
+            <h1 class="content_title">音声自動文字起こしAI</h1>
+            <h2 class="character-name">Noel</h2>
 
-                        <!-- Noel の画像の上に重ねるスピナー -->
-                        <div id="loading-spinner" class="spinner"></div>
-                    </div>
-                </td>
-                <td class="table_col">
-                    <h1 class="content_title">音声自動文字起こしAI</h1>
-                    <h1 class="charactet_name">Noel</h1>
+            <form id="uploadForm">
+                <label for="audioFile" class="custom-file-upload">音声ファイルを選択</label>
+                <input type="file" id="audioFile" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav" onchange="fileSelected()">
+                <p id="file-name" aria-live="polite">選択されていません</p>
+                <button type="button" class="upload-button" onclick="uploadAudio()">アップロードして文字起こし</button>
+            </form>
 
-                    <!-- Form を追加 -->
-                    <form id="uploadForm">
+            <div class="processing-status" aria-live="polite">
+                <div class="processing-label">
+                    <span id="progress-stage">待機中</span>
+                    <span id="progress-percent">0%</span>
+                </div>
+                <div class="progress-track" role="progressbar" aria-label="文字起こしの進捗"
+                     aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track">
+                    <div id="progress-bar" class="progress-bar"></div>
+                </div>
+            </div>
 
-                        <!-- ファイルアップロード -->
-                        <label for="audioFile" class="custom-file-upload">音声ファイルを選択</label>
-                        <input type="file" id="audioFile" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav" onchange="fileSelected()">
-                        <p id="file-name">選択されていません</p>
-
-                        <button type="button" class="upload-button" onclick="uploadAudio()">アップロードして文字起こし</button>
-                    </form>
-
-                    <div class="processing-status" aria-live="polite">
-                        <div class="processing-label">
-                            <span id="progress-stage">待機中</span>
-                            <span id="progress-percent">0%</span>
-                        </div>
-                        <div class="progress-track" role="progressbar" aria-label="文字起こしの進捗"
-                             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track">
-                            <div id="progress-bar" class="progress-bar"></div>
-                        </div>
-                    </div>
-
-                    <!-- 変換結果表示 -->
-                    <h2>文字起こし結果</h2>
-                    <div id="output">ここにテキストが表示されます</div>
-                </td>
-            </tr>
-        </table>
-    </div>
+            <h2 class="result-title">文字起こし結果</h2>
+            <div id="output" aria-live="polite">ここにテキストが表示されます</div>
+        </section>
+    </main>
 
     <script>
         const API_ROOT = "/noel/api";

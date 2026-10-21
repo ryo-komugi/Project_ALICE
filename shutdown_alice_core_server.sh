@@ -1,0 +1,1 @@
+pkill -f 'uvicorn main:app.*--port 8000'
