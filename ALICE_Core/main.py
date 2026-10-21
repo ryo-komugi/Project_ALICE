@@ -45,6 +45,9 @@ app = FastAPI(
 
 @app.middleware("http")
 async def require_https_for_browser_portals(request: Request, call_next):
+    client_ip = request.client.host if request.client else ""
+    if client_ip in ("127.0.0.1", "::1", "localhost"):
+        return await call_next(request)
     path = request.url.path
     is_browser_portal = any(path == root or path.startswith(root + "/") for root in ("/rabbit-hole", "/noel", "/kureha"))
     if is_browser_portal and request.url.scheme != "https":
