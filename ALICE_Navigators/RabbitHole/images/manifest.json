@@ -1,0 +1,25 @@
+{
+  "name": "Project ALICE Rabbit-Hole",
+  "short_name": "Rabbit-Hole",
+  "description": "Project ALICE Navigator Portal",
+  "start_url": "/rabbit-hole",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#060913",
+  "theme_color": "#060913",
+  "icons": [
+    {
+      "src": "/rabbit-hole/assets/rabbit_hole_icon_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/rabbit-hole/assets/rabbit_hole_icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
