@@ -11,6 +11,8 @@ NAVIGATORS_DIR = Path(__file__).resolve().parents[2] / "ALICE_Navigators"
 RABBIT_HOLE_DIR = NAVIGATORS_DIR / "RabbitHole"
 RABBIT_HOLE_PAGE = RABBIT_HOLE_DIR / "index.html"
 FOREST_PREVIEW_PAGE = RABBIT_HOLE_DIR / "forest_preview.html"
+RABBIT_HOLE_MANIFEST = RABBIT_HOLE_DIR / "manifest.json"
+
 SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,39}$")
 LOCAL_PATH_PATTERN = re.compile(r"^/(?!/)[A-Za-z0-9_./-]{1,240}$")
 
@@ -29,6 +31,18 @@ async def rabbit_hole_home():
         },
     )
 
+
+
+@router.get("/rabbit-hole/manifest.json", include_in_schema=False)
+async def rabbit_hole_manifest():
+    return FileResponse(
+        RABBIT_HOLE_MANIFEST,
+        media_type="application/manifest+json",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 @router.get("/rabbit-hole/forest-preview", include_in_schema=False)
 async def forest_animation_preview():
