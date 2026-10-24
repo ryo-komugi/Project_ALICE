@@ -100,11 +100,11 @@ WHISPER_HALLUCINATION_SILENCE_THRESHOLD = None
 # 無音区間での高Temperatureランダムサンプリング幻覚を防止
 WHISPER_TEMPERATURES = (0.0, 0.2, 0.4)
 
-# 日本語句読点生成と汎用的な会話トーンを促す初期プロンプト
-WHISPER_INITIAL_PROMPT = "こんにちは。本日の会議・面談・インタビューを始めます。議題の進捗確認、連絡事項、質疑応答などについて話し合います。よろしくお願いします。"
+# 日本語句読点生成と汎用的な会話トーンを促す初期プロンプト（無音区間でのセリフ逆流・幻覚を防ぐため中立的な文脈指示とする）
+WHISPER_INITIAL_PROMPT = "日本語のビジネス会話、設計・技術ミーティング、1on1面談の文字起こしです。句読点を適切に付与し、専門用語を正確に表記します。"
 
-# 社内・業務頻出語の認識精度を高めるホットワード (condition_on_previous_text=False時はエコー防止のためデフォルトNone)
-WHISPER_HOTWORDS = None
+# 社内・業務頻出語の認識精度を高めるホットワード
+WHISPER_HOTWORDS = "CATIA V5 結線図 配線図 ワイヤリングダイアグラム ボンディングスペック F-2 F-X"
 
 # ビームサーチ幅
 WHISPER_BEAM_SIZE = 5
