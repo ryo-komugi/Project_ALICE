@@ -166,6 +166,23 @@ class OllamaClient:
         )
         json_dict = self.extract_json_object(content)
 
+        # Defensive normalization for LLM bracket slips:
+        # If the LLM slipped brackets and nested root keys (confirmed_decisions, pending_and_next_topics, etc.)
+        # as an element inside agenda_items, hoist them back to root and keep agenda_items clean.
+        if isinstance(json_dict.get("agenda_items"), list):
+            cleaned_agenda = []
+            for item in json_dict["agenda_items"]:
+                if isinstance(item, dict):
+                    if "agenda_title" in item:
+                        cleaned_agenda.append(item)
+                    else:
+                        for k, v in item.items():
+                            if k not in json_dict or not json_dict[k]:
+                                json_dict[k] = v
+                else:
+                    cleaned_agenda.append(item)
+            json_dict["agenda_items"] = cleaned_agenda
+
         if hasattr(schema_class, "model_validate"):
             return schema_class.model_validate(json_dict)
         return schema_class.parse_obj(json_dict)
