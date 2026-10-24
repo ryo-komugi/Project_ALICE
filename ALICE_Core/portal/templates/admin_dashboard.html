@@ -523,14 +523,6 @@
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             </button>
           </div>
-          <!-- CoPilot -->
-          <div class="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1 gap-2">
-            <span class="text-slate-400">CoPilot (Discord):</span>
-            <span id="svc-copilot" class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold text-[11px]">checking...</span>
-            <button onclick="restartService('copilot')" title="CoPilotを再起動" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-sky-300 transition-colors">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            </button>
-          </div>
           <!-- Ollama -->
           <div class="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1 gap-2">
             <span class="text-slate-400">Ollama (LLM):</span>
@@ -1042,7 +1034,7 @@
     }
 
     async function restartService(serviceName) {
-      const names = { core: 'ALICE Core', copilot: 'CoPilot (Discord)', ollama: 'Ollama (LLM)' };
+      const names = { core: 'ALICE Core', ollama: 'Ollama (LLM)' };
       const label = names[serviceName] || serviceName;
       if (!confirm(`${label} を再起動しますか？
 ※実行中のジョブがある場合は一時的に中断される可能性があります。`)) {
@@ -1206,7 +1198,6 @@
         // Services
         try {
           updateServiceBadge('svc-core', data.services.core);
-          updateServiceBadge('svc-copilot', data.services.copilot);
           updateServiceBadge('svc-ollama', data.services.ollama);
         } catch (e) {}
 

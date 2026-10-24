@@ -21,14 +21,110 @@
         }
         body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, .06), transparent 55%); }
         .header {
-            position: fixed; z-index: 100; top: 0; right: 0; display: flex; align-items: center; justify-content: center;
-            width: 100%; min-height: 82px; padding: 20px; box-sizing: border-box;
-            background: rgba(15, 23, 42, .82); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(56, 189, 248, .32); box-shadow: 0 10px 32px rgba(2, 6, 23, .35);
-            font-family: 'BIZ UDPGothic', 'BIZ UDPゴシック', 'Poppins', sans-serif; font-size: 32px; font-weight: 900;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, .9), 0 0 20px rgba(56, 189, 248, .4);
+            font-family: 'BIZ UDPGothic', 'BIZ UDPゴシック', 'Poppins', sans-serif;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 82px;
+            padding: 16px 24px;
+            background: rgba(15, 23, 42, 0.82);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.32);
+            box-shadow: 0 10px 32px rgba(2, 6, 23, 0.35);
+            font-size: 32px;
+            font-weight: 900;
+            color: #e0f2fe;
+            position: fixed;
+            top: 0;
+            right: 0;
+            z-index: 100;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.4);
         }
-        .header span { color: transparent; background: linear-gradient(90deg, #7dd3fc, #f0f9ff 55%, #fcd34d); -webkit-background-clip: text; background-clip: text; }
+
+        .header-title {
+            grid-column: 2;
+            text-align: center;
+            background: linear-gradient(90deg, #7dd3fc, #f0f9ff 55%, #fcd34d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            white-space: nowrap;
+        }
+
+        .header-spacer {
+            grid-column: 3;
+            width: 140px;
+        }
+
+        .back-nav {
+            grid-column: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            border-radius: 9999px;
+            color: #7dd3fc;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-shadow: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(2, 6, 23, 0.4);
+        }
+        .back-nav svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            transition: transform 0.2s ease;
+        }
+        .back-nav:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38bdf8;
+            color: #ffffff;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+        }
+        .back-nav:hover svg {
+            transform: translateX(-3px);
+        }
+
+        .back-nav-text-mobile {
+            display: none;
+        }
+
+        @media (max-width: 680px) {
+            .header {
+                min-height: 64px;
+                padding: 10px 14px;
+            }
+            .header-title {
+                font-size: 19px;
+                letter-spacing: -0.02em;
+            }
+            .header-spacer {
+                display: none;
+            }
+            .back-nav {
+                padding: 6px 12px;
+                font-size: 11px;
+                gap: 5px;
+            }
+            .back-nav svg {
+                width: 14px;
+                height: 14px;
+            }
+            .back-nav-text-pc {
+                display: none;
+            }
+            .back-nav-text-mobile {
+                display: inline;
+            }
+        }
         .container {
             position: relative; z-index: 1; display: grid; grid-template-columns: minmax(280px, 400px) minmax(0, 1fr);
             align-items: center; gap: clamp(24px, 4vw, 52px); width: min(1100px, calc(100% - 40px));
@@ -76,7 +172,15 @@
     </style>
 </head>
 <body>
-    <header class="header"><span>PROJECT ALICE</span></header>
+    <header class="header">
+        <a href="/rabbit-hole" class="back-nav" title="ポータルへ戻る">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+            <span class="back-nav-text-pc">Rabbit-Hole へ戻る</span>
+            <span class="back-nav-text-mobile">戻る</span>
+        </a>
+        <h1 class="header-title">PROJECT ALICE</h1>
+        <div class="header-spacer" aria-hidden="true"></div>
+    </header>
     <main class="container">
         <div class="image-container">
             <img class="character-art" src="/kureha/assets/ai_character_kureha.png" alt="クレハが机に向かい、羽根ペンで記録を書いているイラスト">

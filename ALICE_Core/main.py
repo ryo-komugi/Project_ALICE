@@ -36,6 +36,11 @@ async def lifespan(app: FastAPI):
     print("[Main] Hub JobService / CoreWorker shutdown completed")
 
 
+# ==============================================================================
+# Dynamic Portal Roots (populated during Navigator auto-mount)
+# ==============================================================================
+dynamic_portal_roots = ["/rabbit-hole"]
+
 app = FastAPI(
     title="ALICE Core",
     version="0.2.0",
@@ -49,7 +54,7 @@ async def require_https_for_browser_portals(request: Request, call_next):
     if client_ip in ("127.0.0.1", "::1", "localhost"):
         return await call_next(request)
     path = request.url.path
-    is_browser_portal = any(path == root or path.startswith(root + "/") for root in ("/rabbit-hole", "/noel", "/kureha"))
+    is_browser_portal = any(path == root or path.startswith(root + "/") for root in dynamic_portal_roots)
     if is_browser_portal and request.url.scheme != "https":
         return JSONResponse(
             status_code=400,
@@ -74,47 +79,65 @@ app.include_router(rabbit_hole_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 Path(config.DIR_SHARE).mkdir(parents=True, exist_ok=True)
 app.mount("/share", StaticFiles(directory=config.DIR_SHARE), name="share")
-NOEL_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators" / "Noel"
-app.mount("/noel/assets", StaticFiles(directory=NOEL_DIR / "images"), name="noel-assets")
-RABBIT_HOLE_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators" / "RabbitHole"
-app.mount("/rabbit-hole/assets", StaticFiles(directory=RABBIT_HOLE_DIR / "images"), name="rabbit-hole-assets")
-KUREHA_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators" / "Kureha"
-app.mount("/kureha/assets", StaticFiles(directory=KUREHA_DIR / "images"), name="kureha-assets")
 
+# ==============================================================================
+# ALICE Navigators Plugin Auto-Mount
+# ==============================================================================
+NAVIGATORS_DIR = Path(__file__).resolve().parents[1] / "ALICE_Navigators"
 
-@app.get("/kureha", include_in_schema=False)
-@app.get("/kureha/", include_in_schema=False)
-async def kureha_page():
-    return FileResponse(
-        KUREHA_DIR / "index.html",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Content-Type-Options": "nosniff",
-            "Referrer-Policy": "strict-origin-when-cross-origin",
-            "X-Frame-Options": "DENY",
-            "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'",
-        },
-    )
+def _create_navigator_handler(html_file: Path, csp: str):
+    async def _handler():
+        return FileResponse(
+            html_file,
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Content-Type-Options": "nosniff",
+                "Referrer-Policy": "strict-origin-when-cross-origin",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": csp,
+            },
+        )
+    return _handler
+
+if NAVIGATORS_DIR.is_dir():
+    for nav_dir in sorted(NAVIGATORS_DIR.iterdir()):
+        if not nav_dir.is_dir():
+            continue
+        slug = nav_dir.name.lower()
+        if slug == "rabbithole":
+            # RabbitHole assets mount
+            images_dir = nav_dir / "images"
+            if images_dir.is_dir():
+                app.mount("/rabbit-hole/assets", StaticFiles(directory=images_dir), name="rabbit-hole-assets")
+            continue
+
+        manifest_file = nav_dir / "navigator.json"
+        index_file = nav_dir / "index.html"
+        images_dir = nav_dir / "images"
+
+        if manifest_file.exists() and index_file.exists():
+            portal_route = f"/{slug}"
+            dynamic_portal_roots.append(portal_route)
+
+            # Mount images asset directory
+            if images_dir.is_dir():
+                app.mount(f"/{slug}/assets", StaticFiles(directory=images_dir), name=f"{slug}-assets")
+
+            # Content Security Policy (allow blob: for recording audio/minutes download)
+            csp = (
+                "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                "font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; "
+                "connect-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'"
+            )
+
+            handler = _create_navigator_handler(index_file, csp)
+            app.add_api_route(f"/{slug}", handler, methods=["GET"], include_in_schema=False)
+            app.add_api_route(f"/{slug}/", handler, methods=["GET"], include_in_schema=False)
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
-
-
-@app.get("/noel", include_in_schema=False)
-@app.get("/noel/", include_in_schema=False)
-async def noel_page():
-    return FileResponse(
-        NOEL_DIR / "index.html",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Content-Type-Options": "nosniff",
-            "Referrer-Policy": "strict-origin-when-cross-origin",
-            "X-Frame-Options": "DENY",
-            "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'",
-        },
-    )
 
 
 @app.get("/")
