@@ -25,8 +25,8 @@ logger = logging.getLogger("ALICE_Core.Noel")
 router = APIRouter(prefix="/noel/api", tags=["Noel"])
 
 COOKIE_NAME = "__Host-alice_browser_session"
-MAX_UPLOAD_BYTES = 100 * 1024 * 1024
-MAX_DURATION_SECONDS = 2 * 60 * 60
+MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+MAX_DURATION_SECONDS = 4 * 60 * 60
 MAX_GLOBAL_JOBS = 2
 MAX_SESSION_JOBS = 1
 RATE_LIMIT = 5
@@ -148,7 +148,7 @@ async def _submit_audio_job(request: Request, response: Response, workflow: list
             while chunk := await upload.read(1024 * 1024):
                 total += len(chunk)
                 if total > MAX_UPLOAD_BYTES:
-                    raise HTTPException(status_code=413, detail="Upload exceeds 100 MiB")
+                    raise HTTPException(status_code=413, detail="Upload exceeds 500 MiB")
                 out.write(chunk)
         await upload.close()
         if total == 0:
@@ -172,7 +172,7 @@ async def _submit_audio_job(request: Request, response: Response, workflow: list
         if len(audio_streams) != 1 or has_unsupported_stream or not (fmt & expected_formats[suffix]):
             raise HTTPException(status_code=415, detail="File content does not match the selected audio format")
         if not (0 < duration <= MAX_DURATION_SECONDS):
-            raise HTTPException(status_code=413, detail="Audio duration must be at most 2 hours")
+            raise HTTPException(status_code=413, detail="Audio duration must be at most 4 hours")
         safe_name = f"recording_{secrets.token_hex(8)}{suffix}"
         job = await asyncio.to_thread(job_service.submit_job, uid, temp_path, workflow, safe_name)
         status_url = f"/noel/api/jobs/{quote(job.job_id, safe='')}"
