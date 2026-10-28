@@ -335,6 +335,128 @@ class TestSummaryUnit(unittest.TestCase):
         self.assertIn("7. 【相談課題と助言の峻別】", consultation_tmpl)
         self.assertIn("8. 【アイデアの決定化防止】", consultation_tmpl)
 
+    def test_summary_config_thinking_and_predict_defaults(self):
+        """SummaryConfig の各ステージ思考設定と出力トークン上限（12288）の検証"""
+        from config import SummaryConfig
+        cfg = SummaryConfig()
+        self.assertFalse(cfg.think_stage1)
+        self.assertTrue(cfg.think_stage2)
+        self.assertFalse(cfg.think_stage3)
+        self.assertTrue(cfg.think_commentary)
+        self.assertEqual(cfg.num_predict_stage1, 4096)
+        self.assertEqual(cfg.num_predict_stage2, 12288)
+        self.assertEqual(cfg.num_predict_stage3, 6144)
+        self.assertEqual(cfg.num_predict_commentary, 12288)
+
+    def test_ollama_client_think_payload_and_tag_stripping(self):
+        """OllamaClient が payload['think'] を送信し、<think>/<thought> タグを分離・除去する検証"""
+        import unittest.mock
+        client = OllamaClient()
+        captured_payload = {}
+
+        class FakeHTTPResponse:
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                pass
+            def read(self):
+                return json.dumps({
+                    "message": {
+                        "content": "<think>deep reasoning here</think>\n# 要約タイトル\n本文です。",
+                        "thinking": ""
+                    },
+                    "prompt_eval_count": 100,
+                    "eval_count": 50,
+                    "total_duration": 1000000000,
+                    "load_duration": 100000000,
+                }).encode("utf-8")
+
+        def fake_urlopen(req, timeout=None):
+            nonlocal captured_payload
+            captured_payload = json.loads(req.data.decode("utf-8"))
+            return FakeHTTPResponse()
+
+        with unittest.mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            resp = client.chat(
+                model="gemma4:12b",
+                messages=[{"role": "user", "content": "test"}],
+                think=True,
+                num_predict=12288,
+            )
+            self.assertTrue(captured_payload.get("think"))
+            self.assertEqual(captured_payload["options"]["num_predict"], 12288)
+            self.assertEqual(resp.content, "# 要約タイトル\n本文です。")
+            self.assertEqual(resp.thinking, "deep reasoning here")
+
+    def test_stages_pass_expected_think_and_num_predict(self):
+        """Analyzer, Composer, ConsistencyChecker, Commentator が期待通りの think と num_predict を渡す検証"""
+        import unittest.mock
+        from config import SummaryConfig
+        from core.analyzer import Analyzer
+        from core.composer import Composer
+        from core.checker import ConsistencyChecker
+        from core.commentator import Commentator
+        from core.ollama_client import OllamaResponse
+
+        cfg = SummaryConfig()
+        mock_client = unittest.mock.MagicMock()
+
+        # 1. Analyzer (think=False, num_predict=4096)
+        mock_client.chat.return_value = OllamaResponse(
+            content='{"conversation_overview": {"purpose": "テスト", "background": "背景"}, "topics": []}',
+            thinking=None, prompt_eval_count=10, eval_count=10,
+            total_duration_sec=0.1, load_duration_sec=0.0, raw_response={}
+        )
+        mock_client.extract_json_object.return_value = {
+            "conversation_overview": {"purpose": "テスト", "background": "背景"},
+            "topics": []
+        }
+        analyzer = Analyzer(cfg, mock_client)
+        analyzer.analyze("[00:00] SPEAKER_01: テスト", model_name="gemma4:12b")
+        s1_kwargs = mock_client.chat.call_args.kwargs
+        self.assertFalse(s1_kwargs["think"])
+        self.assertEqual(s1_kwargs["num_predict"], 4096)
+
+        # 2. Composer (think=True, num_predict=12288)
+        mock_client.reset_mock()
+        mock_client.chat.return_value = OllamaResponse(
+            content="# 面談の目的と全体概要\nテスト要約",
+            thinking="stage2 thought", prompt_eval_count=10, eval_count=20,
+            total_duration_sec=0.1, load_duration_sec=0.0, raw_response={}
+        )
+        composer = Composer(cfg, mock_client)
+        composer.compose({"metadata": {"conversation_type": "面談"}}, model_name="gemma4:12b")
+        s2_kwargs = mock_client.chat.call_args.kwargs
+        self.assertTrue(s2_kwargs["think"])
+        self.assertEqual(s2_kwargs["num_predict"], 12288)
+
+        # 3. ConsistencyChecker (think=False, num_predict=6144)
+        mock_client.reset_mock()
+        mock_client.chat.return_value = OllamaResponse(
+            content="# 整合性検証レポート\n- 発見された不整合・修正点: 重大な不整合なし",
+            thinking=None, prompt_eval_count=10, eval_count=20,
+            total_duration_sec=0.1, load_duration_sec=0.0, raw_response={}
+        )
+        checker = ConsistencyChecker(cfg, mock_client)
+        checker.check_and_refine("[00:00] SPEAKER_01: テスト", "# 要約", model_name="gemma4:12b")
+        s3_kwargs = mock_client.chat.call_args.kwargs
+        self.assertFalse(s3_kwargs["think"])
+        self.assertEqual(s3_kwargs["num_predict"], 6144)
+
+        # 4. Commentator (think=True, num_predict=12288)
+        mock_client.reset_mock()
+        mock_client.chat.return_value = OllamaResponse(
+            content="# 面談全体の総括\nテスト講評",
+            thinking="commentary thought", prompt_eval_count=10, eval_count=20,
+            total_duration_sec=0.1, load_duration_sec=0.0, raw_response={}
+        )
+        commentator = Commentator(cfg, mock_client)
+        commentator.generate_commentary({"metadata": {}}, "# 要約", model_name="gemma4:12b")
+        comm_kwargs = mock_client.chat.call_args.kwargs
+        self.assertTrue(comm_kwargs["think"])
+        self.assertEqual(comm_kwargs["num_predict"], 12288)
+
 
 if __name__ == "__main__":
     unittest.main()
+

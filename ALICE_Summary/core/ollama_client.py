@@ -42,6 +42,7 @@ class OllamaClient:
         repeat_penalty: float,
         timeout_sec: int,
         keep_alive: str | int,
+        think: Optional[bool] = None,
     ) -> OllamaResponse:
         payload: Dict[str, Any] = {
             "model": model,
@@ -55,6 +56,9 @@ class OllamaClient:
                 "repeat_penalty": repeat_penalty,
             },
         }
+
+        if think is not None:
+            payload["think"] = think
 
         if format_json:
             payload["format"] = "json"
@@ -77,13 +81,14 @@ class OllamaClient:
         content = message.get("content", "")
         thinking = message.get("thinking", None)
 
-        # 思考モデル（Thinking Model）のタグ混入対策
-        if "<think>" in content and "</think>" in content:
-            think_match = re.search(r"<think>(.*?)</think>", content, flags=re.DOTALL)
-            if think_match:
-                if not thinking:
-                    thinking = think_match.group(1).strip()
-                content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        # 思考モデル（Thinking Model）のタグ混入対策 (<think> / <thought>)
+        for tag in ("think", "thought"):
+            if f"<{tag}>" in content and f"</{tag}>" in content:
+                tag_match = re.search(rf"<{tag}>(.*?)</{tag}>", content, flags=re.DOTALL)
+                if tag_match:
+                    if not thinking:
+                        thinking = tag_match.group(1).strip()
+                    content = re.sub(rf"<{tag}>.*?</{tag}>", "", content, flags=re.DOTALL).strip()
 
         prompt_eval_count = resp_data.get("prompt_eval_count", 0)
         eval_count = resp_data.get("eval_count", 0)
@@ -116,6 +121,7 @@ class OllamaClient:
         retry_delay: float = 2.0,
         backoff_factor: float = 2.0,
         fallback_model: Optional[str] = None,
+        think: Optional[bool] = None,
     ) -> OllamaResponse:
         """Ollama /api/chat を呼び出す（リトライ＆フォールバック付き）"""
         candidate_models = [model]
@@ -144,6 +150,7 @@ class OllamaClient:
                         repeat_penalty=repeat_penalty,
                         timeout_sec=timeout_sec,
                         keep_alive=keep_alive,
+                        think=think,
                     )
                 except urllib.error.HTTPError as e:
                     last_error = e

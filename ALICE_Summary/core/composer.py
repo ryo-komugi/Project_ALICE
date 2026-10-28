@@ -164,7 +164,7 @@ class Composer:
             },
         ]
 
-        logger.info(f"[Composer] Calling Ollama for Stage 2 with model '{model_name}' (type={applied_type}, num_ctx={effective_num_ctx})...")
+        logger.info(f"[Composer] Calling Ollama for Stage 2 with model '{model_name}' (type={applied_type}, num_ctx={effective_num_ctx}, think={self.config.think_stage2})...")
         t0 = time.time()
         fallback = self.config.fallback_model if self.config.enable_fallback else None
         resp = self.client.chat(
@@ -181,6 +181,7 @@ class Composer:
             retry_delay=self.config.retry_delay,
             backoff_factor=self.config.backoff_factor,
             fallback_model=fallback,
+            think=self.config.think_stage2,
         )
         elapsed = time.time() - t0
         logger.info(f"[Composer] Stage 2 Ollama response received in {elapsed:.2f}s")

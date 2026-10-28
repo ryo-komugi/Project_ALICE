@@ -52,7 +52,7 @@ class Commentator:
         )
 
         required_ctx = WorkspaceIO.calculate_dynamic_num_ctx(
-            prompt, base_margin=self.config.num_predict_stage2 + 1024
+            prompt, base_margin=self.config.num_predict_commentary + 1024
         )
         effective_num_ctx = max(num_ctx or min(self.config.num_ctx, 32768), required_ctx)
         effective_keep_alive = keep_alive if keep_alive is not None else self.config.keep_alive
@@ -68,7 +68,7 @@ class Commentator:
             },
         ]
 
-        logger.info(f"[Commentator] Calling Ollama for Commentary with model '{model_name}' (type={conv_type}, num_ctx={effective_num_ctx})...")
+        logger.info(f"[Commentator] Calling Ollama for Commentary with model '{model_name}' (type={conv_type}, num_ctx={effective_num_ctx}, think={self.config.think_commentary})...")
         t0 = time.time()
         fallback = self.config.fallback_model if self.config.enable_fallback else None
         resp = self.client.chat(
@@ -77,7 +77,7 @@ class Commentator:
             format_json=False,
             temperature=self.config.temperature_stage2,
             num_ctx=effective_num_ctx,
-            num_predict=self.config.num_predict_stage2,
+            num_predict=self.config.num_predict_commentary,
             repeat_penalty=self.config.repeat_penalty,
             timeout_sec=self.config.timeout_sec,
             keep_alive=effective_keep_alive,
@@ -85,6 +85,7 @@ class Commentator:
             retry_delay=self.config.retry_delay,
             backoff_factor=self.config.backoff_factor,
             fallback_model=fallback,
+            think=self.config.think_commentary,
         )
         elapsed = time.time() - t0
         logger.info(f"[Commentator] Commentary Ollama response received in {elapsed:.2f}s")

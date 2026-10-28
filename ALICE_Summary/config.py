@@ -23,10 +23,17 @@ class SummaryConfig:
     ctx_threshold_standard: int = 28000   # <= 28k tokens -> 32768
     ctx_threshold_extended: int = 44000   # <= 44k tokens -> 49152, else -> 65536
 
+    # Thinking mode settings per stage
+    think_stage1: bool = os.getenv("SUMMARY_THINK_STAGE1", "false").lower() in ("true", "1", "yes")
+    think_stage2: bool = os.getenv("SUMMARY_THINK_STAGE2", "true").lower() in ("true", "1", "yes")
+    think_stage3: bool = os.getenv("SUMMARY_THINK_STAGE3", "false").lower() in ("true", "1", "yes")
+    think_commentary: bool = os.getenv("SUMMARY_THINK_COMMENTARY", "true").lower() in ("true", "1", "yes")
+
     # Generation length limits & repetition penalty
     num_predict_stage1: int = int(os.getenv("SUMMARY_NUM_PREDICT_STAGE1", "4096"))
-    num_predict_stage2: int = int(os.getenv("SUMMARY_NUM_PREDICT_STAGE2", "4096"))
+    num_predict_stage2: int = int(os.getenv("SUMMARY_NUM_PREDICT_STAGE2", "12288"))
     num_predict_stage3: int = int(os.getenv("SUMMARY_NUM_PREDICT_STAGE3", "6144"))
+    num_predict_commentary: int = int(os.getenv("SUMMARY_NUM_PREDICT_COMMENTARY", "12288"))
     repeat_penalty: float = float(os.getenv("SUMMARY_REPEAT_PENALTY", "1.0"))
 
     # Resilience: Retries and Fallbacks

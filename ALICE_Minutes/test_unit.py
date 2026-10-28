@@ -408,6 +408,32 @@ class TestMinuteUnit(unittest.TestCase):
         self.assertIn("Ollama crashed", data["error"])
         mock_client.unload_model.assert_called()
 
+    def test_minute_config_thinking_and_predict_defaults(self):
+        """MinuteConfig のデフォルト思考モード（Stage1=OFF, Stage2=ON）と出力上限（12288）の検証"""
+        from config import MinuteConfig
+        cfg = MinuteConfig()
+        self.assertFalse(cfg.stage1_think)
+        self.assertTrue(cfg.stage2_think)
+        self.assertEqual(cfg.stage1_num_predict, 8192)
+        self.assertEqual(cfg.stage2_num_predict, 12288)
+
+    def test_composer_passes_think_and_num_predict_to_client(self):
+        """MinuteComposer.run が client.chat に think=True, num_predict=12288 を渡すことの検証"""
+        mock_client = MagicMock()
+        mock_client.model = "gemma4:12b"
+        mock_client.chat.return_value = ("## 1. 概要\n\n## 5. 次回予定\nなし", "thinking trace")
+
+        composer = MinuteComposer(client=mock_client)
+        analysis = MinuteAnalysisResult(meeting_overview=MeetingOverview(title="テスト会議", purpose="テスト目的"))
+        md, _ = composer.run(analysis=analysis, template_name="standard")
+
+        mock_client.chat.assert_called_once()
+        call_kwargs = mock_client.chat.call_args.kwargs
+        self.assertTrue(call_kwargs["think"])
+        self.assertEqual(call_kwargs["num_predict"], 12288)
+        self.assertIn("（以上）", md)
+
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -102,6 +102,7 @@ class ConsistencyChecker:
             retry_delay=self.config.retry_delay,
             backoff_factor=self.config.backoff_factor,
             fallback_model=fallback,
+            think=self.config.think_stage3,
         )
         elapsed = time.time() - t0
         logger.info(f"[ConsistencyChecker] Stage 3 Ollama response received in {elapsed:.2f}s")

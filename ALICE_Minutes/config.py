@@ -21,9 +21,9 @@ class MinuteConfig:
 
     # Thinking & Predict Limits
     stage1_think: bool = os.getenv("ALICE_MINUTE_STAGE1_THINK", "false").lower() == "true"
-    stage2_think: bool = os.getenv("ALICE_MINUTE_STAGE2_THINK", "false").lower() == "true"
+    stage2_think: bool = os.getenv("ALICE_MINUTE_STAGE2_THINK", "true").lower() == "true"
     stage1_num_predict: int = int(os.getenv("ALICE_MINUTE_STAGE1_NUM_PREDICT", "8192"))
-    stage2_num_predict: int = int(os.getenv("ALICE_MINUTE_STAGE2_NUM_PREDICT", "8192"))
+    stage2_num_predict: int = int(os.getenv("ALICE_MINUTE_STAGE2_NUM_PREDICT", "12288"))
 
     # Temperature & Timeouts
     stage1_temperature: float = float(os.getenv("ALICE_MINUTE_STAGE1_TEMP", "0.1"))

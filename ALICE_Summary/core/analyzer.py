@@ -78,6 +78,7 @@ class Analyzer:
             retry_delay=self.config.retry_delay,
             backoff_factor=self.config.backoff_factor,
             fallback_model=fallback,
+            think=self.config.think_stage1,
         )
         elapsed = time.time() - t0
         logger.info(f"[Analyzer] Stage 1 Ollama response received in {elapsed:.2f}s")
