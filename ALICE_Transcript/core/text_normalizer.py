@@ -91,9 +91,42 @@ class TextNormalizer:
             r["text"] = text.strip()
         return results
 
+    def normalize_segment_deduplication(self, results: list) -> list:
+        """同一話者による隣接セグメント間の単語スタッター（連呼）やフレーズの完全重複を統合する。"""
+        if len(results) < 2:
+            return results
+
+        merged = []
+        for r in results:
+            text = r.get("text", "").strip()
+            if not text:
+                continue
+            if not merged:
+                merged.append(r)
+                continue
+
+            prev = merged[-1]
+            prev_text = prev.get("text", "").strip()
+            same_speaker = prev.get("speaker") == r.get("speaker")
+
+            # 同一話者での完全一致単語連呼（例: 「本当に」「本当に」）
+            if same_speaker and text == prev_text:
+                prev["end"] = r.get("end", prev.get("end"))
+                continue
+
+            # 同一話者での6文字以上のフレーズ完全重複（例: 「気になるところがあるんだけれども」）
+            if same_speaker and len(text) >= 6 and text in prev_text:
+                prev["end"] = r.get("end", prev.get("end"))
+                continue
+
+            merged.append(r)
+
+        return merged
+
     def normalize(self, results: list) -> list:
         results = self.normalize_overlap(results)
         results = self.normalize_segment_overlap(results)
+        results = self.normalize_segment_deduplication(results)
         results = self.normalize_whitespace(results)
         results = self.normalize_symbols(results)
         # 空発話および無音ハルシネーション単独セグメントの除外
