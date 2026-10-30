@@ -91,6 +91,23 @@ class TestTextNormalizer(unittest.TestCase):
         self.assertEqual(len(normalized), 1)
         self.assertEqual(normalized[0]["text"], "通常の会議発話です。")
 
+    def test_segment_deduplication(self):
+        """同一話者の単語連呼スタッターおよび重複フレーズが統合され、異話者の相槌は維持されることを確認"""
+        results = [
+            {"start": 1.0, "end": 2.0, "speaker": "SPEAKER_00", "text": "本当に"},
+            {"start": 2.0, "end": 3.0, "speaker": "SPEAKER_00", "text": "本当に"},
+            {"start": 3.0, "end": 4.0, "speaker": "SPEAKER_01", "text": "本当に"}, # 異話者の相槌 -> 維持
+            {"start": 4.0, "end": 6.0, "speaker": "SPEAKER_00", "text": "これもちょっと気になるところがあるんだけれども"},
+            {"start": 6.0, "end": 8.0, "speaker": "SPEAKER_00", "text": "気になるところがあるんだけれども"}, # 同一話者の重複フレーズ -> 統合
+        ]
+        deduped = self.normalizer.normalize_segment_deduplication(results)
+        self.assertEqual(len(deduped), 3)
+        self.assertEqual(deduped[0]["text"], "本当に")
+        self.assertEqual(deduped[0]["end"], 3.0) # 時間軸が結合されていること
+        self.assertEqual(deduped[1]["speaker"], "SPEAKER_01") # 異話者は残ること
+        self.assertEqual(deduped[2]["text"], "これもちょっと気になるところがあるんだけれども")
+        self.assertEqual(deduped[2]["end"], 8.0)
+
 
 if __name__ == "__main__":
     unittest.main()

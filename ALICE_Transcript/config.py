@@ -45,35 +45,32 @@ DEBUG_EXPORT = False
 # ===========================
 # Alignment Engine Parameters
 # ===========================
-# PyannoteとWhisperの微小なタイムラグを吸収する近傍探索マージン (秒)
 TOLERANCE_MARGIN = 0.35
-
-# 同一話者内で発話を分割するポーズ（無音）閾値 (秒)
 PAUSE_THRESHOLD = 1.0
-
-# 1つの発話セグメントの最大継続時間 (秒)
 MAX_UTTERANCE_DURATION = 25.0
-
-# 同一話者に挟まれたUNKNOWN単語を補間する最大ギャップ係数 (秒)
 INTERPOLATE_MAX_GAP = 1.5
-
-# 同一話者に挟まれた微小な異話者フリップ（Pyannoteのオーバーラップ誤認等）を平滑化する閾値 (秒)
 MICRO_FLIP_MAX_DURATION = 0.8
-
-# 同一話者の近接発話を自然に1つに結合する最大ギャップ (秒)
 MERGE_SAME_SPEAKER_GAP = 1.2
 
 # ===========================
-# Audio Preprocessing
+# Audio Preprocessing & Adaptive Gain (可変・適応型音響前処理)
 # ===========================
-# 音声変換時の音響前処理パイプライン設定 (FFmpegネイティブ)
-# 目的: 卓上マイク録音での小声話者（面談対象者等）の持ち上げと低域空調ノイズ除去
 AUDIO_NORMALIZE = True
 AUDIO_PREPROCESSING_ENABLED = True
 AUDIO_FILTER_HIGHPASS = 100      # 空調・机振動・低周波ノイズ除去 (Hz)
 AUDIO_FILTER_LOWPASS = 7600      # 超高域ヒスノイズ除去・子音帯域保持 (Hz)
-AUDIO_FILTER_DENOISE_NF = None   # FFTスペクトル減算による子音劣化・nospeech誤判定を防ぐためデフォルト無効
-AUDIO_DYNAUDNORM = "f=500:g=31:p=0.95:m=4.0"  # 声質・話者特徴量を壊さず小声を緩やかに持ち上げるダイナミックノーマライザ
+AUDIO_FILTER_DENOISE_NF = None   # FFTスペクトル減算はデフォルト無効
+
+# アダプティブ連続可変ゲイン設定
+AUDIO_ADAPTIVE_PREPROCESSING = True  # 音声ごとの音量・ステレオ相関に応じた完全自動可変
+AUDIO_ADAPTIVE_TARGET_RMS = -22.0    # Whisperの最適動作目標会話音量 (dBFS)
+AUDIO_DYNAUDNORM_M_MIN = 3.0         # 通常大音量時の下限m値（過剰増幅防止）
+AUDIO_DYNAUDNORM_M_MAX = 20.0        # 極小音量ささやき声時の上限m値（限界救済）
+
+# 手動上書き用設定 (None の場合は自動判定)
+AUDIO_MANUAL_DYNAUDNORM_M = None     # 数値指定時は自動計算を上書きして固定
+AUDIO_MANUAL_CHANNEL_MODE = None     # "auto", "mono", "ch1", "ch2", "mix" で手動指定可能
+
 AUDIO_LOUDNORM_I = None          # 明示指定時のみEBU R128 loudnormを使用
 AUDIO_LOUDNORM_TP = -1.5         # トゥルーピーク上限 (dBTP)
 AUDIO_LOUDNORM_LRA = 11.0        # ラウドネスレンジ目標 (LU)
@@ -81,33 +78,16 @@ AUDIO_LOUDNORM_LRA = 11.0        # ラウドネスレンジ目標 (LU)
 # ===========================
 # Whisper Parameters
 # ===========================
-# Silero VAD のチャンク強制結合(collect_chunks)による時間軸ジャンプ・単語分断・チャンク破棄を防ぐためデフォルトFalse
 WHISPER_VAD_FILTER = False
-
-# VAD有効時のパラメータ
 WHISPER_VAD_THRESHOLD = 0.30
 WHISPER_VAD_MIN_SILENCE_MS = 600
 WHISPER_VAD_SPEECH_PAD_MS = 350
-
-# ノイズ環境での反復幻覚ループ抑止
 WHISPER_CONDITION_ON_PREV = False
-
-# large-v3 の過敏な nospeech 判定による30秒チャンク丸ごとスキップを抑制
 WHISPER_NO_SPEECH_THRESHOLD = 0.85
 WHISPER_LOG_PROB_THRESHOLD = -1.0
-# 日本語短トークン(<0.133s)に対する過剰な再シーク・後半切断を防ぐためNone
 WHISPER_HALLUCINATION_SILENCE_THRESHOLD = None
-# 無音区間での高Temperatureランダムサンプリング幻覚を防止
 WHISPER_TEMPERATURES = (0.0, 0.2, 0.4)
-
-# 日本語句読点生成と汎用的な会話トーンを促す初期プロンプト（無音区間でのセリフ逆流・幻覚を防ぐため中立的な文脈指示とする）
-WHISPER_INITIAL_PROMPT = "日本語のビジネス会話、設計・技術ミーティング、1on1面談の文字起こしです。句読点を適切に付与し、専門用語を正確に表記します。"
-
-# 社内・業務頻出語の認識精度を高めるホットワード
-WHISPER_HOTWORDS = "CATIA V5 結線図 配線図 ワイヤリングダイアグラム ボンディングスペック F-2 F-X"
-
-# ビームサーチ幅
+WHISPER_INITIAL_PROMPT = None
+WHISPER_HOTWORDS = None
 WHISPER_BEAM_SIZE = 5
-
-# 反復ペナルティ
-WHISPER_REPETITION_PENALTY = 1.05
+WHISPER_REPETITION_PENALTY = 1.08
