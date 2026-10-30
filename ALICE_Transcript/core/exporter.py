@@ -5,6 +5,11 @@ from core.utils import format_time
 
 class Exporter:
     def create_summary(self, job, model_name) -> str:
+        adaptive_info = ""
+        if getattr(job, "acoustic_profile", None):
+            prof = job.acoustic_profile
+            adaptive_info = f"\n音響前処理：{prof.description}\n"
+
         return (
             "\n===== 実行時間 =====\n"
             f"Pipeline全体：{format_time(job.total_time)}\n"
@@ -12,6 +17,7 @@ class Exporter:
             f"Whisper({model_name})：{format_time(job.wh_time)}\n"
             f"Alignment：{format_time(job.aln_time)}\n"
             f"Normalization：{format_time(job.norm_time)}\n"
+            f"{adaptive_info}"
         )
 
     def export_json(self, job):
@@ -47,6 +53,10 @@ class Exporter:
                 "normalization": round(job.norm_time, 2),
             }
         }
+        if getattr(job, "acoustic_profile", None):
+            prof = job.acoustic_profile
+            metadata["acoustic_profile"] = prof.to_dict() if hasattr(prof, "to_dict") else str(prof)
+
         with open(job.metadata_json, "w", encoding="utf-8") as f:
             json.dump(metadata, f, ensure_ascii=False, indent=2)
 
@@ -69,6 +79,10 @@ class Exporter:
                 "normalization": round(job.norm_time, 2),
             }
         }
+        if getattr(job, "acoustic_profile", None):
+            prof = job.acoustic_profile
+            metadata["acoustic_profile"] = prof.to_dict() if hasattr(prof, "to_dict") else str(prof)
+
         try:
             with open(job.metadata_json, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, ensure_ascii=False, indent=2)

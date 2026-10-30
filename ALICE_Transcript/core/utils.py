@@ -1,5 +1,6 @@
 import subprocess
 import os
+from pathlib import Path
 
 # ===========================
 # 時間フォーマット
@@ -20,37 +21,47 @@ def overlap(a_start, a_end, b_start, b_end):
     )
 
 # ===========================
-# 音声変換 (mp3/m4a → wav) & 音響前処理
+# 音声変換 (mp3/m4a → wav) & アダプティブ音響前処理
 # ===========================
-def convert_to_wav(input_path, output_path):
+def convert_to_wav(input_path, output_path, job=None, manual_m=None, manual_channel=None):
+    """
+    Converts audio to 16kHz mono WAV with adaptive acoustic preprocessing.
+    Continuously tunes dynaudnorm gain (m) and routes stereo channels to avoid comb-filtering.
+    """
     import config
-    cmd = ["ffmpeg", "-y", "-i", str(input_path)]
+    from core.audio_processor import build_audio_filter_chain
 
-    if getattr(config, "AUDIO_PREPROCESSING_ENABLED", False):
-        filters = []
-        # 1. 帯域フィルタ (低周波・超高域ノイズカット)
+    cmd = ["ffmpeg", "-y", "-i", str(input_path)]
+    profile = None
+
+    if getattr(config, "AUDIO_PREPROCESSING_ENABLED", True):
+        adaptive_enabled = getattr(config, "AUDIO_ADAPTIVE_PREPROCESSING", True)
+        target_rms = getattr(config, "AUDIO_ADAPTIVE_TARGET_RMS", -22.0)
         hp = getattr(config, "AUDIO_FILTER_HIGHPASS", 100)
         lp = getattr(config, "AUDIO_FILTER_LOWPASS", 7600)
-        if hp:
-            filters.append(f"highpass=f={hp}")
-        if lp:
-            filters.append(f"lowpass=f={lp}")
 
-        # 2. FFTスペクトルノイズ抑制 (明示設定時のみ)
-        nf = getattr(config, "AUDIO_FILTER_DENOISE_NF", None)
-        if nf is not None:
-            filters.append(f"afftdn=nf={nf}")
+        # Job parameter or Config manual override
+        m_override = manual_m
+        if m_override is None and job is not None:
+            m_override = getattr(job, "manual_m", None)
+        if m_override is None:
+            m_override = getattr(config, "AUDIO_MANUAL_DYNAUDNORM_M", None)
 
-        # 3. 音量正規化 (loudnorm明示設定時はloudnorm、デフォルトは小声救済に優れたdynaudnorm)
-        norm_i = getattr(config, "AUDIO_LOUDNORM_I", None)
-        dynaudnorm = getattr(config, "AUDIO_DYNAUDNORM", "f=250:g=15:p=0.90:m=6.0:s=12.0")
-        if norm_i is not None:
-            norm_tp = getattr(config, "AUDIO_LOUDNORM_TP", -1.5)
-            norm_lra = getattr(config, "AUDIO_LOUDNORM_LRA", 11.0)
-            filters.append(f"loudnorm=I={norm_i}:TP={norm_tp}:LRA={norm_lra}")
-        elif dynaudnorm:
-            filters.append(f"dynaudnorm={dynaudnorm}")
+        ch_override = manual_channel
+        if ch_override is None and job is not None:
+            ch_override = getattr(job, "manual_channel", None)
+        if ch_override is None:
+            ch_override = getattr(config, "AUDIO_MANUAL_CHANNEL_MODE", None)
 
+        filters, profile = build_audio_filter_chain(
+            input_path,
+            manual_m=m_override,
+            manual_channel=ch_override,
+            adaptive_enabled=adaptive_enabled,
+            target_rms=target_rms,
+            highpass_hz=hp,
+            lowpass_hz=lp,
+        )
         if filters:
             cmd.extend(["-af", ",".join(filters)])
     elif getattr(config, "AUDIO_NORMALIZE", True):
@@ -58,13 +69,16 @@ def convert_to_wav(input_path, output_path):
 
     cmd.extend(["-ar", "16000", "-ac", "1", str(output_path)])
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    if job is not None and profile is not None:
+        job.acoustic_profile = profile
+
     return output_path
 
 # ===========================
 # オーバーラップ長
 # ===========================
 def overlap_length(text1, text2):
-    # text1末尾とtext2先頭の最大一致長を返す
     max_overlap = 0
     max_len = min(len(text1), len(text2))
     for i in range(1, max_len + 1):

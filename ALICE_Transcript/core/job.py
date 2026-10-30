@@ -30,6 +30,13 @@ class Job:
     error_message: str | None = None
 
     # ===========================
+    # ACOUSTIC PREPROCESSING (可変・アダプティブ音響制御)
+    # ===========================
+    acoustic_profile: object | None = None
+    manual_m: float | None = None
+    manual_channel: str | None = None
+
+    # ===========================
     # WORKSPACE ARTIFACTS
     # ===========================
     # Runtime Artifacts (一時ファイル: cleanupで削除)

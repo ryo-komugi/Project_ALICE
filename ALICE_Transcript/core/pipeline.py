@@ -95,8 +95,11 @@ class TranscriptPipeline:
             # 1. pyannote (話者分離)
             write_progress("音声の準備・話者解析中", 3)
             job.t_py_start = time.time()
-            self.logger.info(f"[{job.basename}] pyannote開始")
-            job.wav_audio = convert_to_wav(job.input_audio, job.wav_audio)
+            self.logger.info(f"[{job.basename}] pyannote開始 (音響プローブ & 前処理)")
+            job.wav_audio = convert_to_wav(job.input_audio, job.wav_audio, job=job)
+            if getattr(job, "acoustic_profile", None):
+                self.logger.info(f"[{job.basename}] {job.acoustic_profile.description}")
+
             self.pyannote.run(job)
             job.t_py_end = time.time()
 
