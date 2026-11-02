@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stella | 課内動静・予定管理 | Project ALICE</title>
+    <style>
+        /* フォント */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', 'BIZ UDPGothic', 'BIZ UDPゴシック', sans-serif;
+            text-align: center;
+            padding: 0;
+            margin: 0;
+            min-height: 100vh;
+            background-color: #060913;
+            background-image:
+                linear-gradient(to bottom, rgba(6, 9, 19, 0.65), rgba(6, 9, 19, 0.75)),
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.12) 0, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.12) 0, transparent 50%),
+                url("/rabbit-hole/assets/rabbit_hole_background.jpg");
+            background-size: cover;
+            background-position: center bottom;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            position: relative;
+            color: #fff;
+        }
+
+        /* 背景を薄くするためのオーバーレイ */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.06), transparent 55%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* タイトルバー (Noel / Kureha 完全統一) */
+        .header {
+            font-family: 'BIZ UDPGothic', 'BIZ UDPゴシック', 'Poppins', sans-serif;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 82px;
+            padding: 16px 24px;
+            background: rgba(15, 23, 42, 0.82);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(56, 189, 248, 0.32);
+            box-shadow: 0 10px 32px rgba(2, 6, 23, 0.35);
+            font-size: 32px;
+            font-weight: 900;
+            color: #e0f2fe;
+            position: fixed;
+            top: 0;
+            right: 0;
+            z-index: 100;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.4);
+        }
+
+        .header-title {
+            grid-column: 2;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin: 0;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .header-title-text {
+            background: linear-gradient(90deg, #7dd3fc, #f0f9ff 55%, #fcd34d);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .header-logo {
+            width: 0.82em;
+            height: 0.82em;
+            border-radius: 0.22em;
+            border: 1.5px solid rgba(56, 189, 248, 0.65);
+            box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
+            object-fit: cover;
+            vertical-align: middle;
+            flex-shrink: 0;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .header-logo:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 18px rgba(56, 189, 248, 0.55);
+        }
+
+        .header-spacer {
+            grid-column: 3;
+            width: 140px;
+        }
+
+        .back-nav {
+            grid-column: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            border-radius: 9999px;
+            color: #7dd3fc;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-shadow: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(2, 6, 23, 0.4);
+        }
+        .back-nav svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            transition: transform 0.2s ease;
+        }
+        .back-nav:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38bdf8;
+            color: #ffffff;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+        }
+        .back-nav:hover svg {
+            transform: translateX(-3px);
+        }
+
+        .back-nav-text-mobile {
+            display: none;
+        }
+
+        @media (max-width: 680px) {
+            .header {
+                min-height: 64px;
+                padding: 10px 14px;
+            }
+            .header-title {
+                font-size: 19px;
+                letter-spacing: -0.02em;
+            }
+            .header-spacer {
+                display: none;
+            }
+            .back-nav {
+                padding: 6px 12px;
+                font-size: 11px;
+                gap: 5px;
+            }
+            .back-nav svg {
+                width: 14px;
+                height: 14px;
+            }
+            .back-nav-text-pc {
+                display: none;
+            }
+            .back-nav-text-mobile {
+                display: inline;
+            }
+        }
+
+        /* メインヒーローコンテナ (Noel / Kureha 完全統一) */
+        .container {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+            align-items: center;
+            gap: clamp(24px, 4vw, 48px);
+            width: min(1100px, calc(100% - 40px));
+            margin: 130px auto 30px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.15);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            padding: clamp(22px, 4vw, 36px);
+            border-radius: 15px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .image-container { position: relative; width: 100%; }
+
+        .character-art {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 10px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .content { min-width: 0; text-align: center; }
+
+        .content_title {
+            margin: 0 0 4px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #e0f2fe;
+        }
+
+        .character-name {
+            margin: 0 0 16px;
+            font-weight: 600;
+            font-size: 48px;
+            line-height: 1.2;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+        }
+
+        .intro {
+            max-width: 540px;
+            margin: 0 auto 20px;
+            color: rgba(255, 255, 255, 0.88);
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        /* アクションボタン (Noel / Kureha スタイル) */
+        .btn-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .upload-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 198, 255, 0.3);
+            border: none;
+            font-family: inherit;
+        }
+
+        .upload-button:hover {
+            background: linear-gradient(135deg, #0072ff, #00c6ff);
+            box-shadow: 0 6px 15px rgba(0, 198, 255, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .custom-file-upload {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 22px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #e0f2fe;
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-family: inherit;
+        }
+
+        .custom-file-upload:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38bdf8;
+            color: #fff;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+            transform: translateY(-1px);
+        }
+
+        /* 本日の動静ダイジェスト (ヒーローカード内) */
+        .today-digest-card {
+            background: rgba(15, 23, 42, 0.45);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 10px;
+            padding: 12px 18px;
+            text-align: left;
+            margin: 0 auto;
+            max-width: 520px;
+        }
+
+        .today-digest-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #7dd3fc;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 0.03em;
+        }
+
+        .today-badges-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .digest-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* 下部カレンダー・ボード専用コンテナ (グラスモーフィズム統一) */
+        .board-container {
+            position: relative;
+            z-index: 1;
+            width: min(1100px, calc(100% - 40px));
+            margin: 0 auto 50px;
+            background: rgba(255, 255, 255, 0.15);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            padding: clamp(20px, 3vw, 32px);
+            border-radius: 15px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+            text-align: left;
+        }
+
+        /* ツールバー / 表示切替 */
+        .board-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .date-navigator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38bdf8;
+        }
+
+        .current-period-text {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f8fafc;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .view-switchers {
+            display: flex;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 8px;
+            padding: 3px;
+            gap: 3px;
+        }
+
+        .view-tab {
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .view-tab.active {
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .view-tab:hover:not(.active) {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .filter-select {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        /* VIEW 1: 動静タイムライン */
+        .timeline-scroll {
+            overflow-x: auto;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 8px;
+            background: rgba(15, 23, 42, 0.45);
+        }
+
+        .timeline-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        .timeline-table th,
+        .timeline-table td {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 9px 8px;
+            text-align: center;
+        }
+
+        .timeline-table th {
+            background: rgba(15, 23, 42, 0.75);
+            font-weight: 600;
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+
+        .timeline-table th.member-col {
+            text-align: left;
+            padding-left: 14px;
+            width: 190px;
+            min-width: 190px;
+        }
+
+        .date-th-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .date-th-weekday {
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .date-th-day {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .sat { color: #38bdf8 !important; }
+        .sun { color: #f87171 !important; }
+
+        .is-today {
+            background: rgba(56, 189, 248, 0.15) !important;
+            border-color: rgba(56, 189, 248, 0.55) !important;
+        }
+
+        .today-pill {
+            background: #fcd34d;
+            color: #000;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 9999px;
+            margin-top: 2px;
+        }
+
+        /* メンバー行 */
+        .member-info-cell {
+            text-align: left !important;
+            padding-left: 14px !important;
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .member-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .member-meta {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .member-badge-title {
+            background: rgba(56, 189, 248, 0.2);
+            color: #7dd3fc;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 10px;
+        }
+
+        /* セル・動静バッジ */
+        .timeline-day-cell {
+            position: relative;
+            min-height: 56px;
+            height: 60px;
+            cursor: pointer;
+            transition: background 0.15s;
+            vertical-align: top;
+            padding: 4px !important;
+        }
+
+        .timeline-day-cell:hover {
+            background: rgba(56, 189, 248, 0.12);
+        }
+
+        .timeline-badges-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            height: 100%;
+            justify-content: flex-start;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            padding: 3px 6px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s;
+            line-height: 1.2;
+            word-break: break-all;
+        }
+
+        .status-badge:hover {
+            transform: scale(1.02);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-vacation {
+            background: rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .status-business {
+            background: rgba(56, 189, 248, 0.25);
+            color: #7dd3fc;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+        }
+
+        .status-remote {
+            background: rgba(16, 185, 129, 0.25);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .status-direct {
+            background: rgba(245, 158, 11, 0.25);
+            color: #fde68a;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .status-deadline {
+            background: rgba(236, 72, 153, 0.25);
+            color: #f472b6;
+            border: 1px solid rgba(236, 72, 153, 0.4);
+        }
+
+        .status-meeting {
+            background: rgba(168, 85, 247, 0.25);
+            color: #d8b4fe;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+        }
+
+        .status-normal {
+            color: #94a3b8;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            opacity: 0.2;
+        }
+
+        .timeline-day-cell:hover .status-normal {
+            opacity: 0.8;
+            color: #38bdf8;
+        }
+
+        /* VIEW 2: 月間カレンダー */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .cal-head {
+            text-align: center;
+            padding: 8px 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #cbd5e1;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 6px;
+        }
+
+        .cal-day-cell {
+            background: rgba(15, 23, 42, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 6px;
+            min-height: 96px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .cal-day-cell:hover {
+            background: rgba(56, 189, 248, 0.12);
+        }
+
+        .cal-day-cell.other-month {
+            opacity: 0.3;
+        }
+
+        .cal-day-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+
+        .cal-day-num {
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .cal-mini-badge {
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        /* VIEW 3: 締切・イベント一覧 */
+        .deadlines-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .deadline-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            transition: transform 0.15s;
+        }
+
+        .deadline-card:hover {
+            background: rgba(56, 189, 248, 0.12);
+            transform: translateX(3px);
+        }
+
+        .deadline-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .deadline-icon-box {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+            flex-shrink: 0;
+        }
+
+        .deadline-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .deadline-meta {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .due-badge {
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .due-urgent {
+            background: rgba(239, 68, 68, 0.25);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .due-near {
+            background: rgba(245, 158, 11, 0.25);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .due-normal {
+            background: rgba(56, 189, 248, 0.2);
+            color: #7dd3fc;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        /* モーダル (Noel / Kureha ダークグラスモーフィズム) */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.75);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-dialog {
+            background: #0f172a;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: 14px;
+            width: min(580px, 100%);
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .modal-close:hover { color: #fff; }
+
+        .modal-body {
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-row label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+
+        .form-row .required { color: #f87171; }
+
+        .form-input, .form-select, .form-textarea {
+            background: rgba(2, 6, 23, 0.65);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 8px rgba(56, 189, 248, 0.35);
+        }
+
+        .form-input:disabled {
+            background: rgba(15, 23, 42, 0.4);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: #64748b;
+            cursor: not-allowed;
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .modal-footer {
+            padding: 14px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        /* 社員マスタテーブル */
+        .member-table-wrap {
+            max-height: 240px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+        }
+
+        .master-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .master-table th, .master-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            text-align: left;
+        }
+
+        .master-table th {
+            background: rgba(2, 6, 23, 0.7);
+            color: #94a3b8;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .action-link {
+            background: transparent;
+            border: none;
+            color: #7dd3fc;
+            cursor: pointer;
+            font-size: 12px;
+            text-decoration: underline;
+            padding: 2px 4px;
+        }
+
+        .action-link.delete { color: #f87171; }
+
+        /* トースト通知 */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid #38bdf8;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 2000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* レスポンシブ (Noel / Kureha 完全統一) */
+        @media (max-width: 760px) {
+            .container {
+                grid-template-columns: 1fr;
+                width: min(620px, calc(100% - 28px));
+                margin-top: 108px;
+                gap: 24px;
+            }
+            .image-container {
+                width: min(100%, 360px);
+                margin: 0 auto;
+            }
+            .board-container {
+                width: min(620px, calc(100% - 28px));
+            }
+            .board-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .date-navigator {
+                justify-content: space-between;
+            }
+            .view-switchers {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header { min-height: 68px; font-size: 25px; }
+            .container { margin-top: 88px; padding: 18px; }
+            .character-name { font-size: 40px; }
+            .upload-button, .custom-file-upload { width: 100%; justify-content: center; }
+            .form-grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- タイトルバー (Noel / Kureha 統一) -->
+    <header class="header">
+        <a href="/rabbit-hole?skip=1" class="back-nav" title="Rabbit-Hole へ戻る" onclick="if(window.history.length > 1){ history.back(); return false; }">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+            <span class="back-nav-text-pc">Rabbit-Hole へ戻る</span>
+            <span class="back-nav-text-mobile">戻る</span>
+        </a>
+        <h1 class="header-title">
+            <span class="header-title-text">Rabbit-Hole</span>
+            <img src="/static/admin/alice_logo.jpg" alt="ALICE" class="header-logo">
+        </h1>
+        <div class="header-spacer" aria-hidden="true"></div>
+    </header>
+
+    <!-- メインヒーローコンテナ (Noel / Kureha 統一レイアウト) -->
+    <main class="container">
+        <div class="image-container">
+            <img id="Stella" class="character-art" src="/stella/assets/ai_character_stella.png" alt="Stella">
+        </div>
+        <section class="content">
+            <h1 class="content_title">課内動静・予定管理AI</h1>
+            <h2 class="character-name">Stella</h2>
+            <p class="intro">職場の配下人員の動静（休暇・出張・在宅）や、各種提出物の締め切り・予定を共有管理します。</p>
+
+            <div class="btn-group">
+                <button type="button" class="upload-button" onclick="openEventModal()">＋ 予定・動静を登録</button>
+                <button type="button" class="custom-file-upload" onclick="openMemberModal()">👥 メンバー管理</button>
+            </div>
+
+            <!-- 本日の動静ダイジェスト -->
+            <div class="today-digest-card">
+                <div class="today-digest-header">
+                    <span>📅 本日の動静 (2026年 11月 02日)</span>
+                    <a href="#boardCard" style="color: #7dd3fc; text-decoration: none; font-size: 11px;">ボードを見る ▼</a>
+                </div>
+                <div class="today-badges-list" id="todayBadgesList">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- カレンダー & 動静ボードコンテナ -->
+    <section class="board-container" id="boardCard">
+        <!-- ツールバー -->
+        <div class="board-toolbar">
+            <!-- 期間ナビゲーション -->
+            <div class="date-navigator">
+                <button class="nav-btn" onclick="shiftPeriod(-1)" title="前へ">◀</button>
+                <button class="custom-file-upload" style="padding: 5px 12px; font-size: 12px;" onclick="goToToday()">今日</button>
+                <button class="nav-btn" onclick="shiftPeriod(1)" title="次へ">▶</button>
+                <span id="currentPeriodText" class="current-period-text">2026年 11月 02日 〜</span>
+            </div>
+
+            <!-- ビュー切替タブ -->
+            <div class="view-switchers">
+                <button class="view-tab active" id="tabTimeline" onclick="switchView('timeline')">📊 動静ボード</button>
+                <button class="view-tab" id="tabCalendar" onclick="switchView('calendar')">📅 月間カレンダー</button>
+                <button class="view-tab" id="tabDeadlines" onclick="switchView('deadlines')">📋 締切・イベント一覧</button>
+            </div>
+
+            <!-- 所属フィルタ -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label for="deptFilter" style="font-size: 12px; color: #94a3b8;">所属:</label>
+                <select id="deptFilter" class="filter-select" onchange="renderActiveView()">
+                    <option value="ALL">すべて表示</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- VIEW 1: 課内動静ボード -->
+        <div id="viewTimeline">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 12px; color: #cbd5e1;">
+                <span>💡 セルをクリックして有休・出張・在宅などの予定を登録できます</span>
+                <div style="display: flex; gap: 6px;">
+                    <span class="status-badge status-vacation">有休</span>
+                    <span class="status-badge status-business">出張</span>
+                    <span class="status-badge status-remote">在宅</span>
+                    <span class="status-badge status-direct">直行/直帰</span>
+                </div>
+            </div>
+            <div class="timeline-scroll">
+                <table class="timeline-table" id="timelineTable">
+                    <!-- Populated by JS -->
+                </table>
+            </div>
+        </div>
+
+        <!-- VIEW 2: 月間カレンダー -->
+        <div id="viewCalendar" style="display: none;">
+            <div class="calendar-grid" id="calendarHeaderGrid">
+                <div class="cal-head">月</div>
+                <div class="cal-head">火</div>
+                <div class="cal-head">水</div>
+                <div class="cal-head">木</div>
+                <div class="cal-head">金</div>
+                <div class="cal-head sat">土</div>
+                <div class="cal-head sun">日</div>
+            </div>
+            <div class="calendar-grid" id="calendarBodyGrid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- VIEW 3: 締切・イベント一覧 -->
+        <div id="viewDeadlines" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h3 style="font-size: 15px; font-weight: 600; color: #f8fafc; margin: 0;">直近の提出物締切 & 課内イベント</h3>
+                <button class="custom-file-upload" style="padding: 6px 12px; font-size: 12px;" onclick="openEventModal(null, null, 'DEADLINE')">
+                    ＋ 締切・イベントを追加
+                </button>
+            </div>
+            <div class="deadlines-container" id="deadlinesContainer">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- MODAL 1: 予定・動静登録モーダル -->
+    <div id="eventModal" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title" id="eventModalTitle">✦ 予定・動静登録</h3>
+                <button class="modal-close" onclick="closeEventModal()">✕</button>
+            </div>
+            <form id="eventForm" onsubmit="saveEvent(event)">
+                <input type="hidden" id="eventId">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <label for="eventMember">対象メンバー<span class="required">*</span></label>
+                        <select id="eventMember" class="form-select" required></select>
+                    </div>
+                    <div class="form-row">
+                        <label for="eventCategory">区分 (カテゴリ)<span class="required">*</span></label>
+                        <select id="eventCategory" class="form-select" required onchange="onCategoryChange()">
+                            <option value="VACATION">🏖 有休・休暇</option>
+                            <option value="BUSINESS_TRIP">🚄 出張</option>
+                            <option value="REMOTE">🏠 在宅勤務 (テレワーク)</option>
+                            <option value="DIRECT">🚗 直行・直帰</option>
+                            <option value="DEADLINE">⚠️ 提出物締切</option>
+                            <option value="MEETING">📌 課内行事・会議</option>
+                            <option value="OTHER">📝 その他</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="eventTitle">用件 / タイトル<span class="required">*</span></label>
+                        <input type="text" id="eventTitle" class="form-input" placeholder="例: 有休、大阪支社訪問、月次報告書提出" required>
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-row">
+                            <label for="eventStartDate">開始日<span class="required">*</span></label>
+                            <input type="date" id="eventStartDate" class="form-input" required onchange="onStartDateChange()">
+                        </div>
+                        <div class="form-row">
+                            <label for="eventEndDate">終了日<span class="required">*</span></label>
+                            <input type="date" id="eventEndDate" class="form-input" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label for="eventNote">備考・連絡先メモ (任意)</label>
+                        <textarea id="eventNote" class="form-textarea" rows="2" placeholder="緊急時の連絡先や特記事項など"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="action-link delete" id="btnDeleteEvent" style="margin-right: auto; display: none;" onclick="deleteCurrentEvent()">削除</button>
+                    <button type="button" class="custom-file-upload" style="padding: 8px 16px; font-size: 13px;" onclick="closeEventModal()">キャンセル</button>
+                    <button type="submit" class="upload-button" style="padding: 8px 18px; font-size: 13px;">保存する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: メンバー管理モーダル -->
+    <div id="memberModal" class="modal-overlay">
+        <div class="modal-dialog" style="width: min(740px, 100%);">
+            <div class="modal-header">
+                <h3 class="modal-title">👥 メンバー管理 (社員マスタ)</h3>
+                <button class="modal-close" onclick="closeMemberModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="member-table-wrap">
+                    <table class="master-table">
+                        <thead>
+                            <tr>
+                                <th>社員番号</th>
+                                <th>氏名</th>
+                                <th>所属1</th>
+                                <th>所属2</th>
+                                <th>役職</th>
+                                <th style="text-align: right;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberMasterTableBody"></tbody>
+                    </table>
+                </div>
+
+                <form id="memberForm" onsubmit="saveMember(event)" style="background: rgba(2, 6, 23, 0.45); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 14px;">
+                    <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #7dd3fc;" id="memberFormTitle">
+                        ＋ 新規メンバー登録
+                    </h4>
+                    <div class="form-grid-2">
+                        <div class="form-row">
+                            <label for="empId">社員番号<span class="required">*</span> <span style="font-size: 10px; color: #94a3b8;">(不変)</span></label>
+                            <input type="text" id="empId" class="form-input" placeholder="例: EMP001" required>
+                        </div>
+                        <div class="form-row">
+                            <label for="empName">氏名<span class="required">*</span></label>
+                            <input type="text" id="empName" class="form-input" placeholder="例: 山田 太郎" required>
+                        </div>
+                    </div>
+                    <div class="form-grid-2" style="margin-top: 8px;">
+                        <div class="form-row">
+                            <label for="empDept1">所属1 (部・室)</label>
+                            <input type="text" id="empDept1" class="form-input" placeholder="例: システム開発部">
+                        </div>
+                        <div class="form-row">
+                            <label for="empDept2">所属2 (課・グループ)</label>
+                            <input type="text" id="empDept2" class="form-input" placeholder="例: 運用第1課">
+                        </div>
+                    </div>
+                    <div class="form-grid-2" style="margin-top: 8px;">
+                        <div class="form-row">
+                            <label for="empTitle">役職</label>
+                            <input type="text" id="empTitle" class="form-input" placeholder="例: 課長、主任、メンバー">
+                        </div>
+                        <div class="form-row" style="justify-content: flex-end; flex-direction: row; align-items: flex-end; gap: 8px;">
+                            <button type="button" class="custom-file-upload" id="btnCancelEditMember" style="display: none; padding: 7px 14px; font-size: 12px;" onclick="resetMemberForm()">キャンセル</button>
+                            <button type="submit" class="upload-button" id="btnSaveMember" style="padding: 7px 18px; font-size: 12px;">登録する</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button type="button" class="action-link" style="font-size: 11px; color: #94a3b8;" onclick="resetDemoData()">デモデータを復元</button>
+                <button type="button" class="custom-file-upload" style="padding: 6px 14px; font-size: 12px;" onclick="closeMemberModal()">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- トースト通知 -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        /* ========================================================
+           Stella Schedule & Presence Management Engine
+           ======================================================== */
+
+        const STORAGE_KEY = 'stella_presence_data_v1';
+
+        const DEFAULT_MEMBERS = [
+            { id: "EMP001", name: "浅野 拓也", dept1: "システム開発部", dept2: "運用第1課", title: "課長" },
+            { id: "EMP002", name: "佐々木 葵", dept1: "システム開発部", dept2: "運用第1課", title: "主任" },
+            { id: "EMP003", name: "渡辺 健太", dept1: "システム開発部", dept2: "運用第1課", title: "リーダー" },
+            { id: "EMP004", name: "木村 翔", dept1: "システム開発部", dept2: "運用第1課", title: "メンバー" },
+            { id: "EMP005", name: "高橋 美咲", dept1: "システム開発部", dept2: "運用第1課", title: "メンバー" }
+        ];
+
+        const DEFAULT_EVENTS = [
+            { id: "ev_1", memberId: "EMP001", category: "BUSINESS_TRIP", title: "出張 (大阪支社点検)", startDate: "2026-11-02", endDate: "2026-11-03", note: "新大阪オフィスにて現地作業" },
+            { id: "ev_2", memberId: "EMP002", category: "REMOTE", title: "在宅勤務", startDate: "2026-11-02", endDate: "2026-11-02", note: "" },
+            { id: "ev_3", memberId: "EMP002", category: "VACATION", title: "有休", startDate: "2026-11-06", endDate: "2026-11-06", note: "私用のため終日不在" },
+            { id: "ev_4", memberId: "EMP003", category: "VACATION", title: "有休", startDate: "2026-11-03", endDate: "2026-11-03", note: "" },
+            { id: "ev_5", memberId: "EMP004", category: "REMOTE", title: "在宅勤務", startDate: "2026-11-04", endDate: "2026-11-04", note: "" },
+            { id: "ev_6", memberId: "EMP004", category: "DIRECT", title: "直行直帰 (クライアント打合せ)", startDate: "2026-11-05", endDate: "2026-11-05", note: "丸の内オフィス直行" },
+            { id: "ev_7", memberId: "ALL", category: "DEADLINE", title: "月次経費精算 申請締切", startDate: "2026-11-05", endDate: "2026-11-05", note: "ワークフロー承認完了まで必須" },
+            { id: "ev_8", memberId: "ALL", category: "MEETING", title: "課内週次定例ミーティング", startDate: "2026-11-06", endDate: "2026-11-06", note: "15:00 - 16:30 第2会議室 & オンライン" },
+            { id: "ev_9", memberId: "ALL", category: "DEADLINE", title: "下半期 目標振り返りシート提出", startDate: "2026-11-10", endDate: "2026-11-10", note: "人事システムへ入力" }
+        ];
+
+        let state = {
+            members: [],
+            events: [],
+            currentView: 'timeline',
+            currentDate: new Date("2026-11-02T00:00:00"),
+            deptFilter: 'ALL',
+            editingMemberId: null
+        };
+
+        function loadData() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    state.members = parsed.members || DEFAULT_MEMBERS;
+                    state.events = parsed.events || DEFAULT_EVENTS;
+                } else {
+                    state.members = [...DEFAULT_MEMBERS];
+                    state.events = [...DEFAULT_EVENTS];
+                    saveData();
+                }
+            } catch (e) {
+                console.error("Storage load error", e);
+                state.members = [...DEFAULT_MEMBERS];
+                state.events = [...DEFAULT_EVENTS];
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                members: state.members,
+                events: state.events
+            }));
+        }
+
+        function resetDemoData() {
+            if (confirm("デモデータを復元しますか？（現在の登録内容はリセットされます）")) {
+                state.members = JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
+                state.events = JSON.parse(JSON.stringify(DEFAULT_EVENTS));
+                saveData();
+                populateDeptFilter();
+                renderTodayDigest();
+                renderActiveView();
+                renderMemberMaster();
+                showToast("デモデータを復元しました");
+            }
+        }
+
+        function formatDateISO(d) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function parseDateISO(str) {
+            const parts = str.split('-');
+            return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        const CATEGORIES = {
+            VACATION: { label: "有休", className: "status-vacation", icon: "🏖" },
+            BUSINESS_TRIP: { label: "出張", className: "status-business", icon: "🚄" },
+            REMOTE: { label: "在宅", className: "status-remote", icon: "🏠" },
+            DIRECT: { label: "直行/直帰", className: "status-direct", icon: "🚗" },
+            DEADLINE: { label: "締切", className: "status-deadline", icon: "⚠️" },
+            MEETING: { label: "会議/行事", className: "status-meeting", icon: "📌" },
+            OTHER: { label: "予定", className: "status-normal", icon: "📝" }
+        };
+
+        function switchView(view) {
+            state.currentView = view;
+            document.getElementById('tabTimeline').classList.toggle('active', view === 'timeline');
+            document.getElementById('tabCalendar').classList.toggle('active', view === 'calendar');
+            document.getElementById('tabDeadlines').classList.toggle('active', view === 'deadlines');
+
+            document.getElementById('viewTimeline').style.display = view === 'timeline' ? 'block' : 'none';
+            document.getElementById('viewCalendar').style.display = view === 'calendar' ? 'block' : 'none';
+            document.getElementById('viewDeadlines').style.display = view === 'deadlines' ? 'block' : 'none';
+
+            renderActiveView();
+        }
+
+        function goToToday() {
+            state.currentDate = new Date("2026-11-02T00:00:00");
+            renderActiveView();
+        }
+
+        function shiftPeriod(delta) {
+            if (state.currentView === 'calendar') {
+                state.currentDate.setMonth(state.currentDate.getMonth() + delta);
+            } else if (state.currentView === 'timeline') {
+                state.currentDate.setDate(state.currentDate.getDate() + delta * 7);
+            } else {
+                state.currentDate.setMonth(state.currentDate.getMonth() + delta);
+            }
+            renderActiveView();
+        }
+
+        function renderTodayDigest() {
+            const todayStr = "2026-11-02";
+            const digestContainer = document.getElementById('todayBadgesList');
+            digestContainer.innerHTML = '';
+
+            const todayEvents = state.events.filter(ev => {
+                return (todayStr >= ev.startDate && todayStr <= ev.endDate);
+            });
+
+            if (todayEvents.length === 0) {
+                digestContainer.innerHTML = '<span style="font-size: 12px; color: #cbd5e1;">本日は全員通常勤務です。特記事項はありません。</span>';
+                return;
+            }
+
+            todayEvents.forEach(ev => {
+                const cat = CATEGORIES[ev.category] || CATEGORIES.OTHER;
+                let targetName = "課内全体";
+                if (ev.memberId !== 'ALL') {
+                    const m = state.members.find(x => x.id === ev.memberId);
+                    targetName = m ? m.name : ev.memberId;
+                }
+                const badge = document.createElement('span');
+                badge.className = `digest-badge ${cat.className}`;
+                badge.innerHTML = `<span>${cat.icon}</span> <strong>${escapeHtml(targetName)}</strong>: ${escapeHtml(cat.label)} ${ev.note ? '(' + escapeHtml(ev.note) + ')' : ''}`;
+                digestContainer.appendChild(badge);
+            });
+        }
+
+        function renderActiveView() {
+            state.deptFilter = document.getElementById('deptFilter').value;
+            renderTodayDigest();
+            if (state.currentView === 'timeline') {
+                renderTimeline();
+            } else if (state.currentView === 'calendar') {
+                renderCalendar();
+            } else if (state.currentView === 'deadlines') {
+                renderDeadlines();
+            }
+        }
+
+        /* タイムライン描画 */
+        function getStartOfWeek(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff));
+        }
+
+        function renderTimeline() {
+            const startMonday = getStartOfWeek(state.currentDate);
+            const daysCount = 7;
+            const days = [];
+            for (let i = 0; i < daysCount; i++) {
+                const dayDate = new Date(startMonday);
+                dayDate.setDate(startMonday.getDate() + i);
+                days.push(dayDate);
+            }
+
+            const endSunday = days[daysCount - 1];
+            const pStart = `${startMonday.getFullYear()}年 ${startMonday.getMonth() + 1}月 ${String(startMonday.getDate()).padStart(2, '0')}日`;
+            const pEnd = `${endSunday.getMonth() + 1}月 ${String(endSunday.getDate()).padStart(2, '0')}日`;
+            document.getElementById('currentPeriodText').textContent = `${pStart} 〜 ${pEnd}`;
+
+            const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+            const todayStr = "2026-11-02";
+
+            const members = state.members.filter(m => {
+                if (state.deptFilter === 'ALL') return true;
+                return (m.dept1 === state.deptFilter || m.dept2 === state.deptFilter);
+            });
+
+            const table = document.getElementById('timelineTable');
+            table.innerHTML = '';
+
+            const thead = document.createElement('thead');
+            const trHead = document.createElement('tr');
+
+            const thMember = document.createElement('th');
+            thMember.className = 'member-col';
+            thMember.innerHTML = `<span>課内メンバー (${members.length}名)</span>`;
+            trHead.appendChild(thMember);
+
+            days.forEach(d => {
+                const iso = formatDateISO(d);
+                const dayOfWeek = d.getDay();
+                const isToday = (iso === todayStr);
+
+                const th = document.createElement('th');
+                if (isToday) th.classList.add('is-today');
+
+                let dayClass = '';
+                if (dayOfWeek === 6) dayClass = 'sat';
+                if (dayOfWeek === 0) dayClass = 'sun';
+
+                th.innerHTML = `
+                    <div class="date-th-cell">
+                        <span class="date-th-weekday ${dayClass}">${weekdays[dayOfWeek]}</span>
+                        <span class="date-th-day ${dayClass}">${String(d.getDate()).padStart(2, '0')}</span>
+                        ${isToday ? '<span class="today-pill">本日</span>' : ''}
+                    </div>
+                `;
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+
+            if (members.length === 0) {
+                const trEmpty = document.createElement('tr');
+                trEmpty.innerHTML = `<td colspan="${daysCount + 1}" style="padding: 24px; color: #94a3b8;">メンバーが登録されていません。上部の「メンバー管理」より登録してください。</td>`;
+                tbody.appendChild(trEmpty);
+            } else {
+                members.forEach(member => {
+                    const tr = document.createElement('tr');
+
+                    const tdInfo = document.createElement('td');
+                    tdInfo.className = 'member-info-cell';
+                    tdInfo.innerHTML = `
+                        <div class="member-name">
+                            <span>${escapeHtml(member.name)}</span>
+                            <span class="member-badge-title">${escapeHtml(member.title || 'メンバー')}</span>
+                        </div>
+                        <div class="member-meta">
+                            <span>${escapeHtml(member.id)}</span>
+                            <span>・</span>
+                            <span>${escapeHtml(member.dept2 || member.dept1 || '課')}</span>
+                        </div>
+                    `;
+                    tr.appendChild(tdInfo);
+
+                    days.forEach(d => {
+                        const iso = formatDateISO(d);
+                        const isToday = (iso === todayStr);
+
+                        const td = document.createElement('td');
+                        td.className = 'timeline-day-cell';
+                        if (isToday) td.classList.add('is-today');
+
+                        const memberEvents = state.events.filter(ev => {
+                            if (ev.memberId !== member.id && ev.memberId !== 'ALL') return false;
+                            return (iso >= ev.startDate && iso <= ev.endDate);
+                        });
+
+                        const badgesWrap = document.createElement('div');
+                        badgesWrap.className = 'timeline-badges-wrap';
+
+                        if (memberEvents.length === 0) {
+                            badgesWrap.innerHTML = `<div class="status-normal">＋</div>`;
+                        } else {
+                            memberEvents.forEach(ev => {
+                                const cat = CATEGORIES[ev.category] || CATEGORIES.OTHER;
+                                const badge = document.createElement('div');
+                                badge.className = `status-badge ${cat.className}`;
+                                badge.title = `${ev.title} ${ev.note ? '(' + ev.note + ')' : ''}`;
+                                badge.innerHTML = `<span>${cat.icon}</span> <span>${escapeHtml(cat.label)}</span>`;
+                                badge.onclick = (e) => {
+                                    e.stopPropagation();
+                                    openEventModal(ev);
+                                };
+                                badgesWrap.appendChild(badge);
+                            });
+                        }
+
+                        td.appendChild(badgesWrap);
+                        td.onclick = () => {
+                            openEventModal(null, { memberId: member.id, date: iso });
+                        };
+
+                        tr.appendChild(td);
+                    });
+
+                    tbody.appendChild(tr);
+                });
+            }
+
+            table.appendChild(tbody);
+        }
+
+        /* 月間カレンダー描画 */
+        function renderCalendar() {
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            document.getElementById('currentPeriodText').textContent = `${year}年 ${month + 1}月`;
+
+            const firstDayOfMonth = new Date(year, month, 1);
+            const lastDayOfMonth = new Date(year, month + 1, 0);
+
+            let startDay = firstDayOfMonth.getDay() - 1;
+            if (startDay === -1) startDay = 6;
+
+            const daysInMonth = lastDayOfMonth.getDate();
+            const bodyGrid = document.getElementById('calendarBodyGrid');
+            bodyGrid.innerHTML = '';
+
+            const todayStr = "2026-11-02";
+
+            const prevMonthLastDay = new Date(year, month, 0).getDate();
+            for (let i = startDay - 1; i >= 0; i--) {
+                const dayNum = prevMonthLastDay - i;
+                const cell = document.createElement('div');
+                cell.className = 'cal-day-cell other-month';
+                cell.innerHTML = `<div class="cal-day-top"><span class="cal-day-num">${dayNum}</span></div>`;
+                bodyGrid.appendChild(cell);
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const cellDate = new Date(year, month, day);
+                const iso = formatDateISO(cellDate);
+                const dayOfWeek = cellDate.getDay();
+                const isToday = (iso === todayStr);
+
+                const cell = document.createElement('div');
+                cell.className = 'cal-day-cell';
+                if (isToday) cell.classList.add('is-today');
+
+                let dayClass = '';
+                if (dayOfWeek === 6) dayClass = 'sat';
+                if (dayOfWeek === 0) dayClass = 'sun';
+
+                const dayEvents = state.events.filter(ev => {
+                    return (iso >= ev.startDate && iso <= ev.endDate);
+                });
+
+                let eventsHtml = '';
+                dayEvents.slice(0, 3).forEach(ev => {
+                    const cat = CATEGORIES[ev.category] || CATEGORIES.OTHER;
+                    let targetName = "全体";
+                    if (ev.memberId !== 'ALL') {
+                        const m = state.members.find(x => x.id === ev.memberId);
+                        targetName = m ? m.name : ev.memberId;
+                    }
+                    eventsHtml += `
+                        <span class="cal-mini-badge ${cat.className}" title="${escapeHtml(ev.title)}">
+                            ${cat.icon} ${escapeHtml(targetName)}: ${escapeHtml(cat.label)}
+                        </span>
+                    `;
+                });
+
+                if (dayEvents.length > 3) {
+                    eventsHtml += `<span style="font-size: 10px; color: #7dd3fc;">他 ${dayEvents.length - 3} 件...</span>`;
+                }
+
+                cell.innerHTML = `
+                    <div class="cal-day-top">
+                        <span class="cal-day-num ${dayClass}">${day}</span>
+                        ${isToday ? '<span class="today-pill">本日</span>' : ''}
+                    </div>
+                    <div>${eventsHtml}</div>
+                `;
+
+                cell.onclick = () => {
+                    openEventModal(null, { date: iso });
+                };
+
+                bodyGrid.appendChild(cell);
+            }
+
+            const totalCells = startDay + daysInMonth;
+            const remaining = (7 - (totalCells % 7)) % 7;
+            for (let i = 1; i <= remaining; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cal-day-cell other-month';
+                cell.innerHTML = `<div class="cal-day-top"><span class="cal-day-num">${i}</span></div>`;
+                bodyGrid.appendChild(cell);
+            }
+        }
+
+        /* 締切一覧描画 */
+        function renderDeadlines() {
+            const container = document.getElementById('deadlinesContainer');
+            container.innerHTML = '';
+
+            const today = parseDateISO("2026-11-02");
+
+            const items = state.events
+                .filter(ev => ev.category === 'DEADLINE' || ev.category === 'MEETING' || ev.memberId === 'ALL')
+                .sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+            if (items.length === 0) {
+                container.innerHTML = `<div style="text-align: center; padding: 30px; color: #94a3b8;">登録されている締切・イベントはありません。</div>`;
+                return;
+            }
+
+            items.forEach(ev => {
+                const cat = CATEGORIES[ev.category] || CATEGORIES.OTHER;
+                const evDate = parseDateISO(ev.startDate);
+                const diffTime = evDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let dueText = '';
+                let dueClass = 'due-normal';
+
+                if (diffDays < 0) {
+                    dueText = `${Math.abs(diffDays)}日経過`;
+                    dueClass = 'due-urgent';
+                } else if (diffDays === 0) {
+                    dueText = '本日締切！';
+                    dueClass = 'due-urgent';
+                } else if (diffDays <= 3) {
+                    dueText = `あと ${diffDays} 日`;
+                    dueClass = 'due-near';
+                } else {
+                    dueText = `あと ${diffDays} 日`;
+                    dueClass = 'due-normal';
+                }
+
+                const card = document.createElement('div');
+                card.className = 'deadline-card';
+                card.innerHTML = `
+                    <div class="deadline-left">
+                        <div class="deadline-icon-box">${cat.icon}</div>
+                        <div>
+                            <div class="deadline-title">${escapeHtml(ev.title)}</div>
+                            <div class="deadline-meta">
+                                <span>期日: <strong>${ev.startDate}</strong></span>
+                                <span>・</span>
+                                <span>対象: <strong>${ev.memberId === 'ALL' ? '課内全員' : (state.members.find(m => m.id === ev.memberId)?.name || ev.memberId)}</strong></span>
+                                ${ev.note ? `<span>・</span><span>${escapeHtml(ev.note)}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="due-badge ${dueClass}">${dueText}</span>
+                        <button class="custom-file-upload" style="font-size: 11px; padding: 4px 8px;" onclick="openEventModal(state.events.find(e => e.id === '${ev.id}'))">編集</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        /* モーダル 1: 予定・動静登録 */
+        function openEventModal(eventObj = null, defaults = {}) {
+            const memberSelect = document.getElementById('eventMember');
+            memberSelect.innerHTML = '<option value="ALL">全体 / 課内共通 (締切・行事など)</option>';
+            state.members.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `${m.name} (${m.title || 'メンバー'} / ${m.id})`;
+                memberSelect.appendChild(opt);
+            });
+
+            const delBtn = document.getElementById('btnDeleteEvent');
+            const titleEl = document.getElementById('eventModalTitle');
+
+            if (eventObj) {
+                titleEl.textContent = "✦ 予定・動静の編集";
+                document.getElementById('eventId').value = eventObj.id;
+                document.getElementById('eventMember').value = eventObj.memberId;
+                document.getElementById('eventCategory').value = eventObj.category;
+                document.getElementById('eventTitle').value = eventObj.title;
+                document.getElementById('eventStartDate').value = eventObj.startDate;
+                document.getElementById('eventEndDate').value = eventObj.endDate;
+                document.getElementById('eventNote').value = eventObj.note || '';
+                delBtn.style.display = 'inline-block';
+            } else {
+                titleEl.textContent = "✦ 予定・動静の登録";
+                document.getElementById('eventId').value = '';
+                document.getElementById('eventMember').value = defaults.memberId || (state.members[0] ? state.members[0].id : 'ALL');
+                document.getElementById('eventCategory').value = defaults.category || 'VACATION';
+                document.getElementById('eventTitle').value = CATEGORIES[defaults.category || 'VACATION'].label;
+                const d = defaults.date || "2026-11-02";
+                document.getElementById('eventStartDate').value = d;
+                document.getElementById('eventEndDate').value = d;
+                document.getElementById('eventNote').value = '';
+                delBtn.style.display = 'none';
+            }
+
+            document.getElementById('eventModal').classList.add('open');
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').classList.remove('open');
+        }
+
+        function onCategoryChange() {
+            const cat = document.getElementById('eventCategory').value;
+            const titleInput = document.getElementById('eventTitle');
+            if (!titleInput.value || Object.values(CATEGORIES).some(c => c.label === titleInput.value)) {
+                titleInput.value = CATEGORIES[cat].label;
+            }
+            if (cat === 'DEADLINE' || cat === 'MEETING') {
+                document.getElementById('eventMember').value = 'ALL';
+            }
+        }
+
+        function onStartDateChange() {
+            const start = document.getElementById('eventStartDate').value;
+            const end = document.getElementById('eventEndDate').value;
+            if (!end || end < start) {
+                document.getElementById('eventEndDate').value = start;
+            }
+        }
+
+        function saveEvent(e) {
+            e.preventDefault();
+            const id = document.getElementById('eventId').value;
+            const memberId = document.getElementById('eventMember').value;
+            const category = document.getElementById('eventCategory').value;
+            const title = document.getElementById('eventTitle').value.trim();
+            const startDate = document.getElementById('eventStartDate').value;
+            const endDate = document.getElementById('eventEndDate').value;
+            const note = document.getElementById('eventNote').value.trim();
+
+            if (id) {
+                const idx = state.events.findIndex(x => x.id === id);
+                if (idx !== -1) {
+                    state.events[idx] = { id, memberId, category, title, startDate, endDate, note };
+                    showToast("予定を更新しました");
+                }
+            } else {
+                const newId = 'ev_' + Date.now();
+                state.events.push({ id: newId, memberId, category, title, startDate, endDate, note });
+                showToast("予定を登録しました");
+            }
+
+            saveData();
+            closeEventModal();
+            renderActiveView();
+        }
+
+        function deleteCurrentEvent() {
+            const id = document.getElementById('eventId').value;
+            if (!id) return;
+            if (confirm("この予定を削除しますか？")) {
+                state.events = state.events.filter(x => x.id !== id);
+                saveData();
+                closeEventModal();
+                renderActiveView();
+                showToast("予定を削除しました");
+            }
+        }
+
+        /* モーダル 2: メンバー管理 */
+        function openMemberModal() {
+            renderMemberMaster();
+            resetMemberForm();
+            document.getElementById('memberModal').classList.add('open');
+        }
+
+        function closeMemberModal() {
+            document.getElementById('memberModal').classList.remove('open');
+            populateDeptFilter();
+            renderActiveView();
+        }
+
+        function renderMemberMaster() {
+            const tbody = document.getElementById('memberMasterTableBody');
+            tbody.innerHTML = '';
+
+            state.members.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${escapeHtml(m.id)}</strong></td>
+                    <td>${escapeHtml(m.name)}</td>
+                    <td>${escapeHtml(m.dept1 || '-')}</td>
+                    <td>${escapeHtml(m.dept2 || '-')}</td>
+                    <td><span class="member-badge-title">${escapeHtml(m.title || '-')}</span></td>
+                    <td style="text-align: right;">
+                        <button class="action-link" onclick="editMember('${m.id}')">編集</button>
+                        <button class="action-link delete" onclick="deleteMember('${m.id}')">削除</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function editMember(empId) {
+            const m = state.members.find(x => x.id === empId);
+            if (!m) return;
+            state.editingMemberId = empId;
+            document.getElementById('memberFormTitle').textContent = `✎ メンバー編集: ${m.name} (${m.id})`;
+            const idInput = document.getElementById('empId');
+            idInput.value = m.id;
+            idInput.disabled = true;
+            document.getElementById('empName').value = m.name;
+            document.getElementById('empDept1').value = m.dept1 || '';
+            document.getElementById('empDept2').value = m.dept2 || '';
+            document.getElementById('empTitle').value = m.title || '';
+
+            document.getElementById('btnSaveMember').textContent = "更新する";
+            document.getElementById('btnCancelEditMember').style.display = "inline-block";
+        }
+
+        function resetMemberForm() {
+            state.editingMemberId = null;
+            document.getElementById('memberFormTitle').textContent = "＋ 新規メンバー登録";
+            const idInput = document.getElementById('empId');
+            idInput.value = '';
+            idInput.disabled = false;
+            document.getElementById('empName').value = '';
+            document.getElementById('empDept1').value = '';
+            document.getElementById('empDept2').value = '';
+            document.getElementById('empTitle').value = '';
+
+            document.getElementById('btnSaveMember').textContent = "登録する";
+            document.getElementById('btnCancelEditMember').style.display = "none";
+        }
+
+        function saveMember(e) {
+            e.preventDefault();
+            const id = document.getElementById('empId').value.trim();
+            const name = document.getElementById('empName').value.trim();
+            const dept1 = document.getElementById('empDept1').value.trim();
+            const dept2 = document.getElementById('empDept2').value.trim();
+            const title = document.getElementById('empTitle').value.trim();
+
+            if (state.editingMemberId) {
+                const idx = state.members.findIndex(x => x.id === state.editingMemberId);
+                if (idx !== -1) {
+                    state.members[idx] = { id: state.editingMemberId, name, dept1, dept2, title };
+                    showToast(`メンバー情報を更新しました: ${name}`);
+                }
+            } else {
+                if (state.members.some(x => x.id === id)) {
+                    alert(`社員番号「${id}」は既に使用されています。`);
+                    return;
+                }
+                state.members.push({ id, name, dept1, dept2, title });
+                showToast(`新メンバーを登録しました: ${name}`);
+            }
+
+            saveData();
+            renderMemberMaster();
+            resetMemberForm();
+        }
+
+        function deleteMember(empId) {
+            const m = state.members.find(x => x.id === empId);
+            if (!m) return;
+            if (confirm(`メンバー「${m.name} (${m.id})」を削除しますか？\n（関連する動静記録も削除されます）`)) {
+                state.members = state.members.filter(x => x.id !== empId);
+                state.events = state.events.filter(x => x.memberId !== empId);
+                saveData();
+                renderMemberMaster();
+                resetMemberForm();
+                showToast(`メンバーを削除しました: ${m.name}`);
+            }
+        }
+
+        function populateDeptFilter() {
+            const select = document.getElementById('deptFilter');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="ALL">すべて表示</option>';
+
+            const depts = new Set();
+            state.members.forEach(m => {
+                if (m.dept2) depts.add(m.dept2);
+                else if (m.dept1) depts.add(m.dept1);
+            });
+
+            depts.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                select.appendChild(opt);
+            });
+
+            if (Array.from(select.options).some(o => o.value === currentVal)) {
+                select.value = currentVal;
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeEventModal();
+                closeMemberModal();
+            }
+        });
+
+        // 起動処理
+        loadData();
+        populateDeptFilter();
+        renderActiveView();
+    </script>
+</body>
+</html>
