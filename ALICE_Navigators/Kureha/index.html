@@ -12,10 +12,10 @@
             min-height: 100vh; margin: 0; padding: 0; color: #fff; text-align: center;
             font-family: 'Poppins', 'BIZ UDPGothic', 'BIZ UDPゴシック', sans-serif;
             background-color: #060913;
-            background-image: linear-gradient(to bottom, rgba(6, 9, 19, .88), rgba(6, 9, 19, .82)),
-                radial-gradient(at 0% 0%, rgba(56, 189, 248, .15) 0, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(168, 85, 247, .15) 0, transparent 50%),
-                url("/kureha/assets/alice_background.png");
+            background-image: linear-gradient(to bottom, rgba(6, 9, 19, .65), rgba(6, 9, 19, .75)),
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, .12) 0, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, .12) 0, transparent 50%),
+                url("/rabbit-hole/assets/rabbit_hole_background.jpg");
             background-size: cover; background-position: center bottom; background-repeat: no-repeat;
             background-attachment: fixed; position: relative;
         }
@@ -46,12 +46,37 @@
 
         .header-title {
             grid-column: 2;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin: 0;
             text-align: center;
+            white-space: nowrap;
+        }
+
+        .header-title-text {
             background: linear-gradient(90deg, #7dd3fc, #f0f9ff 55%, #fcd34d);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            white-space: nowrap;
+        }
+
+        .header-logo {
+            width: 0.82em;
+            height: 0.82em;
+            border-radius: 0.22em;
+            border: 1.5px solid rgba(56, 189, 248, 0.65);
+            box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
+            object-fit: cover;
+            vertical-align: middle;
+            flex-shrink: 0;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .header-logo:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 18px rgba(56, 189, 248, 0.55);
         }
 
         .header-spacer {
@@ -173,12 +198,15 @@
 </head>
 <body>
     <header class="header">
-        <a href="/rabbit-hole" class="back-nav" title="ポータルへ戻る">
+        <a href="/rabbit-hole?skip=1" class="back-nav" title="Rabbit-Hole へ戻る" onclick="if(window.history.length > 1){ history.back(); return false; }">
             <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
             <span class="back-nav-text-pc">Rabbit-Hole へ戻る</span>
             <span class="back-nav-text-mobile">戻る</span>
         </a>
-        <h1 class="header-title">PROJECT ALICE</h1>
+        <h1 class="header-title">
+            <span class="header-title-text">Rabbit-Hole</span>
+            <img src="/static/admin/alice_logo.jpg" alt="ALICE" class="header-logo">
+        </h1>
         <div class="header-spacer" aria-hidden="true"></div>
     </header>
     <main class="container">
