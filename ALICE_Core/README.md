@@ -130,6 +130,14 @@ ALICE_ENABLE_IP_MONITOR=false \
 ./start_alice_core.sh --ip 127.0.0.1 --port 8000
 ```
 
+開発時に指定したクライアントIPからHTTPアクセスを許可するには、`ALICE_HTTP_ALLOWED_IPS` に接続元IPをカンマ区切りで設定するか、起動引数 `--http-allowed-ips` に指定します。起動引数が環境変数より優先されます。設定対象はサーバーのIPではなく、ブラウザーを使うクライアントのIPです。指定外の接続元には、従来どおり `/rabbit-hole`・Navigator画面・Noel APIでHTTPSを要求します。
+
+```bash
+./start_alice_core.sh --ip 0.0.0.0 --port 8001 --http-allowed-ips 100.100.10.20
+```
+
+`100.100.10.20` は例なので、実際に使うクライアントPCのTailnet IPに置き換えてください。HTTP通信は暗号化されないため、信頼できるTailnet/LAN内の開発用途に限ってください。
+
 ポートは loopback に bind し、IP / ポートを直接公開しません。Cloudflare Access はこの一般利用 URL に適用せず、HTTPS とアップロード検証はブラウザー API 側で強制します。
 
 ---
@@ -199,7 +207,7 @@ ALICE_Core/
 
 ## 10. Browser API
 
-ホーム画面は `https://project-alice.net/rabbit-hole` で提供します。ページと画像のソースは `ALICE_Navigators/RabbitHole/` です。`ALICE_Navigators/` 直下の各ナビゲーターディレクトリにある `navigator.json` を読み取り、利用可能な案内先をカード表示します。登録には `name`、`description`、`path` を設定し、任意で同一オリジンの `image` パスを指定します。Noel は `https://project-alice.net/noel`、議事録生成ナビゲーター Kureha は `https://project-alice.net/kureha` へ遷移します。ホーム画面は `/admin` と同じ起動スプラッシュの後、森のラビットホールをくぐる短い演出を表示し、演出はスキップできます。`/rabbit-hole`・`/noel`・`/kureha` 配下の画面、API、静的ファイルは HTTPS 必須です。TLS 終端を Cloudflare Tunnel 等に任せる場合は、Core が信頼するプロキシから `X-Forwarded-Proto: https` を転送してください。ローカルで Core 自身に TLS 終端させる場合は、起動時に `--ssl-keyfile` と `--ssl-certfile` を両方指定します。例: `./start_alice_core.sh --ip 127.0.0.1 --port 8000 --ssl-keyfile /path/to/key.pem --ssl-certfile /path/to/cert.pem`。
+ホーム画面は `https://project-alice.net/rabbit-hole` で提供します。ページと画像のソースは `ALICE_Navigators/RabbitHole/` です。`ALICE_Navigators/` 直下の各ナビゲーターディレクトリにある `navigator.json` を読み取り、利用可能な案内先をカード表示します。登録には `name`、`description`、`path` を設定し、任意で同一オリジンの `image` パスを指定します。Noel は `https://project-alice.net/noel`、議事録生成ナビゲーター Kureha は `https://project-alice.net/kureha` へ遷移します。ホーム画面は `/admin` と同じ起動スプラッシュの後、森のラビットホールをくぐる短い演出を表示し、演出はスキップできます。`/rabbit-hole`・Navigator画面・Noel APIは通常HTTPSを要求しますが、`ALICE_HTTP_ALLOWED_IPS` または `--http-allowed-ips` に列挙した接続元IPからのHTTPは許可されます。TLS 終端を Cloudflare Tunnel 等に任せる場合は、Core が信頼するプロキシから `X-Forwarded-Proto: https` を転送してください。ローカルで Core 自身に TLS 終端させる場合は、起動時に `--ssl-keyfile` と `--ssl-certfile` を両方指定します。例: `./start_alice_core.sh --ip 127.0.0.1 --port 8000 --ssl-keyfile /path/to/key.pem --ssl-certfile /path/to/cert.pem`。
 
 | Method / Path | 内容 |
 | :--- | :--- |

@@ -55,7 +55,8 @@ async def require_https_for_browser_portals(request: Request, call_next):
         return await call_next(request)
     path = request.url.path
     is_browser_portal = any(path == root or path.startswith(root + "/") for root in dynamic_portal_roots)
-    if is_browser_portal and request.url.scheme != "https":
+    if (is_browser_portal and request.url.scheme != "https"
+            and not config.is_http_allowed_ip(client_ip)):
         return JSONResponse(
             status_code=400,
             content={"detail": "HTTPS is required"},

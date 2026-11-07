@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: ./start_alice_core.sh [--foreground|--background] [--log-file PATH] [--ip IP] [--port PORT]
+# Usage: ./start_alice_core.sh [--foreground|--background] [--log-file PATH] [--ip IP] [--port PORT] [--http-allowed-ips IP[,IP...]]
 #   Options are optional and can be specified in either order. Defaults are
 #   ALICE_CORE_HOST/ALICE_CORE_PORT, then 127.0.0.1/8000. Options take precedence.
 #   Foreground mode is the default. Background mode writes Uvicorn output to
@@ -10,6 +10,7 @@
 #   ./start_alice_core.sh --port 8001 --ip 0.0.0.0
 #   ./start_alice_core.sh --background --port 8001
 #   ./start_alice_core.sh --foreground --port 8001
+#   ./start_alice_core.sh --ip 0.0.0.0 --port 8001 --http-allowed-ips 100.112.184.44
 # Either option can be used alone.
 set -Eeuo pipefail
 
@@ -23,11 +24,13 @@ CORE_HOST="${ALICE_CORE_HOST:-127.0.0.1}"
 CORE_PORT="${ALICE_CORE_PORT:-8000}"
 CORE_SSL_KEYFILE="${ALICE_CORE_SSL_KEYFILE:-}"
 CORE_SSL_CERTFILE="${ALICE_CORE_SSL_CERTFILE:-}"
+CORE_HTTP_ALLOWED_IPS="${ALICE_HTTP_ALLOWED_IPS:-}"
+HTTP_ALLOWED_IPS_SET="false"
 RUN_MODE="foreground"
 LOG_FILE=""
 
 usage() {
-  echo "Usage: $0 [--foreground|--background] [--log-file PATH] [--ip IP] [--port PORT] [--ssl-keyfile PATH --ssl-certfile PATH]"
+  echo "Usage: $0 [--foreground|--background] [--log-file PATH] [--ip IP] [--port PORT] [--http-allowed-ips IP[,IP...]] [--ssl-keyfile PATH --ssl-certfile PATH]"
 }
 
 while (( $# )); do
@@ -65,6 +68,16 @@ while (( $# )); do
         exit 2
       fi
       CORE_PORT="$2"
+      shift 2
+      ;;
+    --http-allowed-ips)
+      if (( $# < 2 )) || [[ -z "$2" || "$2" == --* ]]; then
+        echo "Missing value for --http-allowed-ips" >&2
+        usage >&2
+        exit 2
+      fi
+      CORE_HTTP_ALLOWED_IPS="$2"
+      HTTP_ALLOWED_IPS_SET="true"
       shift 2
       ;;
     --ssl-keyfile)
@@ -134,6 +147,9 @@ fi
 CORE_PORT="${CORE_PORT_NUMBER}"
 
 export PROJECT_ROOT="${PROJECT_ROOT:-${PROJECT_ROOT_FROM_SCRIPT}}"
+if [[ "${HTTP_ALLOWED_IPS_SET}" == "true" ]]; then
+  export ALICE_HTTP_ALLOWED_IPS="${CORE_HTTP_ALLOWED_IPS}"
+fi
 cd "${CORE_DIR}"
 
 # Check the GPU lock before accepting jobs. Keep the lock file in place; the

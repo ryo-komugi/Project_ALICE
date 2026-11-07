@@ -49,7 +49,8 @@ def _is_local_request(request: Request) -> bool:
     return client_ip in ("127.0.0.1", "::1", "localhost")
 
 def _require_https(request: Request) -> None:
-    if _is_local_request(request):
+    client_ip = request.client.host if request.client else ""
+    if _is_local_request(request) or config.is_http_allowed_ip(client_ip):
         return
     if not _https(request):
         raise HTTPException(status_code=400, detail="HTTPS is required")
