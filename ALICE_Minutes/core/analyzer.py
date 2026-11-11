@@ -143,6 +143,55 @@ class MinuteAnalyzer:
                         "basis": str(sp.get("basis", "音声発話より確認")).strip(),
                     }
 
+        # UNKNOWN や環境音が participants に混入していた場合は除外
+        result.participants = [
+            p for p in result.participants
+            if str(p.speaker_label).strip().upper() != "UNKNOWN"
+            and "環境音" not in str(p.display_name or "")
+            and "環境音" not in str(p.estimated_role or "")
+        ]
+
+        # 同一 speaker_label の重複登録（例: SPEAKER_01 が2人登録され SPEAKER_02 が同席者になっている等）を解消
+        lbl_counts: Dict[str, int] = {}
+        for p in result.participants:
+            lbl = str(p.speaker_label).strip()
+            if lbl:
+                lbl_counts[lbl] = lbl_counts.get(lbl, 0) + 1
+        if any(c > 1 for c in lbl_counts.values()):
+            target_p = None
+            for p in result.participants:
+                lbl = str(p.speaker_label).strip()
+                role = str(p.estimated_role or "")
+                if lbl_counts.get(lbl, 0) > 1 and ("対象者" in role or "被評価者" in role or "回答者" in role):
+                    target_p = p
+                    break
+            if target_p is not None:
+                replaced = False
+                for p in result.participants:
+                    if p is target_p:
+                        continue
+                    lbl = str(p.speaker_label).strip()
+                    role = str(p.estimated_role or "")
+                    disp = str(p.display_name or "")
+                    if lbl_counts.get(lbl, 0) == 1 and any(k in (role + disp) for k in ["同席者", "スタッフ", "参加者", "その他"]):
+                        p.display_name = target_p.display_name
+                        p.estimated_role = target_p.estimated_role
+                        p.basis = target_p.basis
+                        replaced = True
+                        break
+                if replaced:
+                    result.participants = [p for p in result.participants if p is not target_p]
+            deduped_p = []
+            seen_lbls = set()
+            for p in result.participants:
+                lbl = str(p.speaker_label).strip()
+                if lbl and lbl in seen_lbls:
+                    continue
+                if lbl:
+                    seen_lbls.add(lbl)
+                deduped_p.append(p)
+            result.participants = deduped_p
+
         # 既知の SPEAKER_XX ラベルを収集
         covered_labels = set()
         for p in result.participants:
