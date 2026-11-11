@@ -13,9 +13,17 @@ class TextNormalizer:
 
     # 無音区間でWhisperが出力しやすい典型的な単独ハルシネーション
     HALLUCINATION_STANDALONE_PATTERN = re.compile(
-        r"^(?:BGM|ＢＧＭ|音楽|拍手|字幕|ご視聴ありがとうございました[。！!]?|チャンネル登録.*)$",
+        r"^(?:BGM|ＢＧＭ|音楽|拍手|字幕.*|.*ご視聴(?:いただき|頂き|ありがとう).*|チャンネル登録.*|作詞.*作曲.*|.*初音ミク.*|おやすみな(?:さい)?[。、！!うん\s]*)$",
         re.IGNORECASE,
     )
+
+    # UNKNOWN（話者未特定・無音/雑音区間）で発生しやすい単独挨拶ハルシネーション
+    UNKNOWN_HALLUCINATION_PATTERN = re.compile(
+        r"^(?:お疲れ様でした(?:疲れました)?|ありがとうございました|おやすみな(?:さい)?)[。、！!\s]*$"
+    )
+
+    # 記号のみの発話
+    SYMBOLS_ONLY_PATTERN = re.compile(r"^[。、．，！？!?・…〜～\-ー\s]+$")
 
     # 代表的なフィラー重複パターン
     FILLER_REPEAT_PATTERNS = [
@@ -129,13 +137,15 @@ class TextNormalizer:
         results = self.normalize_segment_deduplication(results)
         results = self.normalize_whitespace(results)
         results = self.normalize_symbols(results)
-        # 空発話および無音ハルシネーション単独セグメントの除外
+        # 空発話、記号のみ、および無音ハルシネーション単独セグメントの除外
         filtered = []
         for r in results:
             txt = r.get("text", "").strip()
-            if not txt:
+            if not txt or self.SYMBOLS_ONLY_PATTERN.match(txt):
                 continue
             if self.HALLUCINATION_STANDALONE_PATTERN.match(txt):
+                continue
+            if r.get("speaker") == "UNKNOWN" and self.UNKNOWN_HALLUCINATION_PATTERN.match(txt):
                 continue
             filtered.append(r)
         return filtered
