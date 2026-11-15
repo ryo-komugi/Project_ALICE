@@ -46,12 +46,11 @@
 ## 4. 協議・ヒアリングの経緯
 
 ### 協議項目: {agenda_title} （時間帯: {time_range}）
-- **論点・協議要旨**: {discussion_summary}
-- **主なやり取り**:
-  - **{speaker}**: {opinion} （{time_anchor}）
-- **確認・合意された方針**:
+- **決定事項**:
   - {decisions}
-- **背景・指導理由**: {rationale}
+- **背景・理由**: {rationale}
+
+決定事項と背景・理由だけを簡潔に記載する。詳しい協議要旨や発言は本文に含めない。
 
 ---
 

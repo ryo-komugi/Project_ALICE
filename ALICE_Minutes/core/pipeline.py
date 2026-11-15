@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional
 from config import config
 from core.analyzer import MinuteAnalyzer
 from core.composer import MinuteComposer
+from core.docx_form import populate_form
 from core.models import MinuteAnalysisResult
 from core.ollama_client import OllamaClient
 from core.workspace_io import WorkspaceIO
@@ -204,6 +205,15 @@ class MinutePipeline:
                 template_name=resolved_template,
             )
 
+            if not markdown_content.strip():
+                previous_minutes_path = minutes_dir / "minutes.md"
+                previous_minutes = previous_minutes_path.read_text(encoding="utf-8").strip() if previous_minutes_path.is_file() else ""
+                if previous_minutes:
+                    logger.warning("Composer returned empty output; retaining the previous non-empty minutes.md")
+                    markdown_content = previous_minutes
+                else:
+                    raise RuntimeError("MinuteComposer returned empty minutes content")
+
             total_elapsed = time.time() - start_total_time
             logger.info(f"Stage 2 completed in {stage2_elapsed:.2f}s. Saving minutes.md and minutes.txt...")
 
@@ -239,6 +249,17 @@ class MinutePipeline:
                 markdown_text=markdown_content,
                 metadata=metadata,
             )
+
+            form_path = workspace_path / "input" / "minutes_form.docx"
+            if form_path.is_file():
+                logger.info("Filling uploaded DOCX minutes form...")
+                saved_files["minutes_docx"] = populate_form(
+                    template_path=form_path,
+                    output_path=minutes_dir / "minutes.docx",
+                    analysis=analysis_result,
+                    markdown_content=markdown_content,
+                    client=self.client,
+                )
 
             for key, p in saved_files.items():
                 logger.info(f"Saved: {p}")
