@@ -157,8 +157,14 @@
             background: rgba(255, 255, 255, .15); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
             border-radius: 15px; box-shadow: 0 6px 15px rgba(0, 0, 0, .2);
         }
-        .image-container { width: 100%; }
+        .image-container { position: relative; width: 100%; overflow: hidden; border-radius: 10px; }
         .character-art { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 10px; box-shadow: 0 12px 32px rgba(0, 0, 0, .3); }
+        .image-loading { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; color: #fff; background: rgba(8, 16, 34, .5); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s ease; }
+        .image-container.is-processing .image-loading { opacity: 1; visibility: visible; }
+        .image-spinner { width: 54px; height: 54px; margin: 0 auto; border: 5px solid rgba(255, 255, 255, .35); border-top-color: #7dd3fc; border-right-color: #c4b5fd; border-radius: 50%; animation: image-spin .85s linear infinite; box-shadow: 0 0 22px rgba(125, 211, 252, .45); }
+        .image-loading-label { font-size: 14px; font-weight: 700; text-shadow: 0 2px 8px rgba(0, 0, 0, .7); }
+        @keyframes image-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .image-spinner { animation-duration: 2.5s; } }
         .content { min-width: 0; }
         .content-title { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
         .character-name { margin: 0 0 20px; font-size: 48px; font-weight: 600; line-height: 1.2; }
@@ -227,6 +233,7 @@
     <main class="container">
         <div class="image-container">
             <img class="character-art" src="/kureha/assets/ai_character_kureha.png" alt="クレハが机に向かい、羽根ペンで記録を書いているイラスト">
+            <div class="image-loading" aria-hidden="true"><span class="image-spinner"></span><span class="image-loading-label">処理中</span></div>
         </div>
         <section class="content">
             <h1 class="content-title">音声から議事録を作成</h1>
@@ -280,8 +287,8 @@
             </details>
             <button id="submit" class="upload-button" type="button">アップロードして議事録を生成</button>
             <div class="processing-status" aria-live="polite">
-                <div class="processing-label"><span id="stage">待機中</span><span id="percent">0%</span></div>
-                <div class="progress-track" role="progressbar" aria-label="議事録生成の進捗" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track">
+                <div class="processing-label"><span id="stage">処理待ち</span><span id="percent">全体進捗（目安） 0%</span></div>
+                <div class="progress-track" role="progressbar" aria-label="議事録生成の全体進捗（目安）" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track">
                     <div class="progress-bar" id="bar"></div>
                 </div>
             </div>
@@ -313,6 +320,7 @@
         const download = document.getElementById("download");
         const docxDownload = document.getElementById("docx-download");
         const progressTrack = document.getElementById("progress-track");
+        const imageContainer = document.querySelector(".image-container");
 
         fileInput.addEventListener("change", () => {
             document.getElementById("file-name").textContent = fileInput.files[0]?.name || "選択されていません";
@@ -324,7 +332,7 @@
         function setProgress(progress = {}) {
             const value = Math.max(0, Math.min(100, Number(progress.percent) || 0));
             stage.textContent = progress.stage || "処理中";
-            percent.textContent = `${value}%`;
+            percent.textContent = `全体進捗（目安） ${value}%`;
             bar.style.width = `${value}%`;
             progressTrack.setAttribute("aria-valuenow", String(value));
         }
@@ -363,6 +371,7 @@
                 output.textContent = "フォームは20 MiB以下のDOCXファイルを選択してください。"; return;
             }
             submit.disabled = true;
+            imageContainer.classList.add("is-processing");
             download.hidden = true;
             docxDownload.hidden = true;
             output.classList.remove("error");
@@ -384,6 +393,7 @@
                 output.classList.add("error");
                 setProgress({ stage: "エラー", percent: 0 });
             } finally {
+                imageContainer.classList.remove("is-processing");
                 submit.disabled = false;
             }
         });

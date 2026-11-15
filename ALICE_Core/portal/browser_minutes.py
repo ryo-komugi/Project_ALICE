@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import logging
+import math
 import os
 import re
 import secrets
@@ -13,6 +14,7 @@ import time
 import zipfile
 import xml.etree.ElementTree as ET
 from collections import defaultdict, deque
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
 
@@ -269,26 +271,90 @@ def _owned_job(job_id: str, uid: str, request: Request | None = None):
     return job
 
 
+def _job_progress(job) -> dict[str, int | str]:
+    """Build a whole-workflow progress estimate and expose its active step."""
+    status = job.status.value if hasattr(job.status, "value") else str(job.status)
+    if status == "COMPLETED":
+        return {"stage": "完了", "percent": 100}
+    if status == "FAILED":
+        return {"stage": "処理に失敗しました", "percent": 0}
+
+    workflow = list(job.workflow or [])
+    if not workflow:
+        return {"stage": "処理待ち", "percent": 0}
+    current_step = job.current_step
+    if not current_step:
+        if status == "RUNNING":
+            return {"stage": "処理を開始しています", "percent": 1}
+        return {"stage": "処理待ち", "percent": 0}
+
+    try:
+        step_index = workflow.index(current_step)
+    except ValueError:
+        return {"stage": "処理中", "percent": 1}
+
+    step_count = len(workflow)
+    local_progress = 0.0
+    stage = {"summary": "要約を作成中", "minutes": "議事録を作成中"}.get(
+        current_step, f"{current_step}を処理中"
+    )
+    if current_step == "transcript":
+        stage = "文字起こしを処理中（進捗は目安）"
+        progress_found = False
+        progress_path = (job.workspace_dir / "transcript" / "progress.json").resolve()
+        try:
+            if progress_path.is_relative_to(job.workspace_dir.resolve()) and progress_path.is_file():
+                saved = json.loads(progress_path.read_text(encoding="utf-8"))
+                saved_stage = saved.get("stage")
+                saved_percent = saved.get("percent")
+                if isinstance(saved_stage, str):
+                    stage = saved_stage[:120]
+                if isinstance(saved_percent, int):
+                    local_progress = max(0.0, min(1.0, saved_percent / 100))
+                    progress_found = True
+        except (OSError, ValueError, TypeError):
+            pass
+        # Transcript reports fixed milestones during audio preparation and then
+        # updates per Whisper segment. Estimate elapsed work as well so long
+        # preparation phases do not leave the browser bar visually frozen.
+        step_history = job.step_history or []
+        entry = next((item for item in step_history if item.get("step") == current_step), {})
+        started_at = entry.get("started_at")
+        try:
+            started = datetime.fromisoformat(started_at).timestamp() if isinstance(started_at, str) else time.time()
+        except (ValueError, TypeError):
+            started = time.time()
+        elapsed = max(0.0, time.time() - started)
+        estimated_progress = min(0.95, 1 - math.exp(-elapsed / 240.0))
+        local_progress = max(local_progress, estimated_progress)
+        if not progress_found:
+            stage = "文字起こしを処理中（進捗を取得できないため目安表示）"
+    else:
+        # Summary and minutes CLIs do not currently report internal token-level progress.
+        # Estimate a slowly advancing fraction from typical step durations, capped until
+        # the worker confirms the step is complete.
+        expected_seconds = {"summary": 120.0, "minutes": 90.0}.get(current_step, 120.0)
+        step_history = job.step_history or []
+        entry = next((item for item in step_history if item.get("step") == current_step), {})
+        started_at = entry.get("started_at")
+        try:
+            started = datetime.fromisoformat(started_at).timestamp() if isinstance(started_at, str) else time.time()
+        except (ValueError, TypeError):
+            started = time.time()
+        elapsed = max(0.0, time.time() - started)
+        local_progress = min(0.95, 1 - math.exp(-elapsed / expected_seconds))
+
+    overall = (step_index + local_progress) / step_count
+    percent = max(0, min(99, int(overall * 100)))
+    return {"stage": stage, "percent": percent}
+
+
 @router.get("/jobs/{job_id}")
 @kureha_router.get("/jobs/{job_id}")
 async def get_job_status(job_id: str, request: Request, response: Response):
     _require_https(request)
     job = _owned_job(job_id, _session_id(request), request)
-    progress = {"stage": "処理待ち", "percent": 0}
-    progress_path = (job.workspace_dir / "transcript" / "progress.json").resolve()
-    if progress_path.is_relative_to(job.workspace_dir.resolve()) and progress_path.is_file():
-        try:
-            saved = json.loads(progress_path.read_text(encoding="utf-8"))
-            stage = saved.get("stage")
-            percent = saved.get("percent")
-            if isinstance(stage, str) and isinstance(percent, int):
-                progress = {"stage": stage[:120], "percent": max(0, min(100, percent))}
-        except (OSError, ValueError, TypeError):
-            pass
-    elif job.status.value == "RUNNING":
-        progress = {"stage": "処理を開始しています", "percent": 1}
-    elif job.status.value == "COMPLETED":
-        progress = {"stage": "完了", "percent": 100}
+    progress = _job_progress(job)
     _no_store(response)
     return {"job_id": job.job_id, "status": job.status.value, "current_step": job.current_step,
             "progress": progress,
