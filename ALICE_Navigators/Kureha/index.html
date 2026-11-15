@@ -175,6 +175,16 @@
         .file-name, .hint { color: rgba(255, 255, 255, .8); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
         .file-name { min-height: 22px; margin: 10px 0 0; }
         .hint { margin: 8px 0 0; }
+        .tag-help { margin: 16px 0 4px; border: 1px solid rgba(125, 211, 252, .38); border-radius: 10px; background: rgba(15, 23, 42, .5); text-align: left; }
+        .tag-help summary { padding: 12px 15px; color: #bae6fd; font-weight: 700; cursor: pointer; }
+        .tag-help summary:hover { color: #fff; }
+        .tag-help-content { padding: 0 15px 14px; color: rgba(255, 255, 255, .88); font-size: 13px; line-height: 1.7; }
+        .tag-help-content p { margin: 6px 0 10px; }
+        .tag-help-content h3 { margin: 14px 0 5px; color: #e0f2fe; font-size: 14px; }
+        .tag-list { display: block; margin: 0; }
+        .tag-list dt { margin: 10px 0 2px; color: #fcd34d; font-family: ui-monospace, monospace; line-height: 1.8; overflow-wrap: anywhere; }
+        .tag-list dd { margin: 0 0 9px; color: rgba(255, 255, 255, .78); }
+        .tag-example { margin-top: 10px !important; padding: 10px 12px; border-radius: 7px; background: rgba(2, 6, 23, .55); font-family: ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
         .processing-status { max-width: 480px; margin: 22px auto 0; text-align: left; }
         .processing-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 7px; font-size: 14px; }
         .progress-track { height: 12px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .25); }
@@ -183,7 +193,12 @@
         .result h2 { margin: 0 0 10px; font-size: 20px; }
         pre { min-height: 80px; max-height: 42vh; margin: 0; overflow: auto; padding: 15px; border-radius: 8px; background: rgba(255, 255, 255, .3); color: #fff; font: 14px/1.7 ui-monospace, monospace; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 4px 10px rgba(0, 0, 0, .1); }
         .error { color: #fecaca; }
-        .download { display: inline-block; margin-top: 12px; color: #bae6fd; }
+        .download-actions { display: flex; flex-direction: column; gap: 10px; width: min(100%, 340px); margin: 14px auto 0; }
+        .download { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 11px 16px; border: 1px solid rgba(125, 211, 252, .55); border-radius: 9px; color: #e0f2fe; background: linear-gradient(135deg, rgba(14, 116, 144, .95), rgba(37, 99, 235, .95)); box-shadow: 0 4px 12px rgba(2, 6, 23, .3); font-size: 14px; font-weight: 700; text-decoration: none; transition: transform .2s ease, box-shadow .2s ease, filter .2s ease; }
+        .download:hover { transform: translateY(-2px); filter: brightness(1.12); box-shadow: 0 7px 18px rgba(2, 6, 23, .4); }
+        .download svg { width: 19px; height: 19px; flex: 0 0 auto; stroke: currentColor; }
+        .download[hidden] { display: none; }
+        .download.docx-download { border-color: rgba(196, 181, 253, .6); background: linear-gradient(135deg, rgba(109, 40, 217, .95), rgba(67, 56, 202, .95)); }
         @media (max-width: 760px) {
             .container { grid-template-columns: 1fr; width: min(620px, calc(100% - 28px)); margin-top: 108px; gap: 24px; }
             .image-container { width: min(100%, 360px); margin: 0 auto; }
@@ -220,7 +235,49 @@
             <label class="custom-file-upload" for="audio">音声ファイルを選択</label>
             <input id="audio" type="file" accept=".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/wav">
             <p class="file-name" id="file-name" aria-live="polite">選択されていません</p>
-            <p class="hint">MP3 / M4A / WAV、100 MiB 以下、音声の長さは2時間以内です。</p>
+            <label class="custom-file-upload" for="minutes-form">議事録フォーム（任意）を選択</label>
+            <input id="minutes-form" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+            <p class="file-name" id="form-file-name" aria-live="polite">フォームは選択されていません</p>
+            <p class="hint">音声: MP3 / M4A / WAV、500 MiB 以下、4時間以内。フォーム: DOCX、20 MiB 以下。</p>
+            <details class="tag-help">
+                <summary>フォームで使えるタグと記入方法</summary>
+                <div class="tag-help-content">
+                    <p>Wordフォームの記入したい位置に、半角の角括弧 <code>[ ]</code> でタグを記入してください。本文タグは必須です。タグは段落または表のセルに置けます。</p>
+                    <p>例: <code>[日時]</code> と書いた箇所に日時、<code>[本文]</code> と書いた箇所に議事録本文が入ります。</p>
+
+                    <h3>基本情報</h3>
+                    <dl class="tag-list">
+                        <dt>[会議テーマ] [テーマ] [件名] [面談件名] [相談件名] [協議件名] [会議名] [タイトル]</dt><dd>会議・面談の件名</dd>
+                        <dt>[日時] [会議日時] [開催日時] [開催日] [日付] [日時・文脈] [実施日時・文脈] [協議日時]</dt><dd>実施日時や会話内で言及された時間の文脈</dd>
+                        <dt>[目的] [目的・背景] [目的、背景] [背景・目的] [面談趣旨・目的]</dt><dd>会議や面談の目的</dd>
+                        <dt>[出席者] [会議出席者] [参加者] [面談参加者] [参加者（相談者／助言担当）]</dt><dd>参加者と役割</dd>
+                    </dl>
+
+                    <h3>議事内容</h3>
+                    <dl class="tag-list">
+                        <dt>[議題]</dt><dd>議題の一覧</dd>
+                        <dt>[決定事項]</dt><dd>確定した決定事項</dd>
+                        <dt>[アクションアイテム] [対応事項] [TODO] [ToDo]</dt><dd>担当者や期限を含む作業項目</dd>
+                        <dt>[保留事項]</dt><dd>未決・次回持ち越しの項目</dd>
+                        <dt>[補足事項] [詳細なやり取り] [協議経緯] [議論の経緯]</dt><dd>議題ごとの詳しい協議要旨や主な意見</dd>
+                        <dt>[本文] [議事録本文] [会議内容] [議事内容]</dt><dd>生成済みMarkdown議事録を整形した本文。いずれか1つは必須</dd>
+                        <dt>[本文(継続)]</dt><dd>本文の続き。本文を段落の切れ目でおおむね半分に分けて記入</dd>
+                    </dl>
+
+                    <h3>タグの使い方</h3>
+                    <ul>
+                        <li>タグの文字は表記どおりに、半角の <code>[ ]</code> で囲みます。例: <code>[日時]</code></li>
+                        <li>フォームに件名・日時・参加者のタグがある場合、本文欄では第1項の同じ項目を省いて重複を避けます。目的・背景は本文に残ります。</li>
+                        <li>アクションアイテムのタグがある場合、本文欄からアクションアイテムの節を省きます。</li>
+                        <li>一覧にない独自タグも使えます。分析結果から該当情報を抽出し、見つからない場合は空欄にします。</li>
+                    </ul>
+                    <p class="tag-example">会議名: [会議テーマ]
+日時: [日時]
+出席者: [出席者]
+
+[本文]</p>
+                </div>
+            </details>
             <button id="submit" class="upload-button" type="button">アップロードして議事録を生成</button>
             <div class="processing-status" aria-live="polite">
                 <div class="processing-label"><span id="stage">待機中</span><span id="percent">0%</span></div>
@@ -231,23 +288,37 @@
             <section class="result" aria-live="polite">
                 <h2>生成結果</h2>
                 <pre id="output">音声ファイルを選択して「議事録を生成」を押してください。</pre>
-                <a id="download" class="download" hidden download="minutes.md">議事録を Markdown で保存</a>
+                <div class="download-actions">
+                    <a id="download" class="download" hidden download="minutes.md">
+                        <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v4h14v-4"/></svg>
+                        <span>議事録を Markdown で保存</span>
+                    </a>
+                    <a id="docx-download" class="download docx-download" hidden download="minutes.docx">
+                        <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v4h14v-4"/></svg>
+                        <span>記入済みフォームを Word で保存</span>
+                    </a>
+                </div>
             </section>
         </section>
     </main>
     <script>
-        const api = "/noel/api";
+        const api = "/kureha/api";
         const fileInput = document.getElementById("audio");
+        const formInput = document.getElementById("minutes-form");
         const submit = document.getElementById("submit");
         const output = document.getElementById("output");
         const stage = document.getElementById("stage");
         const percent = document.getElementById("percent");
         const bar = document.getElementById("bar");
         const download = document.getElementById("download");
+        const docxDownload = document.getElementById("docx-download");
         const progressTrack = document.getElementById("progress-track");
 
         fileInput.addEventListener("change", () => {
             document.getElementById("file-name").textContent = fileInput.files[0]?.name || "選択されていません";
+        });
+        formInput.addEventListener("change", () => {
+            document.getElementById("form-file-name").textContent = formInput.files[0]?.name || "フォームは選択されていません";
         });
 
         function setProgress(progress = {}) {
@@ -258,7 +329,7 @@
             progressTrack.setAttribute("aria-valuenow", String(value));
         }
 
-        async function poll(statusUrl, minutesUrl) {
+        async function poll(statusUrl, minutesUrl, minutesDocxUrl) {
             while (true) {
                 const response = await fetch(statusUrl, { credentials: "same-origin", cache: "no-store" });
                 const job = await response.json();
@@ -271,6 +342,10 @@
                     output.textContent = markdown;
                     download.href = URL.createObjectURL(new Blob([markdown], { type: "text/markdown;charset=utf-8" }));
                     download.hidden = false;
+                    if (minutesDocxUrl) {
+                        docxDownload.href = minutesDocxUrl;
+                        docxDownload.hidden = false;
+                    }
                     setProgress({ stage: "完了", percent: 100 });
                     return;
                 }
@@ -282,9 +357,14 @@
         submit.addEventListener("click", async () => {
             const file = fileInput.files[0];
             if (!file) { output.textContent = "音声ファイルを選択してください。"; return; }
-            if (file.size > 100 * 1024 * 1024) { output.textContent = "ファイルは100 MiB以下にしてください。"; return; }
+            const formFile = formInput.files[0];
+            if (file.size > 500 * 1024 * 1024) { output.textContent = "音声ファイルは500 MiB以下にしてください。"; return; }
+            if (formFile && (formFile.size > 20 * 1024 * 1024 || !formFile.name.toLowerCase().endsWith(".docx"))) {
+                output.textContent = "フォームは20 MiB以下のDOCXファイルを選択してください。"; return;
+            }
             submit.disabled = true;
             download.hidden = true;
+            docxDownload.hidden = true;
             output.classList.remove("error");
             output.textContent = "音声をアップロードしています...";
             setProgress({ stage: "音声をアップロード中", percent: 0 });
@@ -293,11 +373,12 @@
                 if (!session.ok) throw new Error("ブラウザーセッションを開始できませんでした。");
                 const data = new FormData();
                 data.append("audio", file);
+                if (formFile) data.append("minutes_form", formFile);
                 const response = await fetch(`${api}/minutes`, { method: "POST", body: data, credentials: "same-origin", cache: "no-store" });
                 const job = await response.json();
                 if (!response.ok) throw new Error(job.detail || "アップロードに失敗しました。");
                 output.textContent = "文字起こしと議事録を作成しています...";
-                await poll(job.status_url, job.minutes_url);
+                await poll(job.status_url, job.minutes_url, job.minutes_docx_url);
             } catch (error) {
                 output.textContent = error.message;
                 output.classList.add("error");

@@ -28,6 +28,7 @@ class JobService:
         src_file: Path | str,
         workflow: list[str],
         original_filename: str | None = None,
+        attachments: dict[str, tuple[Path | str, str]] | None = None,
     ) -> Job:
         """ワークスペースを作成し、JobQueue に登録する一連の処理を一括実行"""
         job = self.workspace_manager.create_workspace(
@@ -35,6 +36,7 @@ class JobService:
             src_file=src_file,
             workflow=workflow,
             original_filename=original_filename,
+            attachments=attachments,
         )
         self.job_queue.push(job)
         logger.info(f"[JobService] Enqueued job: {job.job_id} (workflow={job.workflow}, queue_size={self.job_queue.size()})")

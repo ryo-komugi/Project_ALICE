@@ -220,11 +220,21 @@ Noel のブラウザー画面は `https://project-alice.net/noel`（ソース: `
 | Method / Path | 内容 |
 | :--- | :--- |
 | `GET /noel/api/session` | ブラウザーセッション用 Cookie を発行し、対応する `user_id` を返す。 |
-| `POST /noel/api/transcribe` | multipart/form-data の `audio` を受け付け、`["transcript"]` のみを実行する文字起こし Job を登録する。MP3 / M4A / WAV、100 MiB 以下、音声 2 時間以下。ffprobe で実データを検証し、M4A の補助 data トラックは許容する。 |
+| `POST /noel/api/transcribe` | multipart/form-data の `audio` を受け付け、`["transcript"]` のみを実行する文字起こし Job を登録する。MP3 / M4A / WAV、500 MiB 以下、音声 4 時間以下。ffprobe で実データを検証し、M4A の補助 data トラックは許容する。 |
 | `GET /noel/api/jobs/{job_id}` | セッション所有 Job の状態と進捗 (`progress.stage`, `progress.percent`) を返す。他セッションの Job は 404。 |
 | `GET /noel/api/jobs/{job_id}/live-transcript` | Whisper が生成した途中の文字起こしテキストを返す。未生成の場合は 204。 |
 | `GET /noel/api/jobs/{job_id}/transcript` | 所有 Job の Whisper 文字起こし結果 (`transcript/transcript.txt`) を返す。未生成の場合は 409。 |
-| `POST /noel/api/minutes` | 議事録生成用の既存 API。`["transcript", "summary", "minutes"]` を実行する。別 Navigator から利用するため維持する。 |
-| `GET /noel/api/jobs/{job_id}/minutes` | 議事録生成 Job の議事録を返す。未生成の場合は 409。 |
 
 Job の `user_id` は署名済みセッション Cookie から導出し、Cookie 値そのものは応答に含めません。各取得時に所有者を照合します。1 セッション 1 件、Noel 全体で実行中・待機中合計 2 件、送信元 IP あたり 15 分で 5 回までに制限します。Uvicorn が信頼する proxy header 送信元は既定で loopback のみです。Cloudflared は同一ホストから loopback に接続させ、Cloudflare 側も Noel のホスト名を Tunnel 経由だけで公開してください。異なる接続元では `ALICE_CORE_TRUSTED_PROXY_IPS` を設定します。
+
+Kureha はNoelの文字起こし画面とは別の `/kureha/api` を利用します。共通のジョブ処理を呼び出しますが、KurehaからのAPI応答URLも `/kureha/api` 配下になります。
+
+| Method / Path | 内容 |
+| :--- | :--- |
+| `GET /kureha/api/session` | Kurehaブラウザーセッション用Cookieを発行する。 |
+| `POST /kureha/api/minutes` | multipart の `audio` と任意の `minutes_form`（DOCX、20 MiB 以下）を受け付け、`["transcript", "summary", "minutes"]` を実行する。フォーム指定時は `minutes/minutes.docx` も生成する。音声は500 MiB以下、4時間以下。 |
+| `GET /kureha/api/jobs/{job_id}` | セッション所有Jobの状態と進捗を返す。 |
+| `GET /kureha/api/jobs/{job_id}/minutes` | 議事録生成JobのMarkdown議事録を返す。 |
+| `GET /kureha/api/jobs/{job_id}/minutes.docx` | フォーム指定Jobの記入済みDOCXを返す。 |
+
+フォーム指定時、登録応答に `minutes_docx_url` が含まれます。DOCX内で記入位置を `[会議テーマ]` などのタグにより指定し、本文欄として `[本文]`（または `[議事録本文]`）を必ず置いてください。別表など2つ目の記入場所へ本文を続ける場合は `[本文(継続)]` を置くと、本文を段落の切れ目でおおむね半分に分けて記入します。フォーム内の別タグに記載される情報との重複を避けるよう、本文はLLMで整理します。既定タグは構造化分析から記入し、独自タグは分析結果と生成済み議事録からLLMが抽出します。本文の議題別記述は決定事項と背景・理由に絞り、詳しい協議要旨や主な意見は `[補足事項]` タグで別欄に出力できます。アクションアイテム専用タグがフォームにある場合、本文欄からアクションアイテム節を除いて重複を防ぎます。長文タグを含む行はページ間で分割できるようにします。タグがない、または本文タグがないフォームはアップロード時に拒否されます。HTTPSでは `__Host-` Cookie、HTTPを明示許可した開発接続ではHTTP用Cookieを使います。
