@@ -56,12 +56,33 @@
             text-shadow: 0 0 18px rgba(56, 189, 248, .38);
         }
 
-        h1 {
+        h1, .portal-heading {
             margin: 0;
             font-size: clamp(34px, 7vw, 64px);
             font-weight: 600;
             letter-spacing: .025em;
             text-shadow: 0 5px 28px rgba(0, 0, 0, .5);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.28em;
+            line-height: 1;
+        }
+
+        .portal-title-logo {
+            width: 0.82em;
+            height: 0.82em;
+            border-radius: 0.22em;
+            border: 2px solid rgba(56, 189, 248, 0.65);
+            box-shadow: 0 4px 18px rgba(56, 189, 248, 0.35);
+            object-fit: cover;
+            vertical-align: middle;
+            flex-shrink: 0;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .portal-title-logo:hover {
+            transform: scale(1.08);
+            box-shadow: 0 6px 24px rgba(56, 189, 248, 0.55);
         }
 
         .intro {
@@ -84,8 +105,29 @@
 
         .navigator-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1fr);
-            gap: 18px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 22px;
+        }
+
+        /* PC (2x2 Grid Layout) */
+        @media (min-width: 768px) {
+            .navigator-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 22px;
+            }
+            .navigator-card-noel {
+                order: 1; /* 左上 (Row 1, Col 1) */
+            }
+            .navigator-card-stella {
+                order: 2; /* 右上 (Row 1, Col 2) */
+            }
+            .navigator-card-kureha {
+                order: 3; /* 左下 (Row 2, Col 1) */
+            }
+            .navigator-card-placeholder {
+                order: 4; /* 右下 (Row 2, Col 2) */
+                display: flex;
+            }
         }
 
         .navigator-card {
@@ -123,6 +165,77 @@
             border-color: rgba(125, 211, 252, .72);
             box-shadow: 0 22px 52px rgba(2, 6, 23, .5), 0 0 30px rgba(56, 189, 248, .16), 0 0 46px rgba(168, 85, 247, .1);
             outline: none;
+        }
+
+        /* 将来用プレースホルダーカード (PCのみ表示) */
+        .navigator-card-placeholder {
+            position: relative;
+            display: flex;
+            min-height: 190px;
+            align-items: center;
+            gap: 20px;
+            overflow: hidden;
+            padding: 22px;
+            border: 1.5px dashed rgba(125, 211, 252, .32);
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, .52), rgba(17, 24, 39, .42));
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            color: #94a3b8;
+            box-shadow: 0 10px 30px rgba(2, 6, 23, .25);
+            user-select: none;
+            cursor: default;
+            transition: border-color .25s ease, background .25s ease;
+        }
+
+        .navigator-card-placeholder:hover {
+            border-color: rgba(125, 211, 252, .55);
+            background: linear-gradient(135deg, rgba(15, 23, 42, .65), rgba(17, 24, 39, .55));
+        }
+
+        .navigator-avatar-placeholder {
+            flex: 0 0 112px;
+            width: 112px;
+            height: 132px;
+            border: 1.5px dashed rgba(125, 211, 252, .35);
+            border-radius: 14px;
+            background: rgba(15, 23, 42, .6);
+            display: grid;
+            place-items: center;
+            color: rgba(125, 211, 252, .5);
+        }
+
+        .navigator-avatar-placeholder svg {
+            width: 38px;
+            height: 38px;
+        }
+
+        .placeholder-title {
+            margin: 0 0 9px;
+            font-size: 22px;
+            font-weight: 600;
+            color: #cbd5e1;
+            letter-spacing: 0.02em;
+        }
+
+        .placeholder-desc {
+            margin: 0;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .placeholder-badge {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #7dd3fc;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
         }
 
         .navigator-avatar {
@@ -256,11 +369,20 @@
         .intro-splash.done { opacity: 0; pointer-events: none; }
         .rabbit-passage.done { opacity: 0; }
 
-        @media (max-width: 600px) {
+        @media (max-width: 767px) {
             .home-shell { width: min(100% - 28px, 520px); padding-top: 58px; }
             .section-heading { margin-top: 38px; }
+            .navigator-grid {
+                grid-template-columns: minmax(0, 1fr);
+                gap: 16px;
+            }
             .navigator-card { min-height: 164px; gap: 15px; padding: 17px; }
             .navigator-avatar { flex-basis: 96px; width: 96px; height: 120px; }
+            /* スマホ版: 縦3人 (Noel -> Kureha -> Stella), プレースホルダーは非表示 */
+            .navigator-card-noel { order: 1; }
+            .navigator-card-kureha { order: 2; }
+            .navigator-card-stella { order: 3; }
+            .navigator-card-placeholder { display: none !important; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -271,7 +393,10 @@
 <body>
     <main class="home-shell">
         <p class="eyebrow">A way into Project ALICE</p>
-        <h1>Rabbit-Hole</h1>
+        <h1 class="portal-heading">
+            <span>Rabbit-Hole</span>
+            <img src="/static/admin/alice_logo.jpg" alt="ALICE" class="portal-title-logo">
+        </h1>
         <p class="intro">不思議の国へようこそ。個性豊かなナビゲーターが、あなたの旅をサポートします。</p>
 
         <div class="section-heading">
@@ -306,7 +431,8 @@
 
         function addNavigatorCard(navigator) {
             const card = document.createElement("a");
-            card.className = "navigator-card";
+            const navId = (navigator.id || "").toLowerCase();
+            card.className = `navigator-card navigator-card-${navId}`;
             card.href = navigator.path;
 
             if (navigator.image) {
@@ -355,6 +481,26 @@
                     grid.append(empty);
                 } else {
                     navigators.forEach(addNavigatorCard);
+
+                    // PC版用プレースホルダー（右下：ブランクカード）
+                    const placeholder = document.createElement("div");
+                    placeholder.className = "navigator-card navigator-card-placeholder";
+                    placeholder.setAttribute("aria-hidden", "true");
+                    placeholder.innerHTML = `
+                        <div class="navigator-avatar-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="16"></line>
+                                <line x1="8" y1="12" x2="16" y2="12"></line>
+                            </svg>
+                        </div>
+                        <div class="navigator-copy">
+                            <h3 class="placeholder-title">Coming Soon</h3>
+                            <p class="placeholder-desc">新しいナビゲーターが準備中です。今後のアップデートをお楽しみに。</p>
+                            <span class="placeholder-badge">NEXT NAVIGATOR</span>
+                        </div>
+                    `;
+                    grid.append(placeholder);
                 }
                 count.textContent = `${navigators.length}名`;
             } catch (error) {
@@ -370,6 +516,7 @@
         }
 
         function skipJourney() {
+            sessionStorage.setItem("rabbit_hole_intro_seen", "true");
             const video = document.getElementById("rabbit-passage-video");
             if (video) video.pause();
             document.getElementById("intro-splash")?.remove();
@@ -377,6 +524,7 @@
         }
 
         function finishJourney() {
+            sessionStorage.setItem("rabbit_hole_intro_seen", "true");
             const passage = document.getElementById("rabbit-passage");
             if (!passage || passage.dataset.finishing === "true") return;
             passage.dataset.finishing = "true";
@@ -425,7 +573,11 @@
         }
 
         loadNavigators();
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const skipRequested = urlParams.has("skip") || urlParams.get("from") === "navigator";
+        const alreadySeen = sessionStorage.getItem("rabbit_hole_intro_seen") === "true";
+
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || skipRequested || alreadySeen) {
             skipJourney();
         } else {
             startJourney();

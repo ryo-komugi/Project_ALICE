@@ -10,7 +10,7 @@ from infrastructure.logger import initialize_logger
 from portal.download import router as download_router
 from portal.viewer import router as viewer_router
 from portal.admin import router as admin_router
-from portal.browser_minutes import router as browser_minutes_router
+from portal.browser_minutes import router as browser_minutes_router, kureha_router as browser_kureha_router
 from portal.rabbit_hole import router as rabbit_hole_router
 from portal.auth import AdminAuthMiddleware
 from hub.container import job_service
@@ -55,7 +55,8 @@ async def require_https_for_browser_portals(request: Request, call_next):
         return await call_next(request)
     path = request.url.path
     is_browser_portal = any(path == root or path.startswith(root + "/") for root in dynamic_portal_roots)
-    if is_browser_portal and request.url.scheme != "https":
+    if (is_browser_portal and request.url.scheme != "https"
+            and not config.is_http_allowed_ip(client_ip)):
         return JSONResponse(
             status_code=400,
             content={"detail": "HTTPS is required"},
@@ -75,6 +76,7 @@ app.include_router(download_router)
 app.include_router(viewer_router)
 app.include_router(admin_router, prefix="/admin")
 app.include_router(browser_minutes_router)
+app.include_router(browser_kureha_router)
 app.include_router(rabbit_hole_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 Path(config.DIR_SHARE).mkdir(parents=True, exist_ok=True)

@@ -23,6 +23,7 @@ class WorkspaceManager:
         src_file: Path | str,
         workflow: list[str] | None = None,
         original_filename: str | None = None,
+        attachments: dict[str, tuple[Path | str, str]] | None = None,
     ) -> Job:
         src_path = Path(src_file)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -48,6 +49,21 @@ class WorkspaceManager:
             "size_bytes": dst_input.stat().st_size if dst_input.exists() else 0,
             "received_at": datetime.now().isoformat(),
         }
+        if attachments:
+            attachment_metadata = {}
+            for stored_name, (attachment_path, attachment_original_name) in attachments.items():
+                if Path(stored_name).name != stored_name or stored_name in {"", ".", ".."}:
+                    raise ValueError(f"Invalid attachment storage name: {stored_name}")
+                attachment_src = Path(attachment_path)
+                attachment_dst = workspace_dir / "input" / stored_name
+                shutil.copy2(attachment_src, attachment_dst)
+                attachment_metadata[stored_name] = {
+                    "original_name": attachment_original_name,
+                    "size_bytes": attachment_dst.stat().st_size,
+                    "received_at": datetime.now().isoformat(),
+                    "path": str(attachment_dst),
+                }
+            input_metadata["attachments"] = attachment_metadata
 
         job = Job(
             job_id=job_id,

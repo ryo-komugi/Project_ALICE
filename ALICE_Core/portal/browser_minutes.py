@@ -10,12 +10,14 @@ import secrets
 import shutil
 import subprocess
 import time
+import zipfile
+import xml.etree.ElementTree as ET
 from collections import defaultdict, deque
 from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Request, Response
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from starlette.datastructures import UploadFile
 
 import config
@@ -23,9 +25,12 @@ from hub.container import core_worker, job_queue, job_service, workspace_manager
 
 logger = logging.getLogger("ALICE_Core.Noel")
 router = APIRouter(prefix="/noel/api", tags=["Noel"])
+kureha_router = APIRouter(prefix="/kureha/api", tags=["Kureha"])
 
-COOKIE_NAME = "__Host-alice_browser_session"
+SECURE_COOKIE_NAME = "__Host-alice_browser_session"
+HTTP_COOKIE_NAME = "alice_browser_session"
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+MAX_FORM_BYTES = 20 * 1024 * 1024
 MAX_DURATION_SECONDS = 4 * 60 * 60
 MAX_GLOBAL_JOBS = 2
 MAX_SESSION_JOBS = 1
@@ -49,14 +54,20 @@ def _is_local_request(request: Request) -> bool:
     return client_ip in ("127.0.0.1", "::1", "localhost")
 
 def _require_https(request: Request) -> None:
-    if _is_local_request(request):
+    client_ip = request.client.host if request.client else ""
+    if _is_local_request(request) or config.is_http_allowed_ip(client_ip):
         return
     if not _https(request):
         raise HTTPException(status_code=400, detail="HTTPS is required")
 
 
+def _cookie_name(request: Request) -> str:
+    return SECURE_COOKIE_NAME if _https(request) else HTTP_COOKIE_NAME
+
+
 def _session_id(request: Request, response: Response | None = None) -> str:
-    token = request.cookies.get(COOKIE_NAME, "")
+    cookie_name = _cookie_name(request)
+    token = request.cookies.get(cookie_name, "")
     try:
         nonce, signature = token.split(".", 1)
         expected = hmac.new(_key, nonce.encode(), hashlib.sha256).hexdigest()
@@ -68,7 +79,7 @@ def _session_id(request: Request, response: Response | None = None) -> str:
         nonce = secrets.token_urlsafe(32)
         signature = hmac.new(_key, nonce.encode(), hashlib.sha256).hexdigest()
         if response is not None:
-            response.set_cookie(COOKIE_NAME, f"{nonce}.{signature}", secure=True, httponly=True,
+            response.set_cookie(cookie_name, f"{nonce}.{signature}", secure=_https(request), httponly=True,
                                 samesite="strict", path="/")
     return "browser_" + hashlib.sha256(nonce.encode()).hexdigest()
 
@@ -88,6 +99,7 @@ def _browser_jobs():
 
 
 @router.get("/session")
+@kureha_router.get("/session")
 async def create_browser_session(request: Request, response: Response):
     _require_https(request)
     uid = _session_id(request, response)
@@ -96,6 +108,7 @@ async def create_browser_session(request: Request, response: Response):
 
 
 @router.post("/minutes")
+@kureha_router.post("/minutes")
 async def submit_minutes(request: Request, response: Response):
     return await _submit_audio_job(request, response, ["transcript", "summary", "minutes"], "minutes")
 
@@ -112,7 +125,7 @@ async def _submit_audio_job(request: Request, response: Response, workflow: list
     if not origin or origin.rstrip("/") != expected_origin:
         raise HTTPException(status_code=403, detail="Origin check failed")
     length = request.headers.get("content-length")
-    if not length or not length.isdigit() or int(length) > MAX_UPLOAD_BYTES + 1024 * 1024:
+    if not length or not length.isdigit() or int(length) > MAX_UPLOAD_BYTES + MAX_FORM_BYTES + 1024 * 1024:
         raise HTTPException(status_code=413, detail="Upload is too large or missing Content-Length")
     uid = _session_id(request)
     client_ip = request.client.host if request.client else "unknown"
@@ -132,11 +145,19 @@ async def _submit_audio_job(request: Request, response: Response, workflow: list
         entries.append(now)
 
     temp_path: Path | None = None
+    form_temp_path: Path | None = None
+    form = None
     try:
-        form = await request.form(max_files=1, max_fields=1, max_part_size=MAX_UPLOAD_BYTES)
-        if set(form.keys()) != {"audio"} or not isinstance(form.get("audio"), UploadFile):
-            raise HTTPException(status_code=400, detail="Provide exactly one audio file in field 'audio'")
-        upload = form["audio"]
+        form = await request.form(max_files=2, max_fields=1, max_part_size=MAX_UPLOAD_BYTES)
+        audio_uploads = form.getlist("audio")
+        form_uploads = form.getlist("minutes_form")
+        if (set(form.keys()) not in ({"audio"}, {"audio", "minutes_form"})
+                or len(audio_uploads) != 1 or not isinstance(audio_uploads[0], UploadFile)
+                or len(form_uploads) > 1):
+            raise HTTPException(status_code=400, detail="Provide an audio file and optionally a DOCX form")
+        if form_uploads and (result_type != "minutes" or not isinstance(form_uploads[0], UploadFile)):
+            raise HTTPException(status_code=400, detail="DOCX forms are only accepted by the minutes endpoint")
+        upload = audio_uploads[0]
         suffix = Path(upload.filename or "").suffix.lower()
         if suffix not in {".mp3", ".m4a", ".wav"}:
             raise HTTPException(status_code=415, detail="Supported formats are MP3, M4A, and WAV")
@@ -173,16 +194,64 @@ async def _submit_audio_job(request: Request, response: Response, workflow: list
             raise HTTPException(status_code=415, detail="File content does not match the selected audio format")
         if not (0 < duration <= MAX_DURATION_SECONDS):
             raise HTTPException(status_code=413, detail="Audio duration must be at most 4 hours")
+
+        attachments = None
+        if form_uploads:
+            form_upload = form_uploads[0]
+            form_suffix = Path(form_upload.filename or "").suffix.lower()
+            if form_suffix != ".docx":
+                raise HTTPException(status_code=415, detail="The minutes form must be a .docx file")
+            form_temp_path = inbox / f"minutes_form_{secrets.token_hex(16)}.docx"
+            form_size = 0
+            with form_temp_path.open("xb") as out:
+                while chunk := await form_upload.read(1024 * 1024):
+                    form_size += len(chunk)
+                    if form_size > MAX_FORM_BYTES:
+                        raise HTTPException(status_code=413, detail="DOCX form exceeds 20 MiB")
+                    out.write(chunk)
+            await form_upload.close()
+            if form_size == 0:
+                raise HTTPException(status_code=400, detail="Empty DOCX form")
+            try:
+                with zipfile.ZipFile(form_temp_path) as archive:
+                    members = archive.infolist()
+                    names = {item.filename for item in members}
+                    if ("[Content_Types].xml" not in names or "word/document.xml" not in names
+                            or "word/vbaProject.bin" in names or len(members) > 2000
+                            or sum(item.file_size for item in members) > 100 * 1024 * 1024):
+                        raise ValueError("Unsupported DOCX structure")
+                    if archive.testzip() is not None:
+                        raise ValueError("Corrupt DOCX archive")
+                    document_xml = ET.fromstring(archive.read("word/document.xml"))
+                    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                    paragraphs = ["".join(node.text or "" for node in paragraph.findall(".//w:t", ns))
+                                  for paragraph in document_xml.findall(".//w:p", ns)]
+                    tags = {tag.strip() for paragraph in paragraphs
+                            for tag in re.findall(r"\[([^\[\]\r\n]{1,40})\]", paragraph)}
+                    if not tags:
+                        raise ValueError("No bracket placeholders found")
+                    if not (tags & {"本文", "議事録本文", "会議内容", "議事内容"}):
+                        raise ValueError("No body placeholder found")
+            except (OSError, zipfile.BadZipFile, ValueError):
+                raise HTTPException(status_code=415, detail="Invalid DOCX form, or missing [本文] placeholder")
+            attachments = {"minutes_form.docx": (form_temp_path, Path(form_upload.filename or "minutes_form.docx").name)}
         safe_name = f"recording_{secrets.token_hex(8)}{suffix}"
-        job = await asyncio.to_thread(job_service.submit_job, uid, temp_path, workflow, safe_name)
-        status_url = f"/noel/api/jobs/{quote(job.job_id, safe='')}"
+        job = await asyncio.to_thread(job_service.submit_job, uid, temp_path, workflow, safe_name, attachments)
+        api_root = "/kureha/api" if request.url.path.startswith("/kureha/api/") else "/noel/api"
+        status_url = f"{api_root}/jobs/{quote(job.job_id, safe='')}"
         result_url = f"{status_url}/{result_type}"
         _no_store(response)
-        return JSONResponse(status_code=202, content={"job_id": job.job_id, "status_url": status_url,
-                              f"{result_type}_url": result_url}, headers={"Cache-Control": "no-store"})
+        payload = {"job_id": job.job_id, "status_url": status_url, f"{result_type}_url": result_url}
+        if attachments:
+            payload["minutes_docx_url"] = f"{status_url}/minutes.docx"
+        return JSONResponse(status_code=202, content=payload, headers={"Cache-Control": "no-store"})
     finally:
+        if form is not None:
+            await form.close()
         if temp_path:
             temp_path.unlink(missing_ok=True)
+        if form_temp_path:
+            form_temp_path.unlink(missing_ok=True)
         async with _quota_lock:
             _reservations[uid] = max(0, _reservations[uid] - 1)
 
@@ -201,6 +270,7 @@ def _owned_job(job_id: str, uid: str, request: Request | None = None):
 
 
 @router.get("/jobs/{job_id}")
+@kureha_router.get("/jobs/{job_id}")
 async def get_job_status(job_id: str, request: Request, response: Response):
     _require_https(request)
     job = _owned_job(job_id, _session_id(request), request)
@@ -227,6 +297,7 @@ async def get_job_status(job_id: str, request: Request, response: Response):
 
 
 @router.get("/jobs/{job_id}/minutes")
+@kureha_router.get("/jobs/{job_id}/minutes")
 async def get_minutes(job_id: str, request: Request, response: Response):
     _require_https(request)
     job = _owned_job(job_id, _session_id(request), request)
@@ -235,6 +306,21 @@ async def get_minutes(job_id: str, request: Request, response: Response):
         raise HTTPException(status_code=409, detail="Minutes are not ready")
     _no_store(response)
     return PlainTextResponse(path.read_text(encoding="utf-8"), headers={"Cache-Control": "no-store"})
+
+
+@router.get("/jobs/{job_id}/minutes.docx")
+@kureha_router.get("/jobs/{job_id}/minutes.docx")
+async def get_minutes_docx(job_id: str, request: Request, response: Response):
+    _require_https(request)
+    job = _owned_job(job_id, _session_id(request), request)
+    if not (job.workspace_dir / "input" / "minutes_form.docx").is_file():
+        raise HTTPException(status_code=404, detail="No DOCX form was uploaded for this job")
+    path = (job.workspace_dir / "minutes" / "minutes.docx").resolve()
+    if not path.is_relative_to(job.workspace_dir.resolve()) or not path.is_file():
+        raise HTTPException(status_code=409, detail="Completed DOCX minutes are not ready")
+    _no_store(response)
+    return FileResponse(path, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        filename="minutes.docx", headers={"Cache-Control": "no-store"})
 
 
 @router.get("/jobs/{job_id}/transcript")

@@ -1,4 +1,5 @@
 import os
+import ipaddress
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -14,6 +15,20 @@ PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", str(CORE_DIR.parent)))
 # Public URL
 # =========================
 PUBLIC_URL = os.getenv("PUBLIC_URL", "https://project-alice.net")
+
+# Exact client IPs allowed to use HTTP for browser portals during development.
+ALICE_HTTP_ALLOWED_IPS = tuple(
+    str(ipaddress.ip_address(value.strip()))
+    for value in os.getenv("ALICE_HTTP_ALLOWED_IPS", "").split(",")
+    if value.strip()
+)
+
+
+def is_http_allowed_ip(value: str) -> bool:
+    try:
+        return str(ipaddress.ip_address(value)) in ALICE_HTTP_ALLOWED_IPS
+    except ValueError:
+        return False
 
 # =========================
 # Directories
