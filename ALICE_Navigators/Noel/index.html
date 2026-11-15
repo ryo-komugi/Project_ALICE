@@ -191,7 +191,7 @@
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
         }
 
-        .image-container { position: relative; width: 100%; }
+        .image-container { position: relative; width: 100%; overflow: hidden; border-radius: 10px; }
 
         .character-art {
             display: block;
@@ -339,25 +339,35 @@
         /* ローディングスピナー */
         .spinner {
             display: none; /* 初期状態は非表示 */
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-top: 5px solid #007bff; /* 青系の色 */
+            width: 54px;
+            height: 54px;
+            border: 5px solid rgba(255, 255, 255, .35);
+            border-top-color: #7dd3fc;
+            border-right-color: #c4b5fd;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-
-            /* Noel の中央に配置 */
+            animation: spin .85s linear infinite;
+            box-shadow: 0 0 22px rgba(125, 211, 252, .45);
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            z-index: 2;
         }
+
+        .image-container.is-processing::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(8, 16, 34, .5);
+        }
+        .image-container.is-processing .spinner { display: block; }
 
         /* アニメーション定義 */
         @keyframes spin {
             0% { transform: translate(-50%, -50%) rotate(0deg); }
             100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
+        @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.5s; } }
 
         @media (max-width: 760px) {
             .container {
@@ -413,9 +423,9 @@
             <div class="processing-status" aria-live="polite">
                 <div class="processing-label">
                     <span id="progress-stage">待機中</span>
-                    <span id="progress-percent">0%</span>
+                    <span id="progress-percent">全体進捗（目安） 0%</span>
                 </div>
-                <div class="progress-track" role="progressbar" aria-label="文字起こしの進捗"
+                <div class="progress-track" role="progressbar" aria-label="文字起こしの全体進捗（目安）"
                      aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-track">
                     <div id="progress-bar" class="progress-bar"></div>
                 </div>
@@ -430,12 +440,12 @@
         const API_ROOT = "/noel/api";
         const fileInput = document.getElementById("audioFile");
         const outputElement = document.getElementById("output");
-        const spinner = document.getElementById("loading-spinner");
         const uploadButton = document.querySelector(".upload-button");
         const progressStage = document.getElementById("progress-stage");
         const progressPercent = document.getElementById("progress-percent");
         const progressTrack = document.getElementById("progress-track");
         const progressBar = document.getElementById("progress-bar");
+        const imageContainer = document.querySelector(".image-container");
 
         function fileSelected() {
             const file = fileInput.files[0];
@@ -443,15 +453,18 @@
         }
 
         function setBusy(busy) {
-            spinner.style.display = busy ? "block" : "none";
+            imageContainer.classList.toggle("is-processing", busy);
             uploadButton.disabled = busy;
             uploadButton.setAttribute("aria-busy", String(busy));
         }
 
         function showProgress(progress, fallbackStage = "処理中") {
             const percent = Math.max(0, Math.min(100, Number(progress?.percent) || 0));
-            progressStage.innerText = progress?.stage || fallbackStage;
-            progressPercent.innerText = `${percent}%`;
+            const stage = progress?.stage === "transcriptを処理中"
+                ? "文字起こしを処理中（進捗は目安）"
+                : progress?.stage || fallbackStage;
+            progressStage.innerText = stage;
+            progressPercent.innerText = `全体進捗（目安） ${percent}%`;
             progressBar.style.width = `${percent}%`;
             progressTrack.setAttribute("aria-valuenow", String(percent));
         }
