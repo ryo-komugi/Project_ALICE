@@ -52,13 +52,15 @@ class WorkspaceIO:
 
     @staticmethod
     def summarize_speakers(segments: List[Dict[str, Any]]) -> str:
-        """Transcript 内の全話者ラベルと発話回数・発話秒数を集計し、話者漏れを防ぐ補助情報を生成する"""
+        """Transcript 内の全話者ラベルと発話回数・発話秒数を集計し、話者漏れを防ぐ補助情報を生成する（UNKNOWNは除外）"""
         stats: Dict[str, Dict[str, float]] = {}
         for s in segments:
             text = s.get("text", "").strip()
             if not text:
                 continue
             sp = s.get("speaker", "UNKNOWN")
+            if sp == "UNKNOWN":
+                continue
             dur = max(0.0, float(s.get("end", 0.0)) - float(s.get("start", 0.0)))
             if sp not in stats:
                 stats[sp] = {"count": 0, "duration": 0.0}

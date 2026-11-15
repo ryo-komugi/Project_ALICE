@@ -94,4 +94,72 @@ class Analyzer:
             logger.warning(f"[Analyzer] Pydantic validation partial warning: {e}. Using raw parsed json.")
             structured_data = raw_json_dict
 
+        self._normalize_speakers_analysis(structured_data, segments)
         return structured_data, resp
+
+    @staticmethod
+    def _normalize_speakers_analysis(
+        structured_data: Dict[str, Any],
+        segments: Optional[List[Dict[str, Any]]] = None,
+    ) -> None:
+        """speakers_analysis から UNKNOWN/環境音を除去し、同一 SPEAKER_XX の重複登録を解消する"""
+        if not isinstance(structured_data, dict):
+            return
+        speakers = structured_data.get("speakers_analysis")
+        if not isinstance(speakers, list):
+            return
+
+        # 1. UNKNOWN や環境音を除去
+        cleaned = [
+            sp for sp in speakers
+            if isinstance(sp, dict)
+            and str(sp.get("speaker_label", "")).strip().upper() != "UNKNOWN"
+            and "環境音" not in str(sp.get("estimated_role", ""))
+        ]
+
+        # 2. 同一 speaker_label の重複がある場合（例: SPEAKER_01 が上司と対象者の2回登録され、SPEAKER_02 が同席者になっている場合）
+        label_counts: Dict[str, int] = {}
+        for sp in cleaned:
+            lbl = str(sp.get("speaker_label", "")).strip()
+            if lbl:
+                label_counts[lbl] = label_counts.get(lbl, 0) + 1
+
+        if any(cnt > 1 for cnt in label_counts.values()):
+            # 対象者エントリが重複ラベル側に作られているか確認
+            target_entry = None
+            for sp in cleaned:
+                lbl = str(sp.get("speaker_label", "")).strip()
+                role = str(sp.get("estimated_role", ""))
+                if label_counts.get(lbl, 0) > 1 and ("対象者" in role or "被評価者" in role or "回答者" in role):
+                    target_entry = sp
+                    break
+
+            if target_entry is not None:
+                # 汎用的な「同席者」「スタッフ」「参加者」になっている別ラベルがあれば、そこに対象者を統合
+                replaced = False
+                for sp in cleaned:
+                    if sp is target_entry:
+                        continue
+                    lbl = str(sp.get("speaker_label", "")).strip()
+                    role = str(sp.get("estimated_role", ""))
+                    if label_counts.get(lbl, 0) == 1 and any(k in role for k in ["同席者", "スタッフ", "参加者", "その他"]):
+                        sp["estimated_role"] = target_entry.get("estimated_role", role)
+                        sp["basis"] = target_entry.get("basis", sp.get("basis", ""))
+                        replaced = True
+                        break
+                if replaced:
+                    cleaned = [sp for sp in cleaned if sp is not target_entry]
+
+            # それでも残る同一 speaker_label の重複は先勝ちで1件に絞る
+            deduped = []
+            seen_labels = set()
+            for sp in cleaned:
+                lbl = str(sp.get("speaker_label", "")).strip()
+                if lbl and lbl in seen_labels:
+                    continue
+                if lbl:
+                    seen_labels.add(lbl)
+                deduped.append(sp)
+            cleaned = deduped
+
+        structured_data["speakers_analysis"] = cleaned
