@@ -1,0 +1,8 @@
+{
+  "name": "Stella",
+  "description": "課内メンバーの動静（休暇・出張・在宅）や各種締め切り・予定を共有管理します。",
+  "path": "/stella",
+  "order": 30,
+  "image": "/stella/assets/ai_character_stella.png"
+}
+

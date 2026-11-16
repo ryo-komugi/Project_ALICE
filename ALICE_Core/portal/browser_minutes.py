@@ -271,6 +271,36 @@ def _owned_job(job_id: str, uid: str, request: Request | None = None):
     return job
 
 
+def _minutes_docx_filename(job) -> str:
+    """Build a safe, stable download name from the title-tag value and job date."""
+    title = ""
+    analysis_path = job.workspace_dir / "minutes" / "analysis.json"
+    try:
+        analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
+        overview = analysis.get("meeting_overview", {})
+        if isinstance(overview, dict):
+            title = str(overview.get("title") or "")
+    except (OSError, ValueError, TypeError):
+        pass
+
+    # Remove path separators, control characters, and characters rejected by
+    # common filesystems while retaining readable Unicode titles.
+    title = re.sub(r'[\\/:*?"<>|\x00-\x1f\x7f]+', "_", title)
+    title = re.sub(r"\s+", " ", title).strip(" ._")[:100].rstrip(" ._")
+    if not title:
+        title = "議事録"
+
+    created_at = getattr(job, "completed_at", None) or getattr(job, "created_at", None)
+    if isinstance(created_at, str):
+        try:
+            created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        except ValueError:
+            created_at = None
+    if not isinstance(created_at, datetime):
+        created_at = datetime.now()
+    return f"{title}_{created_at:%Y%m%d}.docx"
+
+
 def _job_progress(job) -> dict[str, int | str]:
     """Build a whole-workflow progress estimate and expose its active step."""
     status = job.status.value if hasattr(job.status, "value") else str(job.status)
@@ -386,7 +416,7 @@ async def get_minutes_docx(job_id: str, request: Request, response: Response):
         raise HTTPException(status_code=409, detail="Completed DOCX minutes are not ready")
     _no_store(response)
     return FileResponse(path, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        filename="minutes.docx", headers={"Cache-Control": "no-store"})
+                        filename=_minutes_docx_filename(job), headers={"Cache-Control": "no-store"})
 
 
 @router.get("/jobs/{job_id}/transcript")
