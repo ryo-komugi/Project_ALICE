@@ -310,6 +310,8 @@
     </main>
     <script>
         const api = "/kureha/api";
+        const UPLOAD_STALL_TIMEOUT_MS = 2 * 60 * 1000;
+        const UPLOAD_ACK_TIMEOUT_MS = 5 * 60 * 1000;
         const fileInput = document.getElementById("audio");
         const formInput = document.getElementById("minutes-form");
         const submit = document.getElementById("submit");
@@ -335,6 +337,103 @@
             percent.textContent = `全体進捗（目安） ${value}%`;
             bar.style.width = `${value}%`;
             progressTrack.setAttribute("aria-valuenow", String(value));
+            progressTrack.setAttribute("aria-label", "議事録生成の全体進捗（目安）");
+        }
+
+        function uploadMinutes(formData) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                let stallTimer = null;
+                let ackTimer = null;
+                let lastLoaded = 0;
+                let stallDetected = false;
+                let ackTimedOut = false;
+                let settled = false;
+
+                const clearStallTimer = () => {
+                    if (stallTimer !== null) clearTimeout(stallTimer);
+                    stallTimer = null;
+                    if (ackTimer !== null) clearTimeout(ackTimer);
+                    ackTimer = null;
+                };
+                const rejectOnce = error => {
+                    if (settled) return;
+                    settled = true;
+                    clearStallTimer();
+                    reject(error);
+                };
+                const armStallTimer = () => {
+                    clearStallTimer();
+                    stallTimer = setTimeout(() => {
+                        stallDetected = true;
+                        xhr.abort();
+                        rejectOnce(new Error("アップロードの進捗が2分間確認できなかったため通信を中断しました。回線を確認して、再度お試しください。"));
+                    }, UPLOAD_STALL_TIMEOUT_MS);
+                };
+
+                xhr.upload.addEventListener("loadstart", armStallTimer);
+                xhr.upload.addEventListener("progress", event => {
+                    if (event.loaded > lastLoaded) {
+                        lastLoaded = event.loaded;
+                        armStallTimer();
+                    }
+                    if (event.lengthComputable && event.total > 0) {
+                        const value = Math.max(0, Math.min(100, Math.floor(event.loaded / event.total * 100)));
+                        stage.textContent = "音声をアップロード中";
+                        percent.textContent = `アップロード ${value}%（${(event.loaded / 1024 / 1024).toFixed(1)} / ${(event.total / 1024 / 1024).toFixed(1)} MiB）`;
+                        bar.style.width = `${value}%`;
+                        progressTrack.setAttribute("aria-valuenow", String(value));
+                        progressTrack.setAttribute("aria-label", "音声ファイルのアップロード進捗");
+                        output.textContent = `音声をアップロードしています... ${value}%`;
+                    } else {
+                        stage.textContent = "音声をアップロード中";
+                        percent.textContent = "送信量を確認中";
+                    }
+                });
+                xhr.upload.addEventListener("load", () => {
+                    clearStallTimer();
+                    ackTimer = setTimeout(() => {
+                        ackTimedOut = true;
+                        xhr.abort();
+                        rejectOnce(new Error("音声の送信は完了しましたが、5分以内にサーバーの受付応答がありませんでした。重複処理を避けるため、すぐに再送せず、ジョブが開始されていないことを確認してください。"));
+                    }, UPLOAD_ACK_TIMEOUT_MS);
+                    stage.textContent = "アップロード完了・受付確認中";
+                    percent.textContent = "送信完了・受付応答待ち";
+                    bar.style.width = "100%";
+                    progressTrack.setAttribute("aria-valuenow", "100");
+                    progressTrack.setAttribute("aria-label", "音声アップロード完了・受付応答待ち");
+                    output.textContent = "アップロードが完了しました。サーバーの受付を確認しています...";
+                });
+                xhr.addEventListener("load", () => {
+                    clearStallTimer();
+                    let job;
+                    try {
+                        job = JSON.parse(xhr.responseText);
+                    } catch {
+                        rejectOnce(new Error("サーバーから有効な応答を受け取れませんでした。"));
+                        return;
+                    }
+                    if (xhr.status < 200 || xhr.status >= 300) {
+                        rejectOnce(new Error(job.detail || `アップロードに失敗しました（HTTP ${xhr.status}）。`));
+                        return;
+                    }
+                    if (!settled) {
+                        settled = true;
+                        resolve(job);
+                    }
+                });
+                xhr.addEventListener("error", () => {
+                    rejectOnce(new Error("アップロード通信に失敗しました。回線状態を確認して、再度お試しください。"));
+                });
+                xhr.addEventListener("abort", () => {
+                    if (stallDetected || ackTimedOut) return;
+                    rejectOnce(new Error("アップロードが中断されました。回線状態を確認して、再度お試しください。"));
+                });
+
+                xhr.open("POST", `${api}/minutes`);
+                xhr.withCredentials = true;
+                xhr.send(formData);
+            });
         }
 
         async function poll(statusUrl, minutesUrl, minutesDocxUrl) {
@@ -383,9 +482,7 @@
                 const data = new FormData();
                 data.append("audio", file);
                 if (formFile) data.append("minutes_form", formFile);
-                const response = await fetch(`${api}/minutes`, { method: "POST", body: data, credentials: "same-origin", cache: "no-store" });
-                const job = await response.json();
-                if (!response.ok) throw new Error(job.detail || "アップロードに失敗しました。");
+                const job = await uploadMinutes(data);
                 output.textContent = "文字起こしと議事録を作成しています...";
                 await poll(job.status_url, job.minutes_url, job.minutes_docx_url);
             } catch (error) {
