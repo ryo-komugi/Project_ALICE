@@ -101,3 +101,32 @@ async def list_navigators():
         })
     navigators.sort(key=lambda navigator: (navigator["order"], navigator["name"].casefold()))
     return {"navigators": navigators}
+
+
+@router.get("/rabbit-hole/api/queue-status", include_in_schema=False)
+async def rabbit_hole_queue_status():
+    """Return the real-time queue status of ALICE Core."""
+    try:
+        from hub.container import core_worker, job_queue
+        current = core_worker.current_job if core_worker else None
+        queued_count = job_queue.size() if job_queue else 0
+    except Exception:
+        current = None
+        queued_count = 0
+
+    is_busy = current is not None
+    total_waiting = (1 if is_busy else 0) + queued_count
+
+    if total_waiting == 0:
+        message = "ただ今、待ちなし！（すぐ作れるよ✨）"
+    elif total_waiting == 1 and is_busy and queued_count == 0:
+        message = "ただ今、1件処理中！（もう少し待ってね⏰）"
+    else:
+        message = f"ただ今、{total_waiting}件待ちです（順番に案内中🍵）"
+
+    return {
+        "is_busy": is_busy,
+        "queue_length": queued_count,
+        "total_waiting": total_waiting,
+        "message": message,
+    }
