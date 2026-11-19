@@ -185,12 +185,29 @@
             box-shadow: 0 10px 30px rgba(2, 6, 23, .25);
             user-select: none;
             cursor: default;
-            transition: border-color .25s ease, background .25s ease;
+            transition: none;
         }
 
-        .navigator-card-placeholder:hover {
-            border-color: rgba(125, 211, 252, .55);
-            background: linear-gradient(135deg, rgba(15, 23, 42, .65), rgba(17, 24, 39, .55));
+        .navigator-card-placeholder:hover,
+        .navigator-card-placeholder:focus,
+        .navigator-card-placeholder:active {
+            border-color: rgba(125, 211, 252, .32);
+            background: linear-gradient(135deg, rgba(15, 23, 42, .52), rgba(17, 24, 39, .42));
+            transform: none;
+            box-shadow: 0 10px 30px rgba(2, 6, 23, .25);
+        }
+
+        .stella-avatar-img {
+            flex: 0 0 112px;
+            width: 112px;
+            height: 132px;
+            object-fit: cover;
+            object-position: center 30%;
+            border: 1.5px dashed rgba(125, 211, 252, .35);
+            border-radius: 14px;
+            background: rgba(15, 23, 42, .6);
+            filter: saturate(0.72) brightness(0.80);
+            opacity: 0.82;
         }
 
         .navigator-avatar-placeholder {
@@ -377,12 +394,12 @@
                 gap: 16px;
             }
             .navigator-card { min-height: 164px; gap: 15px; padding: 17px; }
-            .navigator-avatar { flex-basis: 96px; width: 96px; height: 120px; }
-            /* スマホ版: 縦3人 (Noel -> Kureha -> Stella), プレースホルダーは非表示 */
+            .navigator-avatar, .stella-avatar-img { flex-basis: 96px; width: 96px; height: 120px; }
+            /* スマホ版: 縦3人 (Noel -> Kureha -> Stella), 4枠目プレースホルダーは非表示 */
             .navigator-card-noel { order: 1; }
             .navigator-card-kureha { order: 2; }
             .navigator-card-stella { order: 3; }
-            .navigator-card-placeholder { display: none !important; }
+            .navigator-card-next-placeholder { display: none !important; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -482,9 +499,26 @@
                 } else {
                     navigators.forEach(addNavigatorCard);
 
-                    // PC版用プレースホルダー（右下：ブランクカード）
+                    // 左下：Stella (Coming Soon プレースホルダー)
+                    const hasActiveStella = navigators.some(nav => (nav.id || "").toLowerCase() === "stella");
+                    if (!hasActiveStella) {
+                        const stellaPlaceholder = document.createElement("div");
+                        stellaPlaceholder.className = "navigator-card navigator-card-stella navigator-card-placeholder";
+                        stellaPlaceholder.setAttribute("aria-disabled", "true");
+                        stellaPlaceholder.innerHTML = `
+                            <img src="/rabbit-hole/assets/ai_character_stella.png" alt="Stellaのキャラクター" class="stella-avatar-img" loading="lazy">
+                            <div class="navigator-copy">
+                                <h3 class="placeholder-title">Stella</h3>
+                                <p class="placeholder-desc">新しいナビゲーターが準備中です。<br>今後のアップデートをお楽しみに。</p>
+                                <span class="placeholder-badge">COMING SOON...</span>
+                            </div>
+                        `;
+                        grid.append(stellaPlaceholder);
+                    }
+
+                    // PC版用プレースホルダー（右下：Next Navigator）
                     const placeholder = document.createElement("div");
-                    placeholder.className = "navigator-card navigator-card-placeholder";
+                    placeholder.className = "navigator-card navigator-card-placeholder navigator-card-next-placeholder";
                     placeholder.setAttribute("aria-hidden", "true");
                     placeholder.innerHTML = `
                         <div class="navigator-avatar-placeholder">
@@ -495,9 +529,9 @@
                             </svg>
                         </div>
                         <div class="navigator-copy">
-                            <h3 class="placeholder-title">Coming Soon</h3>
-                            <p class="placeholder-desc">新しいナビゲーターが準備中です。今後のアップデートをお楽しみに。</p>
-                            <span class="placeholder-badge">NEXT NAVIGATOR</span>
+                            <h3 class="placeholder-title">Next Navigator</h3>
+                            <p class="placeholder-desc">新しいナビゲーターが準備中です。<br>今後のアップデートをお楽しみに。</p>
+                            <span class="placeholder-badge">DEVELOPING...</span>
                         </div>
                     `;
                     grid.append(placeholder);
