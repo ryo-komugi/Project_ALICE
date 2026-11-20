@@ -285,6 +285,61 @@
         }
 
         .footnote { margin-top: 44px; color: #94a3b8; font-size: 11px; text-align: center; }
+        .footnote-legal { margin-top: 8px; color: #64748b; font-size: 11px; text-align: center; letter-spacing: .04em; }
+        .license-link {
+            padding: 0;
+            border: 0;
+            background: none;
+            color: #7dd3fc;
+            font: inherit;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            cursor: pointer;
+        }
+        .license-link:hover, .license-link:focus-visible { color: #bae6fd; outline: none; }
+
+        /* About & Licenses ダイアログ */
+        .license-dialog {
+            width: min(640px, calc(100% - 28px));
+            max-height: min(80vh, 760px);
+            padding: 0;
+            border: 1px solid rgba(125, 211, 252, .3);
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, .97), rgba(17, 24, 39, .95));
+            color: #e2e8f0;
+            box-shadow: 0 24px 64px rgba(2, 6, 23, .6), 0 0 40px rgba(56, 189, 248, .12);
+        }
+        .license-dialog::backdrop { background: rgba(2, 6, 23, .7); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+        .license-dialog-header {
+            position: sticky;
+            top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 22px;
+            border-bottom: 1px solid rgba(125, 211, 252, .16);
+            background: rgba(15, 23, 42, .98);
+        }
+        .license-dialog-header h2 { margin: 0; font-size: 17px; font-weight: 600; }
+        .license-close {
+            width: 32px;
+            height: 32px;
+            border: 1px solid rgba(125, 211, 252, .3);
+            border-radius: 50%;
+            background: transparent;
+            color: #cbd5e1;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .license-close:hover, .license-close:focus-visible { border-color: #7dd3fc; color: #fff; outline: none; }
+        .license-body { padding: 6px 22px 22px; font-size: 12.5px; line-height: 1.8; text-align: left; }
+        .license-body h3 { margin: 18px 0 6px; color: #7dd3fc; font-size: 13px; font-weight: 600; letter-spacing: .06em; }
+        .license-body p { margin: 0 0 6px; color: #cbd5e1; }
+        .license-body ul { margin: 0; padding-left: 18px; color: #cbd5e1; }
+        .license-body li { margin: 2px 0; }
+        .license-body .lic { color: #94a3b8; font-size: 11.5px; }
+        .license-body a { color: #7dd3fc; }
+        .license-body .note { margin-top: 18px; color: #64748b; font-size: 11px; }
 
         /* Admin splash followed by the Rabbit-Hole animation video. */
         .intro-splash, .rabbit-passage {
@@ -424,7 +479,55 @@
             <div class="empty-state">ナビゲーターを探しています…</div>
         </section>
         <p class="footnote">PROJECT ALICE · RABBIT-HOLE</p>
+        <p class="footnote-legal">© 2026 Project ALICE · <button type="button" class="license-link" onclick="openLicenseDialog()">About &amp; Licenses</button></p>
     </main>
+
+    <dialog id="license-dialog" class="license-dialog" aria-labelledby="license-dialog-title">
+        <div class="license-dialog-header">
+            <h2 id="license-dialog-title">About &amp; Licenses</h2>
+            <button type="button" class="license-close" aria-label="閉じる" onclick="closeLicenseDialog()">✕</button>
+        </div>
+        <div class="license-body">
+            <h3>PROJECT ALICE</h3>
+            <p>© 2026 Project ALICE. All rights reserved.</p>
+            <p>本システムは社内業務支援を目的とした社内限定システムです。音声認識・話者分離・文章生成はすべて社内サーバー上で処理されます。</p>
+
+            <h3>AI MODELS</h3>
+            <ul>
+                <li>OpenAI Whisper large-v3（faster-whisper / CTranslate2 形式） <span class="lic">— MIT License</span></li>
+                <li>pyannote.audio / pyannote/speaker-diarization-3.1 / pyannote/segmentation-3.0 <span class="lic">— MIT License</span></li>
+                <li>WeSpeaker ResNet34-LM speaker embedding (trained on VoxCeleb), via pyannote/wespeaker-voxceleb-resnet34-LM (used unmodified / 未改変で利用) <span class="lic">— <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></span></li>
+                <li>Gemma 4 (Google) <span class="lic">— Apache License 2.0</span></li>
+                <li>Qwen3 (Alibaba Cloud) <span class="lic">— Apache License 2.0</span></li>
+                <li>Ollama <span class="lic">— MIT License</span></li>
+            </ul>
+
+            <h3>OPEN SOURCE SOFTWARE</h3>
+            <ul>
+                <li>FastAPI <span class="lic">— MIT</span> / Starlette, Uvicorn <span class="lic">— BSD-3-Clause</span> / Pydantic <span class="lic">— MIT</span></li>
+                <li>PyTorch, torchaudio <span class="lic">— BSD</span> / SpeechBrain, PyTorch Lightning <span class="lic">— Apache-2.0</span></li>
+                <li>FFmpeg <span class="lic">— LGPL/GPL</span> / PyAV <span class="lic">— BSD</span></li>
+                <li>LINE Messaging API SDK for Python <span class="lic">— Apache-2.0</span></li>
+                <li>marked.js <span class="lic">— MIT (© Christopher Jeffrey)</span> / Tailwind CSS <span class="lic">— MIT</span></li>
+            </ul>
+
+            <h3>FONTS</h3>
+            <ul>
+                <li>Poppins, BIZ UDPGothic, Inter, JetBrains Mono <span class="lic">— SIL Open Font License 1.1</span></li>
+            </ul>
+
+            <h3>CHARACTERS &amp; ARTWORK</h3>
+            <p>ナビゲーターのキャラクター（Noel / Kureha / Stella）、ロゴ、背景、アイコン、アニメーションは、Project ALICE チームが生成AI（ChatGPT / Gemini）を用いて制作したオリジナル素材です。</p>
+
+            <h3>LICENSE REFERENCES</h3>
+            <ul>
+                <li><a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">MIT License</a> / <a href="https://opensource.org/licenses/BSD-3-Clause" target="_blank" rel="noopener noreferrer">BSD 3-Clause</a> / <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener noreferrer">Apache License 2.0</a></li>
+                <li><a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a> / <a href="https://openfontlicense.org/" target="_blank" rel="noopener noreferrer">SIL Open Font License 1.1</a></li>
+            </ul>
+
+            <p class="note">各ソフトウェア・モデルの著作権はそれぞれの権利者に帰属します。詳細なライセンス一覧および条文はリポジトリの Docs/THIRD_PARTY_NOTICES.md を参照してください。</p>
+        </div>
+    </dialog>
 
     <section id="intro-splash" class="intro-splash" aria-label="Project ALICE 起動演出">
         <button class="skip-button" type="button" onclick="skipJourney()">演出をスキップ</button>
@@ -548,6 +651,20 @@
                 grid.setAttribute("aria-busy", "false");
             }
         }
+
+        const licenseDialog = document.getElementById("license-dialog");
+        function openLicenseDialog() {
+            if (typeof licenseDialog.showModal === "function") licenseDialog.showModal();
+            else licenseDialog.setAttribute("open", "");
+        }
+        function closeLicenseDialog() {
+            if (typeof licenseDialog.close === "function") licenseDialog.close();
+            else licenseDialog.removeAttribute("open");
+        }
+        // 背景（ダイアログ外）クリックで閉じる
+        licenseDialog.addEventListener("click", (event) => {
+            if (event.target === licenseDialog) closeLicenseDialog();
+        });
 
         function skipJourney() {
             sessionStorage.setItem("rabbit_hole_intro_seen", "true");
